@@ -59,6 +59,15 @@ export type Flag =
   | 'bathroomDone'
   | 'deadlinePassed';
 
+/** What a lane (you / her) was doing over a stretch of minutes, for the morning plot. */
+export type Span = {
+  lane: 'parent' | 'child';
+  kind: 'task' | 'help' | 'incident' | 'blocked';
+  task?: TaskId;
+  start: number;
+  end: number;
+};
+
 export type LogEntry = { minute: number; text: string; notable?: boolean };
 
 export type Mood = 0 | 1 | 2 | 3 | 4 | 5;
@@ -85,6 +94,7 @@ export type GameState = {
   morningCondition: MorningCondition;
   childTendency: ChildTendency;
   history: LogEntry[];
+  spans: Span[];
   ended: boolean;
   departedAt?: number;
 };

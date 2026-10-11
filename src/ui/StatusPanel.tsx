@@ -1,7 +1,8 @@
 import { CHECKLIST, CONDITIONS, MOOD_LABELS, TASKS, TENDENCIES } from '../sim/content';
 import { formatClock } from '../sim/constants';
-import { childRate, childStalled, isGroggy, taskDuration } from '../sim/engine';
+import { childRate, childStalled, isGroggy, parentRate, taskDuration } from '../sim/engine';
 import type { GameState, TaskId } from '../sim/types';
+import { Ring } from './MorningPlot';
 
 export function MoodBar({ mood }: { mood: number }) {
   return (
@@ -15,38 +16,60 @@ export function MoodBar({ mood }: { mood: number }) {
 
 function objectiveRow(s: GameState, id: TaskId) {
   const o = s.objectives[id];
-  const label = TASKS[id].label;
   switch (o.status) {
     case 'done':
-      return { glyph: '✓', gClass: 'green', label, value: 'Done', vClass: 'muted' };
+      return { node: 'done', value: 'Done', vClass: 'muted' };
     case 'skipped':
-      return { glyph: '–', gClass: 'muted', label, value: 'Skipped', vClass: 'amber' };
+      return { node: 'skipped', value: 'Skipped', vClass: 'amber' };
     case 'blocked':
-      return { glyph: '◐', gClass: 'amber', label, value: 'Paused', vClass: 'amber' };
+      return { node: 'blocked', value: 'Stopped', vClass: 'amber' };
     case 'active':
-      return { glyph: '◐', gClass: 'amber', label, value: 'In progress', vClass: '' };
+      return { node: 'active', value: 'In progress', vClass: '' };
     default:
       return o.progress > 0
-        ? { glyph: '◔', gClass: 'muted', label, value: 'Part done', vClass: 'muted' }
-        : { glyph: '○', gClass: 'muted', label, value: 'Not started', vClass: 'muted' };
+        ? { node: 'part', value: 'Part done', vClass: 'muted' }
+        : { node: '', value: 'Not started', vClass: 'muted' };
   }
 }
 
-export function activityText(s: GameState, who: 'parent' | 'child'): string {
+type Activity = { text: string; progress: number; paused: boolean; ring: string };
+
+export function activity(s: GameState, who: 'parent' | 'child'): Activity {
+  const idle = (text: string): Activity => ({ text, progress: 0, paused: false, ring: '—' });
   if (who === 'child') {
-    if (!s.childAwake) return 'Asleep';
+    if (!s.childAwake) return idle('Asleep');
     const ca = s.childActivity;
-    if (!ca) return 'Free';
+    if (!ca) return idle('Free');
     const o = s.objectives[ca];
-    if (o.status === 'blocked') return `${TASKS[ca].doing} · Paused`;
-    if (childStalled(s, ca)) return `${TASKS[ca].doing} · Needs you`;
+    const progress = o.progress / taskDuration(s, ca);
+    if (o.status === 'blocked') return { text: `${TASKS[ca].doing} · Stopped`, progress, paused: true, ring: '!!' };
+    if (childStalled(s, ca)) return { text: `${TASKS[ca].doing} · Needs you`, progress, paused: true, ring: '··' };
     const left = Math.max(1, Math.ceil((taskDuration(s, ca) - o.progress) / childRate(s)));
-    return `${TASKS[ca].doing} · ~${left}m`;
+    return { text: TASKS[ca].doing, progress, paused: false, ring: `${left}m` };
   }
   const pa = s.parentActivity;
-  if (!pa) return 'Available';
-  if (pa === 'help') return 'Helping her';
-  return TASKS[pa].doing;
+  if (!pa) return idle('Available');
+  if (pa === 'help') {
+    const ca = s.childActivity;
+    const progress = ca ? s.objectives[ca].progress / taskDuration(s, ca) : 0;
+    return { text: 'Helping her', progress, paused: false, ring: 'w/' };
+  }
+  const o = s.objectives[pa];
+  const left = Math.max(1, Math.ceil((taskDuration(s, pa) - o.progress) / parentRate(s)));
+  return { text: TASKS[pa].doing, progress: o.progress / taskDuration(s, pa), paused: false, ring: `${left}m` };
+}
+
+function ActivityCard({ s, who }: { s: GameState; who: 'parent' | 'child' }) {
+  const a = activity(s, who);
+  return (
+    <div className="mini frame">
+      <Ring value={a.progress} paused={a.paused} label={a.ring} />
+      <div style={{ minWidth: 0 }}>
+        <div className="eyebrow">{who === 'parent' ? 'You' : 'Your daughter'}</div>
+        <strong>{a.text}</strong>
+      </div>
+    </div>
+  );
 }
 
 export function StatusPanel({ s }: { s: GameState }) {
@@ -54,9 +77,11 @@ export function StatusPanel({ s }: { s: GameState }) {
   const mood = s.householdMood;
   const groggy = isGroggy(s);
   return (
-    <div className="panel">
+    <div className="panel frame">
       <div className="sectionhead">
-        <span className="sectitle">At home</span>
+        <span className="sectitle">
+          <span className="num">01</span>At home
+        </span>
         <span className={`status ${s.childAwake ? 'amber' : 'green'}`}>{s.childAwake ? 'Active' : 'Quiet'}</span>
       </div>
       <div className="row">
@@ -81,15 +106,32 @@ export function StatusPanel({ s }: { s: GameState }) {
           {TENDENCIES[s.childTendency].label}
         </span>
       </div>
-      <div className="row" style={{ marginBottom: 4 }}>
+      <div className="row" style={{ marginBottom: 5 }}>
         <span className="k">Household mood</span>
         <span className={`v ${mood <= 1 ? 'red' : mood === 2 ? 'amber' : 'green'}`}>{MOOD_LABELS[mood]}</span>
       </div>
       <MoodBar mood={mood} />
-      {s.coffeeBuffer && <div className="small" style={{ marginTop: 8 }}>☕ Coffee in hand. You'll stay calm once.</div>}
+      {s.coffeeBuffer && <div className="small" style={{ marginTop: 8 }}>Coffee in hand. You'll keep your cool once.</div>}
+
+      {s.childAwake && (
+        <>
+          <div className="sectionhead spaced">
+            <span className="sectitle">
+              <span className="num">02</span>Activities
+            </span>
+            <span className="status">2 slots</span>
+          </div>
+          <div className="two-stat">
+            <ActivityCard s={s} who="parent" />
+            <ActivityCard s={s} who="child" />
+          </div>
+        </>
+      )}
 
       <div className="sectionhead spaced">
-        <span className="sectitle">Morning checklist</span>
+        <span className="sectitle">
+          <span className="num">{s.childAwake ? '03' : '02'}</span>Morning checklist
+        </span>
         <span className={`status ${done === CHECKLIST.length ? 'green' : 'amber'}`}>
           {done} of {CHECKLIST.length}
         </span>
@@ -99,8 +141,8 @@ export function StatusPanel({ s }: { s: GameState }) {
         return (
           <div className="row" key={id}>
             <span className="k">
-              <span className={`glyph ${r.gClass}`}>{r.glyph}</span>
-              {r.label}
+              <span className={`node ${r.node}`} />
+              {TASKS[id].label}
             </span>
             <span className={`v ${r.vClass}`}>{r.value}</span>
           </div>
@@ -108,32 +150,11 @@ export function StatusPanel({ s }: { s: GameState }) {
       })}
       <div className="row">
         <span className="k">
-          <span className={`glyph ${s.objectives.shoesFound.status === 'done' ? 'green' : 'muted'}`}>
-            {s.objectives.shoesFound.status === 'done' ? '✓' : '○'}
-          </span>
+          <span className={`node ${s.objectives.shoesFound.status === 'done' ? 'done' : ''}`} />
           Shoes
         </span>
         <span className="v muted">{s.objectives.shoesFound.status === 'done' ? 'Found' : 'Not checked'}</span>
       </div>
-
-      {s.childAwake && (
-        <>
-          <div className="sectionhead spaced">
-            <span className="sectitle">Activities</span>
-            <span className="status">2 slots</span>
-          </div>
-          <div className="two-stat">
-            <div className="mini">
-              <div className="eyebrow">You</div>
-              <strong>{activityText(s, 'parent')}</strong>
-            </div>
-            <div className="mini">
-              <div className="eyebrow">Your daughter</div>
-              <strong>{activityText(s, 'child')}</strong>
-            </div>
-          </div>
-        </>
-      )}
 
       <div className="thin" />
       <details>

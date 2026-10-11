@@ -214,6 +214,8 @@ export type ResolveCtx = {
   keepOpen: (note: string) => void;
 };
 
+export type ResponseTag = { text: string; tone: 'good' | 'bad' | 'neutral' };
+
 export type ResponseDef = {
   id: string;
   label: string;
@@ -221,6 +223,8 @@ export type ResponseDef = {
   minutes: number;
   both?: boolean; // requires parent and child together
   risky?: boolean;
+  riskBase?: number; // escalation base chance passed to escalate(); default 0.4
+  tags?: ResponseTag[]; // likely outcomes, shown before choosing
   available?: (s: GameState, inc: OpenIncident) => boolean;
   apply: (ctx: ResolveCtx) => void;
 };
@@ -255,6 +259,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Get the blue spoon',
         hint: 'Simple, if it is clean',
         minutes: 2,
+        tags: [{ text: 'Breakfast resumes', tone: 'neutral' }],
         apply: (c) => {
           if (c.roll() < 0.7) c.log('Breakfast resumed with the blue spoon.', true);
           else {
@@ -268,6 +273,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Offer her two choices',
         hint: 'Takes a moment; she may cheer up',
         minutes: 3,
+        tags: [{ text: 'Mood ↑ likely', tone: 'good' }],
         both: true,
         apply: (c) => {
           if (c.roll() < 0.7) {
@@ -281,6 +287,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Tell her to use this one',
         hint: 'Quick, but might upset her',
         minutes: 1,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
         risky: true,
         apply: (c) => {
           if (!c.escalate({ extra: 3 })) c.log('She used the spoon she had.', true);
@@ -291,6 +298,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Leave breakfast unfinished',
         hint: "Saves time; she'll be hungry later",
         minutes: 0,
+        tags: [{ text: 'No breakfast', tone: 'bad' }],
         apply: (c) => {
           c.skipTask('breakfastEaten');
           c.flag('hungry');
@@ -315,6 +323,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Clean up together',
         hint: 'Reliable, if slow',
         minutes: 5,
+        tags: [{ text: 'Fresh start', tone: 'neutral' }],
         both: true,
         apply: (c) => {
           c.addExtra(2);
@@ -326,6 +335,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Wipe it up yourself',
         hint: 'Faster; the top stays as it is',
         minutes: 2,
+        tags: [{ text: 'Top may stay stained', tone: 'bad' }],
         apply: (c) => {
           c.addExtra(2);
           if (done(c.s, 'dressed')) c.flag('stainedShirt');
@@ -337,6 +347,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Leave it for later',
         hint: 'Free now; the kitchen will be waiting',
         minutes: 0,
+        tags: [{ text: 'Messy kitchen', tone: 'bad' }],
         apply: (c) => {
           c.addExtra(2);
           c.flag('messyKitchen');
@@ -362,6 +373,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Let her choose another pair',
         hint: 'Slow, but likely to go well',
         minutes: 4,
+        tags: [{ text: 'Mood ↑ likely', tone: 'good' }],
         both: true,
         apply: (c) => {
           if (c.roll() < 0.7) c.mood(1);
@@ -373,6 +385,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Find the soft socks',
         hint: 'Usually works, if you can find them',
         minutes: 3,
+        tags: [{ text: 'Better if clothes laid out', tone: 'neutral' }],
         apply: (c) => {
           if (done(c.s, 'clothesOut') || c.roll() < 0.6) c.log('Found the soft socks. Accepted.', true);
           else {
@@ -386,6 +399,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Insist on these socks',
         hint: 'Quick, but might make things worse',
         minutes: 1,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
         risky: true,
         apply: (c) => {
           if (!c.escalate({ extra: 3 })) c.log('She wore the socks. Under protest.', true);
@@ -396,6 +410,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Skip socks for now',
         hint: 'Leave the problem for later; shoes will be harder',
         minutes: 0,
+        tags: [{ text: 'No socks', tone: 'bad' }, { text: 'Shoes slower', tone: 'bad' }],
         apply: (c) => {
           c.flag('noSocks');
           c.log('Socks postponed indefinitely.', true);
@@ -419,6 +434,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Let her change',
         hint: 'Slow; she will be happy',
         minutes: 3,
+        tags: [{ text: 'Mood ↑', tone: 'good' }, { text: 'Dressing longer', tone: 'bad' }],
         both: true,
         apply: (c) => {
           c.addExtra(3);
@@ -431,9 +447,11 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Promise the dress tomorrow',
         hint: 'Often works',
         minutes: 2,
+        tags: [{ text: 'Small chance of upset', tone: 'bad' }],
+        riskBase: 0.2,
         risky: true,
         apply: (c) => {
-          if (!c.escalate({ base: 0.2, extra: 3 })) c.log('Yellow dress promised for tomorrow.', true);
+          if (!c.escalate({ extra: 3 })) c.log('Yellow dress promised for tomorrow.', true);
         },
       },
       {
@@ -441,6 +459,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Tell her there is no time',
         hint: 'Quick, but might make things worse',
         minutes: 1,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
         risky: true,
         apply: (c) => {
           if (!c.escalate({ extra: 4 })) c.log('Outfit stayed as it was.', true);
@@ -464,6 +483,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Look at it together',
         hint: "Costs a few minutes; she'll be pleased",
         minutes: 3,
+        tags: [{ text: 'Mood ↑', tone: 'good' }],
         both: true,
         apply: (c) => {
           c.mood(1);
@@ -475,6 +495,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Promise to look after school',
         hint: 'Quick; she may not let it go',
         minutes: 1,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
         risky: true,
         apply: (c) => {
           if (!c.escalate({ extra: 2 })) c.log('Bug viewing postponed until after school.', true);
@@ -485,6 +506,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Let her watch it',
         hint: "Free for you; she'll be a while",
         minutes: 0,
+        tags: [{ text: 'Her task slows', tone: 'bad' }],
         apply: (c) => {
           c.addExtra(4);
           c.log('She watched the bug for some time.', true);
@@ -506,6 +528,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Look for them together',
         hint: 'Reliable, takes a while',
         minutes: 6,
+        tags: [{ text: 'Shoes found', tone: 'neutral' }],
         both: true,
         apply: (c) => {
           c.completeTask('shoesFound');
@@ -517,11 +540,13 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'She can wear her wellies',
         hint: 'Quick; she may object',
         minutes: 1,
+        tags: [{ text: 'Wellies', tone: 'bad' }],
+        riskBase: 0.3,
         risky: true,
         apply: (c) => {
           c.flag('wellies');
           c.completeTask('shoesFound');
-          if (!c.escalate({ base: 0.3, extra: 2 })) c.log('Wellies on. It is not raining.', true);
+          if (!c.escalate({ extra: 2 })) c.log('Wellies on. It is not raining.', true);
         },
       },
     ],
@@ -540,6 +565,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Ask her where it is',
         hint: 'Quick, if she remembers',
         minutes: 2,
+        tags: [{ text: '50/50', tone: 'neutral' }],
         both: true,
         available: (s) => s.childAwake && !has(s, 'askedBook'),
         apply: (c) => {
@@ -555,6 +581,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Search the house',
         hint: 'Takes a while; might find it',
         minutes: 6,
+        tags: [{ text: 'Better odds', tone: 'neutral' }],
         available: (s) => !has(s, 'searchedBook'),
         apply: (c) => {
           c.flag('searchedBook');
@@ -569,6 +596,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Leave it',
         hint: 'It can go back tomorrow',
         minutes: 0,
+        tags: [{ text: 'Book stays home', tone: 'bad' }],
         apply: (c) => {
           c.flag('bookLeft');
           c.log('Library book not found. It can go back tomorrow.', true);
@@ -590,6 +618,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Wait for her',
         hint: 'Reliable',
         minutes: 4,
+        tags: [{ text: 'Reliable', tone: 'neutral' }],
         apply: (c) => c.log('A last-minute bathroom trip.', true),
       },
       {
@@ -597,9 +626,11 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Ask her to be quick',
         hint: 'Might save time; might not',
         minutes: 2,
+        tags: [{ text: 'May take longer', tone: 'bad' }],
+        riskBase: 0.35,
         risky: true,
         apply: (c) => {
-          if (!c.escalate({ base: 0.35, extra: 0 })) c.log('A very quick bathroom trip.', true);
+          if (!c.escalate({ extra: 0 })) c.log('A very quick bathroom trip.', true);
         },
       },
     ],

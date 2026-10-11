@@ -1,11 +1,12 @@
-import { CHILD_TASKS, INCIDENTS, PARENT_TASKS, TASKS } from '../sim/content';
+import { CHILD_TASKS, INCIDENTS, PARENT_TASKS, TASKS, type ResponseDef } from '../sim/content';
 import { formatClock } from '../sim/constants';
 import {
   childRate,
+  childStalled,
   childTaskBlocker,
   currentIncident,
-  childStalled,
   earliness,
+  escalationChance,
   nothingRunning,
   parentRate,
   parentTaskBlocker,
@@ -25,7 +26,7 @@ function ChoiceButton(props: {
   onClick: () => void;
 }) {
   return (
-    <button className="btnline" disabled={props.disabled} onClick={props.onClick}>
+    <button className="btnline frame" disabled={props.disabled} onClick={props.onClick}>
       <span>
         <span className="label">
           {props.label}
@@ -48,8 +49,7 @@ function ParentTaskButtons({ s, act }: Props) {
     <>
       {PARENT_TASKS.filter((t) => s.objectives[t].status !== 'done').map((t) => {
         const blocker = parentTaskBlocker(s, t);
-        const o = s.objectives[t];
-        const resumed = o.progress > 0;
+        const resumed = s.objectives[t].progress > 0;
         return (
           <ChoiceButton
             key={t}
@@ -73,17 +73,13 @@ function leaveWarning(s: GameState): string {
   return `Not done: ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? '…' : ''}.`;
 }
 
-function minutesToLeave(s: GameState) {
-  return s.departureDeadline - s.minute;
-}
-
 // ---------------------------------------------------------------------------
 
 function QuietView({ s, act }: Props) {
   const e = earliness(s);
   const warning = e > 0.66 ? 'Likely to be very tired.' : e > 0.33 ? "She'll probably be tired." : 'Slightly early.';
   return (
-    <>
+    <div className="panel frame actions">
       <div className="sectionhead">
         <span className="sectitle">What will you do?</span>
         <span className="status">{s.wakeMinute - s.minute} min until she wakes</span>
@@ -93,13 +89,15 @@ function QuietView({ s, act }: Props) {
         you'll need the time.
       </p>
       <ParentTaskButtons s={s} act={act} />
-      <p className="small" style={{ margin: '4px 0 0' }}>Prep is quicker while she sleeps.</p>
-      <div className="callout">
+      <p className="small" style={{ margin: '4px 0 0' }}>
+        Prep is quicker while she sleeps.
+      </p>
+      <div className="callout frame">
         <span>
           <div className="label">Wake her now</div>
           <div className="sub">More time together. {warning}</div>
         </span>
-        <button className="primary" onClick={() => act({ type: 'wakeNow' })}>
+        <button className="primary frame oct" onClick={() => act({ type: 'wakeNow' })}>
           WAKE HER
         </button>
       </div>
@@ -109,20 +107,20 @@ function QuietView({ s, act }: Props) {
           Wait until she wakes →
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
 function ActiveView({ s, act }: Props) {
   const ca = s.childActivity;
-  const childBusy = ca && s.objectives[ca].status === 'active';
-  const stalled = !!ca && childBusy && childStalled(s, ca);
+  const childBusy = !!ca && s.objectives[ca].status === 'active';
+  const stalled = childBusy && !!ca && childStalled(s, ca);
   const deferred = s.incidents.filter((i) => i.status === 'deferred');
-  const left = minutesToLeave(s);
+  const left = s.departureDeadline - s.minute;
   const idle = nothingRunning(s);
 
   return (
-    <>
+    <div className="panel frame actions">
       <div className="sectionhead">
         <span className="sectitle">What next?</span>
         <span className={`status ${left < 0 ? 'red' : left <= 10 ? 'amber' : ''}`}>
@@ -132,11 +130,13 @@ function ActiveView({ s, act }: Props) {
 
       <div className="eyebrow group-label">Your daughter</div>
       {childBusy && ca ? (
-        <div className="mini" style={{ margin: '8px 0' }}>
+        <div className="mini frame" style={{ margin: '8px 0', display: 'block' }}>
           <strong>
-            {TASKS[ca].doing} · about {Math.max(1, Math.ceil((taskDuration(s, ca) - s.objectives[ca].progress) / childRate(s)))} min left
+            {stalled
+              ? `${TASKS[ca].doing} · waiting for you`
+              : `${TASKS[ca].doing} · about ${Math.max(1, Math.ceil((taskDuration(s, ca) - s.objectives[ca].progress) / childRate(s)))} min left`}
           </strong>
-          <div className="progress">
+          <div className={`progress ${stalled ? 'paused' : ''}`}>
             <span style={{ width: `${Math.min(100, (100 * s.objectives[ca].progress) / taskDuration(s, ca))}%` }} />
           </div>
           {s.parentActivity !== 'help' && (
@@ -199,68 +199,114 @@ function ActiveView({ s, act }: Props) {
         onClick={() => act({ type: 'wait' })}
       />
 
-      <div className="callout">
+      <div className="callout frame">
         <span>
           <div className="label">Leave for school</div>
           <div className="sub">{leaveWarning(s)}</div>
         </span>
-        <button className="primary" onClick={() => act({ type: 'leave' })}>
+        <button className="primary frame oct" onClick={() => act({ type: 'leave' })}>
           LEAVE NOW
         </button>
       </div>
-    </>
+    </div>
+  );
+}
+
+/** Risk band shown before choosing, from the live escalation chance. */
+function riskBand(s: GameState, r: ResponseDef): { label: string; cls: string } {
+  if (!r.risky) return { label: 'None', cls: 'risk-none' };
+  if (s.coffeeBuffer) return { label: 'Low', cls: 'risk-low' }; // coffee absorbs one escalation
+  const p = escalationChance(s, r.riskBase);
+  if (p < 0.3) return { label: 'Low', cls: 'risk-low' };
+  if (p < 0.5) return { label: 'Some', cls: 'risk-moderate' };
+  return { label: 'High', cls: 'risk-high' };
+}
+
+function ResponseCard({ s, r, onClick }: { s: GameState; r: ResponseDef; onClick: () => void }) {
+  const risk = riskBand(s, r);
+  return (
+    <button className="btnline frame choice" onClick={onClick}>
+      <span className="what">
+        <span className="label">
+          {r.label}
+          {r.both && <span className="tag">You both</span>}
+        </span>
+        <span className={`sub ${r.risky ? 'risky' : ''}`}>{r.hint}</span>
+        {r.tags && (
+          <span className="outcomes">
+            {r.tags.map((t) => (
+              <span key={t.text} className={`outcome ${t.tone}`}>
+                {t.text}
+              </span>
+            ))}
+          </span>
+        )}
+      </span>
+      <span className="readouts">
+        <span className="readout time">
+          Time <b>{r.minutes}m</b>
+        </span>
+        <span className={`readout ${risk.cls}`}>
+          Risk <b>{risk.label}</b>
+        </span>
+      </span>
+    </button>
   );
 }
 
 function IncidentView({ s, act, inc }: Props & { inc: OpenIncident }) {
   const def = INCIDENTS[inc.id];
+  const urgent = s.minute >= s.departureDeadline;
+  const stuck = s.minute - inc.minute;
   return (
-    <>
-      <div className="sectionhead">
-        <span className="sectitle">Current situation</span>
-        <span className="risk">NEEDS ATTENTION</span>
+    <div className={`crisis frame actions ${urgent ? 'urgent' : ''}`}>
+      <div className="crisis-head">
+        <span className="tri" aria-hidden>
+          ▲
+        </span>
+        <span className="title">{def.title}</span>
+        <span className="code">INC-{String(inc.uid).padStart(2, '0')}</span>
       </div>
-      <div className="situation">
-        <div className="eyebrow">{def.context}</div>
-        <h2>{def.headline(s)}</h2>
-        <p>{inc.note ?? def.detail(s)}</p>
+      <div className="crisis-body">
+        <div className="crisis-meta">
+          <span className="sectitle">Current situation</span>
+          <span className="status amber">{stuck > 0 ? `Waiting ${stuck} min` : 'Needs attention'}</span>
+        </div>
+        <div className="paper frame oct">
+          <div className="doc-head">
+            <span>Situation report</span>
+            <span className="code">{formatClock(inc.minute)}</span>
+          </div>
+          <div className="context">{def.context}</div>
+          <h2>{def.headline(s)}</h2>
+          <p>{inc.note ?? def.detail(s)}</p>
+        </div>
+        {def.responses
+          .filter((r) => !r.available || r.available(s, inc))
+          .map((r) => (
+            <ResponseCard key={r.id} s={s} r={r} onClick={() => act({ type: 'respond', response: r.id })} />
+          ))}
+        <div className="right">
+          {def.deferrable ? (
+            <button className="naked" onClick={() => act({ type: 'defer' })}>
+              Deal with it later
+            </button>
+          ) : (
+            <span />
+          )}
+          {inc.id !== 'bathroom' && (
+            <button className="naked" onClick={() => act({ type: 'leave' })}>
+              Leave for school →
+            </button>
+          )}
+        </div>
       </div>
-      {def.responses
-        .filter((r) => !r.available || r.available(s, inc))
-        .map((r) => (
-          <ChoiceButton
-            key={r.id}
-            label={r.label}
-            sub={r.hint}
-            risky={r.risky}
-            tag={r.both ? 'You both' : undefined}
-            cost={`${r.minutes} MIN`}
-            onClick={() => act({ type: 'respond', response: r.id })}
-          />
-        ))}
-      <div className="right">
-        {def.deferrable ? (
-          <button className="naked" onClick={() => act({ type: 'defer' })}>
-            Deal with it later
-          </button>
-        ) : (
-          <span />
-        )}
-        {inc.id !== 'bathroom' && (
-          <button className="naked" onClick={() => act({ type: 'leave' })}>
-            Leave for school →
-          </button>
-        )}
-      </div>
-    </>
+    </div>
   );
 }
 
 export function ActionPanel({ s, act }: Props) {
   const inc = currentIncident(s);
-  return (
-    <div className="panel actions">
-      {inc ? <IncidentView s={s} act={act} inc={inc} /> : s.childAwake ? <ActiveView s={s} act={act} /> : <QuietView s={s} act={act} />}
-    </div>
-  );
+  if (inc) return <IncidentView s={s} act={act} inc={inc} />;
+  return s.childAwake ? <ActiveView s={s} act={act} /> : <QuietView s={s} act={act} />;
 }

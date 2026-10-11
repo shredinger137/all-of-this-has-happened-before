@@ -1,92 +1,109 @@
 import { MOOD_LABELS } from '../sim/content';
 import { formatClock } from '../sim/constants';
 import type { Results } from '../sim/engine';
-import { MoodBar } from './StatusPanel';
 
-type Props = { r: Results; onRetry: () => void; onReplay: () => void };
+type Props = { r: Results; seed: number; onRetry: () => void; onReplay: () => void };
 
-export function Debrief({ r, onRetry, onReplay }: Props) {
+export function Debrief({ r, seed, onRetry, onReplay }: Props) {
   const late = r.lateness > 0;
   return (
-    <>
-      <div className="bigresult">
-        <div className="result">
-          <div className="eyebrow">Left home</div>
-          <div className="num">{formatClock(r.departed)}</div>
+    <div className="report-wrap">
+      <div className="paper frame oct report-doc">
+        <div className="doc-head">
+          <span>After-action report</span>
+          <span className="code">MORNING {String(seed).padStart(6, '0')}</span>
         </div>
-        <div className="result">
-          <div className="eyebrow">Arrived</div>
-          <div className="num">{formatClock(r.arrived)}</div>
+        <div className="report-title">
+          <div>
+            <div className="context">Monday · school run</div>
+            <h2>Morning complete</h2>
+            <p>Everyone got out of the house.</p>
+          </div>
+          <div className={`stamp ${late ? 'late' : 'ok'}`}>
+            {late ? 'Late' : 'On time'}
+            <small>{late ? `+${r.lateness} min` : formatClock(r.arrived)}</small>
+          </div>
         </div>
-        <div className={`result ${late ? 'negative' : 'positive'}`}>
-          <div className="eyebrow">Time</div>
-          <div className="num">{late ? `+${String(r.lateness).padStart(2, '0')}m` : 'ON TIME'}</div>
+
+        <div className="facts">
+          <div className="fact">
+            <div className="k">Left home</div>
+            <div className="n">{formatClock(r.departed)}</div>
+          </div>
+          <div className="fact">
+            <div className="k">Arrived</div>
+            <div className={`n ${late ? 'bad' : 'good'}`}>{formatClock(r.arrived)}</div>
+          </div>
+          <div className="fact">
+            <div className="k">Household mood</div>
+            <div className="n" style={{ fontFamily: 'var(--font-head)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {MOOD_LABELS[r.mood]}
+            </div>
+          </div>
+          <div className="fact">
+            <div className="k">Assessment</div>
+            <div className="n">
+              {r.score} <span style={{ fontSize: '0.5em', fontFamily: 'var(--font-head)', letterSpacing: '0.1em' }}>{r.grade.toUpperCase()}</span>
+            </div>
+          </div>
         </div>
-        <div className="result">
-          <div className="eyebrow">Assessment</div>
-          <div className="num">{r.score}</div>
-          <div className="small">{r.grade}</div>
+
+        <div className="report-cols">
+          <div>
+            <h3>Completed · {r.completed.length}</h3>
+            <ul>
+              {r.completed.length === 0 && <li>Nothing, really.</li>}
+              {r.completed.map((c) => (
+                <li key={c}>
+                  <span className="node done" />
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3>Left behind · {r.leftBehind.length}</h3>
+            <ul>
+              {r.leftBehind.length === 0 && <li>Nothing.</li>}
+              {r.leftBehind.map((c) => (
+                <li key={c}>
+                  <span className="node" />
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3>Notes</h3>
+            <ul>
+              {r.notes.map((n, i) => (
+                <li key={i}>
+                  <span className="t">{formatClock(n.minute)}</span>
+                  <span>{n.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
+        <p className="report-summary">{r.summary}</p>
       </div>
-      <div className="workarea">
-        <div className="panel">
-          <div className="sectionhead">
-            <span className="sectitle">What got done</span>
-            <span className="status green">{r.completed.length} complete</span>
-          </div>
-          {r.completed.length === 0 && <div className="row muted">Nothing, really.</div>}
-          {r.completed.map((c) => (
-            <div className="row" key={c}>
-              <span className="k">
-                <span className="glyph green">✓</span>
-                {c}
-              </span>
-            </div>
-          ))}
-          <div className="sectionhead spaced">
-            <span className="sectitle">Left behind</span>
-            <span className={`status ${r.leftBehind.length ? 'amber' : 'green'}`}>{r.leftBehind.length} items</span>
-          </div>
-          {r.leftBehind.length === 0 && <div className="row muted">Nothing.</div>}
-          {r.leftBehind.map((c) => (
-            <div className="row" key={c}>
-              <span className="k">
-                <span className="glyph muted">·</span>
-                {c}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="panel">
-          <div className="sectionhead">
-            <span className="sectitle">How it went</span>
-            <span className="status">Household mood · {MOOD_LABELS[r.mood]}</span>
-          </div>
-          <MoodBar mood={r.mood} />
-          <div className="report" style={{ marginTop: 16 }}>
-            <div className="eyebrow">Morning notes</div>
-            {r.notes.map((n, i) => (
-              <p key={i}>
-                <span className="muted">{formatClock(n.minute)}</span> &nbsp; {n.text}
-              </p>
-            ))}
-          </div>
-          <p className="summary" style={{ marginTop: 20 }}>
-            {r.summary}
-          </p>
-          <button className="btnline" onClick={onRetry}>
+
+      <div className="report-actions">
+        <button className="btnline frame" onClick={onRetry}>
+          <span>
             <span className="label">Try another morning</span>
-            <span className="cost">→</span>
-          </button>
-          <button className="btnline" onClick={onReplay}>
-            <span>
-              <span className="label">Same morning again</span>
-              <span className="sub">Same seed. Same surprises, if you make the same choices</span>
-            </span>
-            <span className="cost">↺</span>
-          </button>
-        </div>
+            <span className="sub">New seed, new surprises</span>
+          </span>
+          <span className="cost">→</span>
+        </button>
+        <button className="btnline frame" onClick={onReplay}>
+          <span>
+            <span className="label">Same morning again</span>
+            <span className="sub">Same surprises, if you make the same choices</span>
+          </span>
+          <span className="cost">↺</span>
+        </button>
       </div>
-    </>
+    </div>
   );
 }

@@ -30,6 +30,7 @@ import type {
   MorningCondition,
   Objective,
   OpenIncident,
+  Span,
   TaskId,
 } from './types';
 
@@ -63,6 +64,7 @@ export function createGame(seed: number): GameState {
     morningCondition: 'ordinary',
     childTendency: 'independent',
     history: [],
+    spans: [],
     ended: false,
   };
   s.morningCondition = CONDITION_POOL[Math.floor(rand(s) * CONDITION_POOL.length)];
@@ -145,6 +147,15 @@ function incidentModifier(s: GameState): number {
   if (s.householdMood <= 1) m += 0.15;
   if (s.householdMood >= 4) m -= 0.1;
   return m;
+}
+
+/** Chance a risky response backfires right now (before coffee). Shown to the player as a band. */
+export function escalationChance(s: GameState, base = 0.4): number {
+  let chance = base;
+  if (isGroggy(s)) chance += 0.3 * s.groggyLevel;
+  if (s.householdMood <= 1) chance += 0.15;
+  if (s.householdMood >= 4) chance -= 0.1;
+  return Math.max(0, Math.min(1, chance));
 }
 
 /** How early a wake-up would be right now: 0 = natural, 1 = as early as possible. */
@@ -255,11 +266,42 @@ function onParentComplete(s: GameState, task: TaskId) {
   }
 }
 
+/** Extend the current span for a lane, or start a new one. */
+function record(s: GameState, lane: Span['lane'], kind: Span['kind'] | undefined, task: TaskId | undefined, start: number) {
+  if (!kind) return;
+  const last = [...s.spans].reverse().find((sp) => sp.lane === lane);
+  if (last && last.end === start && last.kind === kind && last.task === task) last.end = start + 1;
+  else s.spans.push({ lane, kind, task, start, end: start + 1 });
+}
+
+/** What each lane is doing during the coming minute. */
+function laneState(s: GameState, engaged: { parent: boolean; child: boolean }) {
+  const pa = s.parentActivity;
+  const parent: [Span['kind'] | undefined, TaskId | undefined] = engaged.parent
+    ? ['incident', undefined]
+    : pa === 'help'
+      ? ['help', s.childActivity]
+      : pa
+        ? ['task', pa]
+        : [undefined, undefined];
+  const ca = s.childActivity;
+  let child: [Span['kind'] | undefined, TaskId | undefined] = [undefined, undefined];
+  if (s.childAwake) {
+    if (engaged.child) child = ['incident', undefined];
+    else if (ca && s.objectives[ca].status === 'blocked') child = ['blocked', ca];
+    else if (ca && s.objectives[ca].status === 'active' && !childStalled(s, ca)) child = ['task', ca];
+  }
+  return { parent, child };
+}
+
 /**
  * Advance one simulated minute. Returns true if something happened that the
  * player should look at. `engaged` marks who is tied up resolving an incident.
  */
 function tick(s: GameState, engaged: { parent: boolean; child: boolean }): boolean {
+  const lanes = laneState(s, engaged);
+  record(s, 'parent', lanes.parent[0], lanes.parent[1], s.minute);
+  record(s, 'child', lanes.child[0], lanes.child[1], s.minute);
   s.minute += 1;
   let event = false;
 
@@ -450,12 +492,8 @@ export function reduce(prev: GameState, action: Action): GameState {
         log: (text, notable) => log(s, text, notable),
         mood: (d) => changeMood(s, d),
         flag: (f) => setFlag(s, f),
-        escalate: ({ base = 0.4, extra = 3 } = {}) => {
-          let chance = base;
-          if (isGroggy(s)) chance += 0.3 * s.groggyLevel;
-          if (s.householdMood <= 1) chance += 0.15;
-          if (s.householdMood >= 4) chance -= 0.1;
-          if (rand(s) >= chance) return false;
+        escalate: ({ base = resp.riskBase ?? 0.4, extra = 3 } = {}) => {
+          if (rand(s) >= escalationChance(s, base)) return false;
           if (s.coffeeBuffer) {
             s.coffeeBuffer = false;
             log(s, 'It nearly went badly. The coffee helped; you stayed calm.', true);

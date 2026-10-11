@@ -70,6 +70,11 @@ describe('parallel activity', () => {
     expect(eat.progress).toBeLessThanOrEqual(10);
   });
 
+  it('records parallel spans for the morning plot', () => {
+    const s = run(ordinary(), { type: 'startParent', task: 'lunch' });
+    expect(s.spans).toEqual([{ lane: 'parent', kind: 'task', task: 'lunch', start: START_MINUTE, end: START_MINUTE + 8 }]);
+  });
+
   it('assigning the child is free', () => {
     const s = run(ordinary(), { type: 'wakeNow' });
     const t = run(s, { type: 'assignChild', task: 'dressed' });

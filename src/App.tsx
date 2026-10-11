@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActionPanel } from './ui/ActionPanel';
 import { Debrief } from './ui/Debrief';
+import { MorningPlot } from './ui/MorningPlot';
 import { StatusPanel } from './ui/StatusPanel';
 import * as sound from './ui/sound';
 import { formatClock, SAFETY_CUTOFF, START_MINUTE } from './sim/constants';
+
+const SEGMENT_MINUTES = 5;
 import { createGame, currentIncident, reduce, results } from './sim/engine';
 import { randomSeed } from './sim/rng';
 import type { Action, GameState } from './sim/types';
@@ -72,8 +75,10 @@ export default function App() {
       : left >= 0
         ? `${left} min to leave`
         : `${-left} min overdue`;
-  const elapsed = Math.min(100, ((game.minute - START_MINUTE) / (game.departureDeadline - START_MINUTE)) * 100);
   const last = game.history[game.history.length - 1];
+  // Departure countdown in 5-minute segments, like a jump timer.
+  const totalSegments = Math.ceil((game.departureDeadline - START_MINUTE) / SEGMENT_MINUTES);
+  const litSegments = Math.max(0, Math.ceil(left / SEGMENT_MINUTES));
 
   return (
     <div className="site">
@@ -83,7 +88,7 @@ export default function App() {
           <div className="brand">SCHOOL RUN</div>
         </div>
         <button
-          className="tool"
+          className="tool frame oct"
           onClick={() => {
             sound.setMuted(!muted);
             setMuted(!muted);
@@ -94,41 +99,52 @@ export default function App() {
         </button>
       </div>
 
-      <div className="terminal" style={{ ['--elapsed' as string]: `${elapsed}%` }}>
-        <header className="head">
-          <div>
-            <div className="eyebrow">Monday / Morning {String(seed).padStart(6, '0')}</div>
-            <h1>{title}</h1>
-            <div className="small">{sub}</div>
-          </div>
-          <div className={`timebox ${late ? 'late' : ''}`}>
-            <div className="time">{formatClock(shownTime)}</div>
-            <div className="time-sub">{timeSub}</div>
-          </div>
-        </header>
+      <div className="bracketed">
+        <div className="terminal frame">
+          <header className="head">
+            <div>
+              <div className="eyebrow">Monday / Morning {String(seed).padStart(6, '0')}</div>
+              <h1>{title}</h1>
+              <div className="small">{sub}</div>
+            </div>
+            <div className={`timebox frame ${late ? 'late' : ''}`}>
+              <div className="time">{formatClock(shownTime)}</div>
+              <div className="time-sub">{timeSub}</div>
+              {!r && (
+                <div className={`segments ${left <= 10 ? 'low' : ''}`} aria-hidden>
+                  {Array.from({ length: totalSegments }, (_, i) => (
+                    <i key={i} className={i < litSegments ? 'on' : ''} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </header>
 
-        {r ? (
-          <Debrief r={r} onRetry={() => start(randomSeed())} onReplay={() => start(seed)} />
-        ) : (
-          <div className="workarea">
-            <StatusPanel s={game} />
-            <ActionPanel s={game} act={act} />
-          </div>
-        )}
+          {!r && <MorningPlot s={game} />}
 
-        <footer className="foot">
           {r ? (
-            <>
-              <strong>{formatClock(r.arrived)}</strong> &nbsp;{' '}
-              {r.lateness > 0 ? 'Morning over. School has begun.' : 'Morning over. The bell has not gone yet.'}
-            </>
+            <Debrief r={r} seed={seed} onRetry={() => start(randomSeed())} onReplay={() => start(seed)} />
           ) : (
-            <>
-              <strong>{formatClock(last.minute)}</strong> &nbsp; {last.text}
-              {game.minute >= SAFETY_CUTOFF - 15 && ' It is getting very late.'}
-            </>
+            <div className="workarea">
+              <StatusPanel s={game} />
+              <ActionPanel s={game} act={act} />
+            </div>
           )}
-        </footer>
+
+          <footer className="foot">
+            {r ? (
+              <>
+                <strong>{formatClock(r.arrived)}</strong> &nbsp;{' '}
+                {r.lateness > 0 ? 'Morning over. School has begun.' : 'Morning over. The bell has not gone yet.'}
+              </>
+            ) : (
+              <>
+                <strong>{formatClock(last.minute)}</strong> &nbsp; {last.text}
+                {game.minute >= SAFETY_CUTOFF - 15 && ' It is getting very late.'}
+              </>
+            )}
+          </footer>
+        </div>
       </div>
       <p className="caption">
         Prototype. Time only moves when you act. Seed {seed}: share the URL to replay this exact morning.
