@@ -83,10 +83,7 @@ export default function App() {
   return (
     <div className="site">
       <div className="site-top">
-        <div>
-          <div className="eyebrow">A morning in crisis</div>
-          <div className="brand">SCHOOL RUN</div>
-        </div>
+        <div className="brand">TUESDAY</div>
         <button
           className="tool frame oct"
           onClick={() => {
@@ -103,7 +100,7 @@ export default function App() {
         <div className="terminal frame">
           <header className="head">
             <div>
-              <div className="eyebrow">Monday / Morning {String(seed).padStart(6, '0')}</div>
+              <div className="eyebrow">Morning {String(seed).padStart(6, '0')}</div>
               <h1>{title}</h1>
               <div className="small">{sub}</div>
             </div>

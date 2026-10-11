@@ -648,7 +648,7 @@ export const BATHROOM_CHANCE = 0.5;
 // ---------------------------------------------------------------------------
 
 export const CONDITIONS: Record<MorningCondition, { label: string; note: string }> = {
-  ordinary: { label: 'An ordinary Monday', note: 'Nothing unusual.' },
+  ordinary: { label: 'An ordinary Tuesday', note: 'Nothing unusual.' },
   lateBedtime: { label: 'Late bedtime', note: 'She went to bed late. She will be tired even at 7.' },
   shoesByDoor: { label: 'Shoes by the door', note: 'Her shoes are where they belong, for once.' },
   noBread: { label: 'No bread', note: 'Lunch will take longer.' },

@@ -15,7 +15,7 @@ export function Debrief({ r, seed, onRetry, onReplay }: Props) {
         </div>
         <div className="report-title">
           <div>
-            <div className="context">Monday · school run</div>
+            <div className="context">Tuesday</div>
             <h2>Morning complete</h2>
             <p>Everyone got out of the house.</p>
           </div>

@@ -1,4 +1,6 @@
-# School Run
+# Tuesday
+
+(Working title in the spec: *School Run*.)
 
 A turn-based browser game about getting a child out the door by 07:45, presented like a
 military crisis console. Built from `docs/operation_school_run_spec_v0_2.md` (design spec v0.2).
