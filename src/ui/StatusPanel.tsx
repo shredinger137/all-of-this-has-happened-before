@@ -77,7 +77,7 @@ export function StatusPanel({ s }: { s: GameState }) {
   const mood = s.householdMood;
   const groggy = isGroggy(s);
   return (
-    <div className="panel frame">
+    <div className="panel frame screen">
       <div className="sectionhead">
         <span className="sectitle">
           <span className="num">01</span>At home

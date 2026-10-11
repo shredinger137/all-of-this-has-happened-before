@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@fontsource/barlow": "^5.1.0",
-    "@fontsource/barlow-condensed": "^5.1.0",
     "@fontsource/ibm-plex-mono": "^5.1.0",
+    "@fontsource/michroma": "^5.2.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

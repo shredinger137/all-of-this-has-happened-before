@@ -8,7 +8,7 @@ export function Debrief({ r, seed, onRetry, onReplay }: Props) {
   const late = r.lateness > 0;
   return (
     <div className="report-wrap">
-      <div className="paper frame oct report-doc">
+      <div className="paper frame report-doc">
         <div className="doc-head">
           <span>After-action report</span>
           <span className="code">MORNING {String(seed).padStart(6, '0')}</span>
@@ -36,14 +36,15 @@ export function Debrief({ r, seed, onRetry, onReplay }: Props) {
           </div>
           <div className="fact">
             <div className="k">Household mood</div>
-            <div className="n" style={{ fontFamily: 'var(--font-head)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div className="n word">
               {MOOD_LABELS[r.mood]}
             </div>
           </div>
           <div className="fact">
             <div className="k">Assessment</div>
             <div className="n">
-              {r.score} <span style={{ fontSize: '0.5em', fontFamily: 'var(--font-head)', letterSpacing: '0.1em' }}>{r.grade.toUpperCase()}</span>
+              {r.score}
+              <span className="grade">{r.grade}</span>
             </div>
           </div>
         </div>

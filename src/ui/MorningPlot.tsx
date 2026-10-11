@@ -61,7 +61,14 @@ export function MorningPlot({ s }: { s: GameState }) {
   const ticks: number[] = [];
   for (let m = START_MINUTE; m <= END - 15; m += 15) ticks.push(m);
   return (
-    <div className="plot" aria-label="Timeline of the morning">
+    <div className="plot frame" aria-label="Timeline of the morning">
+      <div className="plot-tabs">
+        <span className="plot-tab solid">Morning plot</span>
+        <span className="plot-tab optional">06:30 – 08:15</span>
+        <span className="plot-tab spacer" />
+        <span className="plot-tab optional">You · her</span>
+        <span className="plot-tab">{s.ended ? 'Complete' : formatClock(s.minute)}</span>
+      </div>
       <div className="plot-grid">
         <span />
         <div className="track axis">

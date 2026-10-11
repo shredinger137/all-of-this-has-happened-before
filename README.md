@@ -21,9 +21,9 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 | `src/sim/constants.ts` | Clock values (start, wake, deadline, commute, cutoff) |
 | `src/sim/content.ts` | Tasks, incidents + responses, run conditions. **Most tuning happens here.** |
 | `src/sim/engine.ts` | Pure, deterministic reducer: `createGame(seed)`, `reduce(state, action)`, `results(state)` |
-| `src/ui/` | React panels (status, actions/incident, debrief, morning plot) and synthesized sounds |
+| `src/ui/` | `GameScreen` (pure view of a game state) plus its panels: status, actions/incident, debrief, morning plot; synthesized sounds |
 | `scripts/balance.ts` | Bot strategies for comparing openings |
-| `docs/` | Original spec, design mockups, reference screenshots, `ui-reference-notes.md` (Scattered Hopes / BSG principles) |
+| `docs/` | Original spec, design mockups, reference screenshots, `ui-reference-notes.md` (why it reads as Galactica) |
 
 ## How the sim works
 

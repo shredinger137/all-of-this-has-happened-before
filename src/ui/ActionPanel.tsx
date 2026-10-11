@@ -79,7 +79,7 @@ function QuietView({ s, act }: Props) {
   const e = earliness(s);
   const warning = e > 0.66 ? 'Likely to be very tired.' : e > 0.33 ? "She'll probably be tired." : 'Slightly early.';
   return (
-    <div className="panel frame actions">
+    <div className="panel frame screen actions">
       <div className="sectionhead">
         <span className="sectitle">What will you do?</span>
         <span className="status">{s.wakeMinute - s.minute} min until she wakes</span>
@@ -97,7 +97,7 @@ function QuietView({ s, act }: Props) {
           <div className="label">Wake her now</div>
           <div className="sub">More time together. {warning}</div>
         </span>
-        <button className="primary frame oct" onClick={() => act({ type: 'wakeNow' })}>
+        <button className="primary frame" onClick={() => act({ type: 'wakeNow' })}>
           WAKE HER
         </button>
       </div>
@@ -120,7 +120,7 @@ function ActiveView({ s, act }: Props) {
   const idle = nothingRunning(s);
 
   return (
-    <div className="panel frame actions">
+    <div className="panel frame screen actions">
       <div className="sectionhead">
         <span className="sectitle">What next?</span>
         <span className={`status ${left < 0 ? 'red' : left <= 10 ? 'amber' : ''}`}>
@@ -204,7 +204,7 @@ function ActiveView({ s, act }: Props) {
           <div className="label">Leave for school</div>
           <div className="sub">{leaveWarning(s)}</div>
         </span>
-        <button className="primary frame oct" onClick={() => act({ type: 'leave' })}>
+        <button className="primary frame" onClick={() => act({ type: 'leave' })}>
           LEAVE NOW
         </button>
       </div>
@@ -243,7 +243,7 @@ function ResponseCard({ s, r, onClick }: { s: GameState; r: ResponseDef; onClick
         )}
       </span>
       <span className="readouts">
-        <span className="readout time">
+        <span className="readout duration">
           Time <b>{r.minutes}m</b>
         </span>
         <span className={`readout ${risk.cls}`}>
@@ -268,15 +268,7 @@ function IncidentView({ s, act, inc }: Props & { inc: OpenIncident }) {
         <span className="code">INC-{String(inc.uid).padStart(2, '0')}</span>
       </div>
       <div className="crisis-body">
-        <div className="crisis-meta">
-          <span className="sectitle">Current situation</span>
-          <span className="status amber">{stuck > 0 ? `Waiting ${stuck} min` : 'Needs attention'}</span>
-        </div>
-        <div className="paper frame oct">
-          <div className="doc-head">
-            <span>Situation report</span>
-            <span className="code">{formatClock(inc.minute)}</span>
-          </div>
+        <div className="message">
           <div className="context">{def.context}</div>
           <h2>{def.headline(s)}</h2>
           <p>{inc.note ?? def.detail(s)}</p>
@@ -300,6 +292,20 @@ function IncidentView({ s, act, inc }: Props & { inc: OpenIncident }) {
             </button>
           )}
         </div>
+      </div>
+      <div className="crisis-foot">
+        <span className="micro">
+          Logged <b>{formatClock(inc.minute)}</b>
+        </span>
+        <span className="micro">
+          {stuck > 0 ? (
+            <>
+              Waiting <b>{stuck} min</b>
+            </>
+          ) : (
+            <b>Needs attention</b>
+          )}
+        </span>
       </div>
     </div>
   );

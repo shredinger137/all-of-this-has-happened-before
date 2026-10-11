@@ -1,54 +1,67 @@
-# UI reference notes: Scattered Hopes and BSG
+# UI reference notes: reading as *Galactica*
 
-Research pass, 2026-10-10. Sources: the *Battlestar Galactica: Scattered Hopes* Steam store
-screenshots (Alt Shift / Dotemu, 2026) and Battlestar Wiki (DRADIS; Colonial "octagon" aesthetics).
-Per the spec (§4), we borrow **principles**, never assets, logos, fonts or exact layouts.
+Goal (from the user): the console should read as **Battlestar Galactica**, not generic sci-fi.
+Research passes 2026-10-10 and 2026-10-11. Sources:
 
-## What the references do
+- Battlestar Wiki: *Arts and Literature of the Twelve Colonies* (sections "Octagons",
+  "Hexagons", "Polygonal Architecture"), *Computers in the Re-imagined Series*, *DRADIS*,
+  *Combat Information Center*, and set and screen captures linked from those pages.
+- *Battlestar Galactica: Scattered Hopes* Steam store screenshots (Alt Shift / Dotemu, 2026).
 
-**Scattered Hopes**
-- Crisis panel: a solid red header bar with a warning icon, a short title ("Desertion") and a
-  designation code (FMD-1), plus "N turns left to avoid negative effect".
-- A cream "CRISIS REPORT" card sits on the dark UI: paper-coloured documents against
-  console chrome.
-- Choices are side-by-side cards. Each has **Cost** and **Risk** rows (risk as a range, e.g.
-  "0–25"), a SELECT button, and a green RESOLVE connector for the chosen one.
-- Dialogue choices carry consequence tags: "Military → Increases", "Workers → Deteriorates".
-- Investigation screen: a beige paper dossier with cut corners and paperclipped photos, a grid of
-  status pills, and a small legend table of cost bands (VERY HIGH / HIGH / MODERATE / CHEAP).
-- Chrome: chamfered panel corners, L-shaped corner brackets, diamond node icons, dashed leader
-  lines, segmented gauges with numbers, status rings around crew portraits, an FTL-jump panel
-  with a countdown, and a resource strip with red deltas.
-- Palette: near-black with teal for systems, red for crises, green for confirm/complete.
+We borrow **principles**: shapes, colour roles, typographic feel and layout ideas. We don't use
+assets, logos, insignia or the show's own typefaces.
 
-**Battlestar Galactica (2004 series)**
-- Colonial design trims corners at 45°: paper, photos, books and data discs are "snub
-  rectangles" (octagons).
-- DRADIS: a dark field in a red/magenta frame with tabbed headers and tiny small-caps labels.
-  Friendly contacts are green, hostile contacts red; monochrome vector feel.
+## What reads as Galactica
 
-## What School Run takes from them
+1. **Octagons, on all four corners.** Colonial paper, photos, data discs, and "windows and menus"
+   on Colonial computers have their corners trimmed at 45°. Production chose this to make things
+   feel "a bit unconventional and unfamiliar". Hexagons are the secondary shape (dog tags, cards,
+   corridors, the CIC table). A two-corner chamfer reads as generic sci-fi.
+2. **Black CRT glass.** Screens are near-black, slightly blooming, with scanlines. Text glows.
+3. **Colour by function on screen.** Cyan for message text ("HAVE HOPE. WE'RE COMING FOR YOU."),
+   green for status ("CHANNEL OPEN"), amber/yellow for confirmations ("PACKET RECEIVED"), red for
+   alarms.
+4. **Wide extended caps.** On-screen labels use a wide, geometric, all-caps face (a
+   Eurostile-Extended look) with generous tracking. Micro-legends are tiny caps
+   ("SYS_REQ OUTPUT / PRIMARY DATA BUS", "DATA THROUGHPUT STATUS: NOMINAL").
+5. **Message windows.** An octagon with a thick **khaki/olive bezel**, a dark title strip carrying
+   micro labels, centred cyan caps text, and a matching footer strip.
+6. **Salmon / red-orange outlined controls.** Buttons like SOURCE, ACQUIRE and CYCLE, outlined
+   number keypads, and salmon bar gauges.
+7. **DRADIS.** A black field inside **red-magenta chrome** with angled tab headers ("SYS REQ",
+   "SHUT DOWN", "CENTRAL TAC"), a blue grid, green friendly contacts and red hostiles.
+8. **Hardware.** Gunmetal consoles, rows of guarded red switches, round amber/red/green indicator
+   lamps, chunky analogue dials, warm desk lamps.
 
-| Principle | Where it lives |
+## How Tuesday applies it
+
+| Galactica principle | Implementation |
 |---|---|
-| 45° cut corners | `.frame` / `.frame.oct` in `src/styles.css`: panels (two corners), buttons and paper (four) |
-| Paper documents on console chrome | Situation report inside each incident; debrief is an after-action report with a rubber stamp |
-| Crisis header + designation code | `IncidentView`: amber bar (red after 07:45), ▲, title, `INC-03`, "Waiting N min" |
-| Cost / Risk read-outs | `ResponseCard`: TIME and RISK cells; risk band from the sim's live `escalationChance` (grogginess, mood, coffee) |
-| Consequence tags | `ResponseDef.tags` in `src/sim/content.ts` ("Mood ↑ likely", "No socks") |
-| Status rings | Activity cards show task progress as a ring with minutes left |
-| Segmented gauge / jump countdown | Time box: 5-minute segments until departure |
-| Diamond nodes | Checklist markers: filled = done, half = in progress, flashing = stopped |
-| Corner brackets | `.bracketed` around the terminal |
-| DRADIS-style track | `MorningPlot`: 06:30–08:15 track with lanes for you and her, recorded spans, dashed projections, LEAVE/BELL lines |
+| Octagons everywhere | `.frame` in `src/styles.css`: every panel, button, window and printout is an octagon (edge width `--bw`) |
+| Hexagons | Checklist pips (`.node`) are hexagons |
+| CRT glass | `.screen`: near-black fill, scanlines, centre bloom; glowing text via `--glow` |
+| Colour by function | Cyan messages and log, green done/status, amber time/costs/in-progress, red stopped/late/problems |
+| Wide caps | Michroma (OFL, Eurostile-Extended-like) for titles, strips, button labels, micro legends. Body copy stays in Barlow for readability |
+| Message window | Incidents (`IncidentView`): khaki bezel, title strip (`▲ SOCKS · INC-02`), centred cyan headline, footer strip (`LOGGED 07:12 · WAITING 2 MIN`) |
+| Salmon controls | `.btnline` / `.callout` / `.primary` / `.tool` |
+| DRADIS | `MorningPlot`: red-magenta frame with angled tabs; your and her activity as green "friendly" bars, incidents as red "hostile" bars, blue grid, LEAVE/BELL lines |
+| Hardware | Gunmetal housing (`.terminal`) with indicator lamps: Awake, Groggy, Coffee, Problem (blinking), Late (blinking) |
+| Colonial printout | Debrief: octagonal paper after-action report with rubber stamp |
 
 ## Deliberately not taken
 
-- **Teal and red as the main accents.** The spec palette (charcoal, amber, desaturated green)
-  stays. Red is kept for being late and for genuinely urgent states, as the spec asks.
-- **Portraits, ship art, icons and logos.** The spec says "no custom graphics", and those are
-  proprietary assets.
-- **Military-parody copy.** Codes like `INC-03` are ornament. The writing stays plain ("Socks",
-  "She doesn't want those socks").
-- **Risk as numeric ranges.** We show bands (None/Low/Some/High) so there are no hidden
-  coin-flips, but the player also isn't doing arithmetic over breakfast.
+- Logos, the Colonial eagle, colony symbols, ship art, portraits: proprietary, and the spec says
+  no custom graphics.
+- The word "DRADIS" and other show jargon on screen. Labels stay plain ("Morning plot", "You",
+  "Her"). The spec's copy restraint still applies: the serious interface carries the joke and the
+  writing stays ordinary.
+- Military parody headings ("Condition One", "Action stations").
+- Animated CRT flicker and screen shake. Only the Problem and Late lamps and a stopped task's pip
+  blink, and not at all with `prefers-reduced-motion`.
+
+## Departure from the spec palette
+
+Spec §4 listed a charcoal/slate/amber palette. The user later asked for the UI to read as
+Galactica, which needs black CRT glass, cyan/green screen text, salmon controls and red-magenta
+DRADIS chrome. The spec's restraint survives: red is kept for genuinely urgent states (problems,
+lateness, the bell), and copy stays plain.

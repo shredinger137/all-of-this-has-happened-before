@@ -2,13 +2,10 @@
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { CHILD_TASKS, INCIDENTS, PARENT_TASKS } from '../sim/content';
-import { childTaskBlocker, createGame, currentIncident, parentTaskBlocker, reduce, results } from '../sim/engine';
+import { childTaskBlocker, createGame, currentIncident, parentTaskBlocker, reduce } from '../sim/engine';
 import { nextRandom } from '../sim/rng';
 import type { Action, GameState } from '../sim/types';
-import { ActionPanel } from './ActionPanel';
-import { Debrief } from './Debrief';
-import { MorningPlot } from './MorningPlot';
-import { StatusPanel } from './StatusPanel';
+import { GameScreen } from './GameScreen';
 
 function legalActions(s: GameState): Action[] {
   const inc = currentIncident(s);
@@ -38,9 +35,7 @@ describe('UI renders every reachable state', () => {
     for (let seed = 1; seed <= 200; seed++) {
       let s = createGame(seed);
       for (let step = 0; step < 300 && !s.ended; step++) {
-        renderToString(<StatusPanel s={s} />);
-        renderToString(<ActionPanel s={s} act={act} />);
-        renderToString(<MorningPlot s={s} />);
+        renderToString(<GameScreen game={s} seed={seed} act={act} onRetry={act} onReplay={act} />);
         states++;
         const options = legalActions(s);
         const [r, next] = nextRandom(rng);
@@ -48,9 +43,8 @@ describe('UI renders every reachable state', () => {
         s = reduce(s, options[Math.floor(r * options.length)]);
       }
       expect(s.ended).toBe(true);
-      const html = renderToString(<Debrief r={results(s)} seed={seed} onRetry={act} onReplay={act} />);
+      const html = renderToString(<GameScreen game={s} seed={seed} act={act} onRetry={act} onReplay={act} />);
       expect(html).toContain('Left home');
-      renderToString(<MorningPlot s={s} />);
     }
     expect(states).toBeGreaterThan(1000);
   });
