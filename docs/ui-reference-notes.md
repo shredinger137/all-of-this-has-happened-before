@@ -46,7 +46,7 @@ assets, logos, insignia or the show's own typefaces.
 | Salmon controls | `.btnline` / `.callout` / `.primary` / `.tool` |
 | DRADIS | `MorningPlot`: red-magenta frame with angled tabs; your and her activity as green "friendly" bars, incidents as red "hostile" bars, blue grid, LEAVE/BELL lines, a faint afterglow behind the sweep line, and a blinking diamond "contact" for the open problem |
 | Hardware | Gunmetal housing (`.terminal`) with indicator lamps: Awake, Groggy, Coffee, Problem (blinking), Late (blinking) |
-| Guarded switches | `Dock`: the irreversible commits (wake her, leave) sit under a hinged, striped cover, like the FTL jump key. Lifting the cover is free and shows what you are committing to (what's not done, how tired she'll be); the lit key acts. Amber for wake, red for leave |
+| Commit key | `Dock`: the irreversible commits (wake her, leave) are a single lit key, amber for wake and red for leave, with the consequence (what's not done, how tired she'll be) shown beside it at all times. A hinged guard cover was tried and dropped: one press is enough |
 | Button banks | Action keys tile into a grid (`.bank`) on wide screens, like the CIC's banks of keys |
 | Message window flash | A new incident's khaki bezel flashes amber twice |
 | Colonial printout | Debrief: octagonal paper after-action report with rubber stamp and an "end of report / filed" foot line |
@@ -54,8 +54,8 @@ assets, logos, insignia or the show's own typefaces.
 ### Layout decisions (2026-10-23)
 
 - **Leaving is always in reach.** The bottom strip (`Dock`) is sticky at every width and carries the clock,
-  the latest log line and the guarded switch. Leave and wake used to be the last cards in a long list,
-  below the fold. The two-step cover also stops accidental departures, since leaving can't be undone.
+  the latest log line and the leave/wake key. Leave and wake used to be the last cards in a long list,
+  below the fold.
 - **Large monitors scale the console** (`zoom` 1.2 at ≥1700px, 1.4 at ≥2200px) instead of leaving a small
   column with 11px labels in the middle of the screen.
 - **Phones:** lamps take their own single row under the title; the dock drops the log timestamp because
