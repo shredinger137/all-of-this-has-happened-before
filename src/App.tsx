@@ -42,13 +42,13 @@ export default function App() {
     const g = createGame(newSeed);
     prev.current = g;
     setGame(g);
-    window.scrollTo({ top: 0 });
   };
 
   return (
     <div className="site">
       <div className="site-top">
         <div className="brand">TUESDAY</div>
+        <div className="caption">Prototype · seed {seed} · share the URL to replay this morning</div>
         <button
           className="tool frame"
           onClick={() => {
@@ -63,9 +63,6 @@ export default function App() {
 
       <GameScreen game={game} seed={seed} act={act} onRetry={() => start(randomSeed())} onReplay={() => start(seed)} />
 
-      <p className="caption">
-        Prototype. Time only moves when you act. Seed {seed}: share the URL to replay this exact morning.
-      </p>
     </div>
   );
 }

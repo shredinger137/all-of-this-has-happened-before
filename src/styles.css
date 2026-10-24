@@ -7,7 +7,8 @@
  *  - salmon-outlined screen buttons; khaki-bezelled message windows with micro-label strips
  *  - a DRADIS-style plot: red-magenta chrome, blue grid, green friendlies, red hostiles
  *  - gunmetal hardware housing with indicator lamps; the debrief is a Colonial printout
- *  - commits (wake, leave) are a lit key in a sticky dock along the bottom
+ *  - commits (wake, leave) are a lit key in the status bar along the bottom
+ *  - the console fills exactly one screen: header, plot and status bar are fixed; screens scroll inside
  */
 :root {
   color-scheme: dark;
@@ -50,9 +51,11 @@
   --font-wide: 'Michroma', 'Eurostile', 'Microgramma', 'Arial', sans-serif;
   --mono: 'IBM Plex Mono', Consolas, 'Courier New', monospace;
   --glow: 0 0 7px color-mix(in srgb, currentColor 45%, transparent);
+  --zoom: 1;
 }
 
 * { box-sizing: border-box; }
+html, body, #root { height: 100%; }
 
 body {
   margin: 0;
@@ -117,7 +120,7 @@ button { font: inherit; color: inherit; }
 @keyframes blink { to { background: #3a1410; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .node.blocked, .lamp.on.alarm i, .contact, .crisis { animation: none; }
+  .node.blocked, .lamp.on.alarm i, .contact, .crisis, .tab.alert { animation: none; }
 }
 
 /* Micro labels: the tiny caps legends printed on every Colonial screen strip. */
@@ -125,11 +128,12 @@ button { font: inherit; color: inherit; }
 
 /* ---------------------------------------------------------------- page + housing */
 
-.site { max-width: 1240px; margin: 0 auto; padding: 16px 22px 40px; }
+/* The console is exactly one screen tall; only the screens inside it scroll. */
+.site { max-width: 1240px; height: calc(100dvh / var(--zoom)); min-height: 520px; margin: 0 auto; padding: 10px 22px 12px; display: flex; flex-direction: column; zoom: var(--zoom); }
 /* On big monitors scale the whole console up rather than leaving a small column in the middle. */
-@media (min-width: 1700px) { .site { zoom: 1.2; } }
-@media (min-width: 2200px) { .site { zoom: 1.4; } }
-.site-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 4px 12px; }
+@media (min-width: 1700px) { :root { --zoom: 1.2; } }
+@media (min-width: 2200px) { :root { --zoom: 1.4; } }
+.site-top { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 4px 8px; }
 .brand { font: 400 20px/1 var(--font-wide); letter-spacing: 0.38em; color: #dfe4e7; text-shadow: 0 1px 0 #000; }
 .tool { --c: 6px; --bw: 1.5px; --frame-edge: var(--salmon); --frame-fill: var(--glass); border: none; padding: 9px 14px; font: 400 9.5px/1 var(--font-wide); letter-spacing: 0.16em; color: var(--salmon-ink); cursor: pointer; text-transform: uppercase; }
 .tool:hover { --frame-fill: var(--salmon-deep); }
@@ -142,17 +146,20 @@ button { font: inherit; color: inherit; }
   --frame-fill: linear-gradient(180deg, #30363b, #23282c 40%, #1e2225);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
   padding: 8px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
+.terminal > * { flex: none; }
 
-.head { padding: 16px 22px 14px; display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'title time' 'lamps time'; gap: 0 18px; align-items: center; }
-.head-title { grid-area: title; min-width: 0; }
-.head .timebox { grid-area: time; }
-.head .lamps { grid-area: lamps; }
+.head { padding: 10px 22px 10px; display: flex; justify-content: space-between; gap: 18px; align-items: center; }
+.head-title { min-width: 0; }
 .head h1 { font: 400 23px/1.2 var(--font-wide); letter-spacing: 0.1em; text-transform: uppercase; margin: 6px 0 5px; color: #eef2f4; }
 .small { font-size: 13px; color: #a8b6bb; }
 
 /* Indicator lamps on the housing. */
-.lamps { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; }
+.lamps { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: 7px 14px; }
 .lamp { display: flex; align-items: center; gap: 7px; font: 400 8.5px/1 var(--font-wide); letter-spacing: 0.14em; color: #7f8a90; text-transform: uppercase; }
 .lamp i { width: 9px; height: 9px; border-radius: 50%; background: #3a2f2b; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7); }
 .lamp.on { color: #d9dfe2; }
@@ -203,8 +210,22 @@ button { font: inherit; color: inherit; }
 
 /* ---------------------------------------------------------------- screens */
 
-.workarea { padding: 0 6px 8px; display: grid; grid-template-columns: minmax(280px, 0.72fr) minmax(350px, 1.5fr); gap: 10px; align-items: start; }
-.panel { --c: 14px; --bw: 2px; padding: 0 16px 18px; min-width: 0; }
+.terminal > .workarea { flex: 1; min-height: 0; }
+.workarea { padding: 0 6px 8px; display: grid; grid-template-columns: minmax(280px, 0.72fr) minmax(350px, 1.5fr); grid-template-rows: minmax(0, 1fr); gap: 10px; }
+/* A screen: fixed title strip, scrolling body. */
+.panel { --c: 14px; --bw: 2px; padding: 0 16px; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.panel > .sectionhead { flex: none; }
+.panel-body { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -16px; padding: 0 16px 16px; }
+.panel-body, .crisis-body, .workarea.report { scrollbar-width: thin; scrollbar-color: #3c474c transparent; }
+
+/* Tabs on a screen's title strip, or above the screen on a phone. */
+.sectionhead.tabhead { padding: 7px 14px 0; align-items: flex-end; }
+.tabs { display: flex; gap: 4px; }
+.tab { border: none; cursor: pointer; padding: 6px 18px 7px; font: 400 9px/1 var(--font-wide); letter-spacing: 0.16em; text-transform: uppercase; color: var(--khaki); background: #1b1d14; clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 100%, 0 100%); }
+.tab:hover { color: #e3e2bf; }
+.tab.on { background: var(--khaki); color: #15160f; }
+.tab:focus-visible { outline: 1px solid #fff; outline-offset: -3px; }
+.tab.alert:not(.on) { color: var(--red); animation: lampblink 1s steps(2, start) infinite; }
 
 /* Title strip across the top of each screen. */
 .sectionhead {
@@ -321,7 +342,9 @@ button { font: inherit; color: inherit; }
 
 /* ---------------------------------------------------------------- incident: message window */
 
-.crisis { --c: 18px; --bw: 4px; --frame-edge: var(--khaki); --frame-fill: var(--glass); padding: 4px; animation: crisisflash 1.2s; }
+.crisis { --c: 18px; --bw: 4px; --frame-edge: var(--khaki); --frame-fill: var(--glass); padding: 4px; animation: crisisflash 1.2s; min-height: 0; display: flex; flex-direction: column; }
+.crisis > * { flex: none; }
+.crisis > .crisis-body { flex: 1; min-height: 0; overflow-y: auto; }
 /* The bezel flashes amber twice when a problem comes in. */
 @keyframes crisisflash { 0%, 50% { --frame-edge: var(--amber); } 25%, 75%, 100% { --frame-edge: var(--khaki); } }
 .crisis.urgent { --frame-edge: #c9705a; }
@@ -343,23 +366,18 @@ button { font: inherit; color: inherit; }
 
 /* ---------------------------------------------------------------- log + footer */
 
-.log { margin: 0; padding: 0; list-style: none; font: 12px/1.6 var(--mono); max-height: 220px; overflow-y: auto; }
+.log { margin: 0; padding: 0; list-style: none; font: 12px/1.6 var(--mono); }
 .log li { display: flex; gap: 10px; color: var(--cyan-dim); }
 .log li .t { color: var(--khaki-dim); flex: none; }
 .log li.notable { color: var(--cyan); }
-details summary { cursor: pointer; list-style: none; }
-details summary::-webkit-details-marker { display: none; }
-details summary .sectitle::after { content: ' +'; }
-details[open] summary .sectitle::after { content: ' −'; }
 
-.foot { --c: 10px; --bw: 1px; margin: 0 6px; padding: 10px 18px 11px; color: var(--cyan); font: 12.5px/1.4 var(--mono); text-shadow: var(--glow); }
-.foot strong { color: var(--amber); font-weight: 600; }
 
 /* ---------------------------------------------------------------- dock */
 
-.dock { --c: 12px; --bw: 1.5px; position: sticky; bottom: 8px; z-index: 5; margin: 0 6px; padding: 8px 8px 8px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
-.dock-time { display: flex; flex-direction: column; gap: 3px; padding-right: 16px; border-right: 1px solid var(--rule); }
-.dock-time > span:first-child { font: 600 19px/1 var(--mono); font-variant-numeric: tabular-nums; text-shadow: var(--glow); }
+.dock { --c: 12px; --bw: 1.5px; margin: 0 6px; padding: 8px 8px 8px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
+.dock.ended { grid-template-columns: 1fr auto; }
+.dock .lamps { padding-right: 16px; border-right: 1px solid var(--rule); }
+.dock-keys { display: flex; gap: 8px; }
 .dock-text { min-width: 0; color: var(--cyan); font: 12.5px/1.4 var(--mono); text-shadow: var(--glow); }
 .dock-text strong { color: var(--amber); font-weight: 600; }
 .dock-text .warning { color: var(--amber-dim); font-size: 11.5px; margin-top: 2px; text-shadow: none; }
@@ -381,13 +399,15 @@ details[open] summary .sectitle::after { content: ' −'; }
   clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
 }
 .dock-key.tone-amber { --lit: var(--amber); }
+.dock-key.tone-salmon { --lit: var(--salmon); }
 .dock-key:hover:not(:disabled) { filter: brightness(1.12); }
 .dock-key:focus-visible { outline: 2px solid #fff; outline-offset: -5px; }
 .dock-key:disabled { background: #2a1a17; color: #6d5b55; cursor: not-allowed; }
 
 /* ---------------------------------------------------------------- debrief: Colonial printout */
 
-.report-wrap { padding: 6px 6px 8px; }
+.workarea.report { display: block; overflow-y: auto; }
+.report-wrap { padding: 0 0 2px; }
 .paper { --c: 12px; --bw: 1px; --frame-fill: var(--paper); --frame-edge: var(--paper-edge); color: var(--paper-ink); padding: 14px 18px 15px; }
 .paper .doc-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; margin-bottom: 12px; border-bottom: 1px solid #b6ae98; font: 400 9px/1.3 var(--font-wide); letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-dim); }
 .paper .doc-head .code { font: 500 11px/1.3 var(--mono); letter-spacing: 0; }
@@ -435,36 +455,38 @@ details[open] summary .sectitle::after { content: ' −'; }
 .report-summary { margin: 20px 0 0; padding-top: 12px; border-top: 1px solid #b6ae98; font-size: 16px; font-style: italic; }
 .paper .doc-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 8px; border-top: 1px dashed #b6ae98; font: 400 8.5px/1.3 var(--font-wide); letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-dim); }
 .paper .doc-foot .code { font: 500 10.5px/1.3 var(--mono); letter-spacing: 0.04em; }
-.report-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-.report-actions .btnline { flex: 1; min-width: 240px; margin: 0; }
 
-.caption { color: #6f7b80; font-size: 12px; margin: 12px 6px 0; }
+.caption { flex: 1; text-align: right; color: #6f7b80; font-size: 12px; }
 
 /* ---------------------------------------------------------------- small screens */
 
 @media (max-width: 730px) {
-  .site { padding: 8px 6px 22px; }
-  .site-top { margin: 4px 6px 10px; }
+  .site { padding: 6px 6px 6px; min-height: 480px; }
+  .site-top { margin: 2px 6px 6px; }
+  .caption { display: none; }
   .brand { font-size: 16px; letter-spacing: 0.3em; }
   .terminal { --c: 14px; padding: 5px; }
-  .head { padding: 14px 12px 12px; gap: 0 10px; align-items: start; grid-template-areas: 'title time' 'lamps lamps'; }
-  .head h1 { font-size: 16px; overflow-wrap: anywhere; }
-  .head .small { font-size: 12px; }
-  .lamps { gap: 6px 10px; flex-wrap: nowrap; margin-top: 12px; justify-content: space-between; }
+  .head { padding: 10px 12px 8px; gap: 10px; align-items: start; }
+  .head h1 { font-size: 15px; overflow-wrap: anywhere; margin: 4px 0 3px; }
+  .head .small { font-size: 11.5px; line-height: 1.3; }
+  .lamps { display: flex; gap: 6px 10px; justify-content: space-between; }
   .lamp { font-size: 7.5px; letter-spacing: 0.1em; gap: 5px; }
   .timebox { flex: none; min-width: 0; padding: 8px 10px; }
   .time { font-size: 21px; }
   .time-sub { font-size: 7px; letter-spacing: 0.1em; }
   .segments i { width: 4px; }
   .plot { margin: 0 2px 6px; padding: 0 6px 8px; }
-  .plot-tab { padding: 5px 10px 6px; }
+  .plot-tabs { margin-bottom: 4px; }
+  .plot-tab { padding: 4px 10px 5px; }
   .plot-tab.optional { display: none; }
-  .plot-grid { grid-template-columns: 32px 1fr; padding: 8px 8px 9px 6px; }
+  .plot-grid { grid-template-columns: 32px 1fr; padding: 6px 8px 7px 6px; row-gap: 4px; }
   .tick.minor, .tick-time { display: none; }
-  .track { height: 16px; }
+  .track { height: 13px; }
   .track.axis { height: 14px; }
-  .workarea { padding: 0 2px 6px; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
-  .workarea > .actions { order: -1; }
+  .workarea { padding: 0 2px 6px; display: flex; flex-direction: column; gap: 0; }
+  .workarea > .tabs { flex: none; padding: 0 10px; }
+  .workarea > .tabs .tab { flex: 1; }
+  .workarea > .panel, .workarea > .crisis { flex: 1; }
   .panel { padding: 0 12px 14px; }
   .sectionhead { margin: 0 -12px 12px; padding: 9px 14px 8px 16px; }
   .btnline { min-height: 54px; padding: 10px 11px; }
@@ -472,16 +494,13 @@ details[open] summary .sectitle::after { content: ' −'; }
   .readouts { grid-template-columns: 1fr 1fr; grid-template-rows: none; }
   .message h2 { font-size: 15px; }
   .crisis-body { padding: 12px 10px 4px; }
-  .foot { margin: 0 2px; padding: 10px 12px; }
-  .dock { margin: 0 2px; bottom: 4px; padding: 6px 6px 6px 10px; gap: 10px; }
-  .dock-time { padding-right: 10px; }
-  .dock-time > span:first-child { font-size: 16px; }
-  .dock-time .micro { font-size: 7px; letter-spacing: 0.08em; }
+  .dock { margin: 0 2px; padding: 7px 6px 6px 10px; gap: 6px 10px; grid-template-columns: 1fr auto; }
+  .dock .lamps { grid-column: 1 / -1; padding: 0 4px 6px 0; border-right: none; border-bottom: 1px solid var(--rule); }
   .dock-text { font-size: 11.5px; }
   .dock-text > div { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .dock-log > strong { display: none; } /* the dock clock already says when */
   .dock-text .warning { font-size: 10.5px; }
   .dock-key { min-width: 0; width: 96px; padding: 12px 8px; font-size: 9.5px; letter-spacing: 0.1em; line-height: 1.3; }
+  .dock-keys .dock-key { width: 84px; }
   .report-doc { --c: 16px; padding: 20px 16px 22px; }
   .report-title { flex-direction: column-reverse; gap: 8px; }
   .report-title h2 { font-size: 18px; }

@@ -21,7 +21,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 | `src/sim/constants.ts` | Clock values (start, wake, deadline, commute, cutoff) |
 | `src/sim/content.ts` | Tasks, incidents + responses, run conditions. **Most tuning happens here.** |
 | `src/sim/engine.ts` | Pure, deterministic reducer: `createGame(seed)`, `reduce(state, action)`, `results(state)` |
-| `src/ui/` | `GameScreen` (pure view of a game state) plus its panels: status, actions/incident, debrief, morning plot, and the sticky `Dock` with the leave/wake key; synthesized sounds |
+| `src/ui/` | `GameScreen` (pure view of a game state) plus its panels: status, actions/incident, debrief, morning plot, and the `Dock` status bar with the leave/wake key; the console fills one screen and screens scroll inside; synthesized sounds |
 | `scripts/balance.ts` | Bot strategies for comparing openings |
 | `docs/` | Original spec, design mockups, reference screenshots, `ui-reference-notes.md` (why it reads as Galactica) |
 
@@ -46,7 +46,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 - Risky responses escalate with ~40% chance (+ groggy, + low mood): mood −1, the task
   takes longer, and 2 extra minutes for both of you.
 - **Leaving mid-incident** is allowed; the problem is left unresolved and shows in the debrief.
-- **Leave and wake live in a sticky dock** with what you'd leave undone shown beside the key.
+- **Leave and wake live in the status bar** with what you'd leave undone shown beside the key.
 - **A bathroom trip at the door stops both activities**: nobody keeps eating breakfast with their coat on.
 - Score = 100 − 3/late min − 8/missing objective − 3/extra loose end ± mood. It's shown, but
   the debrief leads with times and the checklist.

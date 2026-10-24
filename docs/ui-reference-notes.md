@@ -53,13 +53,15 @@ assets, logos, insignia or the show's own typefaces.
 
 ### Layout decisions (2026-10-23)
 
-- **Leaving is always in reach.** The bottom strip (`Dock`) is sticky at every width and carries the clock,
-  the latest log line and the leave/wake key. Leave and wake used to be the last cards in a long list,
-  below the fold.
+- **One screen, no page scroll.** The console fills the viewport: header (title, clock), morning plot and
+  the status bar (`Dock`: lamps, latest log line, what you'd leave undone, the leave/wake key) are fixed.
+  Each screen keeps its title strip and scrolls its own body. Wide screens show Status|Log tabs on the left
+  screen next to the actions; phones get Actions|Status|Log tabs and jump to Actions when a problem comes
+  in (the Actions tab blinks red otherwise). Once the morning is over the status bar carries the
+  "same again" / "new morning" keys and the report scrolls in the work area.
 - **Large monitors scale the console** (`zoom` 1.2 at ≥1700px, 1.4 at ≥2200px) instead of leaving a small
   column with 11px labels in the middle of the screen.
-- **Phones:** lamps take their own single row under the title; the dock drops the log timestamp because
-  its clock already shows the time.
+- **Phones:** the lamps take their own row at the top of the status bar.
 - **Checklist counts only what the debrief scores** (8 items). Making breakfast and finding shoes are listed
   under "Prep", so "1 of 9" during play can't become "Completed · 0" in the report.
 

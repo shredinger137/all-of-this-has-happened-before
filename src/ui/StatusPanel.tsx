@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { CHECKLIST, CONDITIONS, MOOD_LABELS, TASKS, TENDENCIES } from '../sim/content';
 import { formatClock } from '../sim/constants';
 import { childRate, childStalled, isGroggy, parentRate, taskDuration } from '../sim/engine';
@@ -72,106 +73,117 @@ function ActivityCard({ s, who }: { s: GameState; who: 'parent' | 'child' }) {
   );
 }
 
-export function StatusPanel({ s }: { s: GameState }) {
+/** `head` is the fixed strip above the scrolling body (the tab strip on wide screens). */
+export function StatusPanel({ s, head }: { s: GameState; head?: ReactNode }) {
   const done = CHECKLIST.filter((t) => s.objectives[t].status === 'done').length;
   const mood = s.householdMood;
   const groggy = isGroggy(s);
   return (
     <div className="panel frame screen">
-      <div className="sectionhead">
-        <span className="sectitle">
-          <span className="num">01</span>At home
-        </span>
-        <span className={`status ${s.childAwake ? 'amber' : 'green'}`}>{s.childAwake ? 'Active' : 'Quiet'}</span>
-      </div>
-      <div className="row">
-        <span className="k">Your daughter</span>
-        <span className="v">{s.childAwake ? (groggy ? 'Awake · groggy' : 'Awake') : 'Asleep'}</span>
-      </div>
-      {!s.childAwake && (
-        <div className="row">
-          <span className="k">Usually wakes</span>
-          <span className="v">{formatClock(s.wakeMinute)}</span>
+      {head}
+      <div className="panel-body">
+        <div className="sectionhead">
+          <span className="sectitle">
+            <span className="num">01</span>At home
+          </span>
+          <span className={`status ${s.childAwake ? 'amber' : 'green'}`}>{s.childAwake ? 'Active' : 'Quiet'}</span>
         </div>
-      )}
-      <div className="row">
-        <span className="k">Today</span>
-        <span className="v" title={CONDITIONS[s.morningCondition].note}>
-          {CONDITIONS[s.morningCondition].label}
-        </span>
-      </div>
-      <div className="row">
-        <span className="k">She is</span>
-        <span className="v" title={TENDENCIES[s.childTendency].note}>
-          {TENDENCIES[s.childTendency].label}
-        </span>
-      </div>
-      <div className="row" style={{ marginBottom: 5 }}>
-        <span className="k">Household mood</span>
-        <span className={`v ${mood <= 1 ? 'red' : mood === 2 ? 'amber' : 'green'}`}>{MOOD_LABELS[mood]}</span>
-      </div>
-      <MoodBar mood={mood} />
-      {s.coffeeBuffer && <div className="small" style={{ marginTop: 8 }}>Coffee in hand. You'll keep your cool once.</div>}
-
-      {s.childAwake && (
-        <>
-          <div className="sectionhead spaced">
-            <span className="sectitle">
-              <span className="num">02</span>Activities
-            </span>
-            <span className="status">2 slots</span>
+        <div className="row">
+          <span className="k">Your daughter</span>
+          <span className="v">{s.childAwake ? (groggy ? 'Awake · groggy' : 'Awake') : 'Asleep'}</span>
+        </div>
+        {!s.childAwake && (
+          <div className="row">
+            <span className="k">Usually wakes</span>
+            <span className="v">{formatClock(s.wakeMinute)}</span>
           </div>
-          <div className="two-stat">
-            <ActivityCard s={s} who="parent" />
-            <ActivityCard s={s} who="child" />
-          </div>
-        </>
-      )}
+        )}
+        <div className="row">
+          <span className="k">Today</span>
+          <span className="v" title={CONDITIONS[s.morningCondition].note}>
+            {CONDITIONS[s.morningCondition].label}
+          </span>
+        </div>
+        <div className="row">
+          <span className="k">She is</span>
+          <span className="v" title={TENDENCIES[s.childTendency].note}>
+            {TENDENCIES[s.childTendency].label}
+          </span>
+        </div>
+        <div className="row" style={{ marginBottom: 5 }}>
+          <span className="k">Household mood</span>
+          <span className={`v ${mood <= 1 ? 'red' : mood === 2 ? 'amber' : 'green'}`}>{MOOD_LABELS[mood]}</span>
+        </div>
+        <MoodBar mood={mood} />
+        {s.coffeeBuffer && <div className="small" style={{ marginTop: 8 }}>Coffee in hand. You'll keep your cool once.</div>}
 
-      <div className="sectionhead spaced">
-        <span className="sectitle">
-          <span className="num">{s.childAwake ? '03' : '02'}</span>Morning checklist
-        </span>
-        <span className={`status ${done === CHECKLIST.length ? 'green' : 'amber'}`}>
-          {done} of {CHECKLIST.length}
-        </span>
-      </div>
-      {CHECKLIST.map((id) => {
-        const r = objectiveRow(s, id);
-        return (
-          <div className="row" key={id}>
-            <span className="k">
-              <span className={`node ${r.node}`} />
-              {TASKS[id].label}
-            </span>
-            <span className={`v ${r.vClass}`}>{r.value}</span>
-          </div>
-        );
-      })}
-      <div className="eyebrow group-label">Prep</div>
-      <div className="row">
-        <span className="k">
-          <span className={`node ${objectiveRow(s, 'breakfastMade').node}`} />
-          Breakfast
-        </span>
-        <span className="v muted">
-          {{ done: 'Made', active: 'Making it' }[s.objectives.breakfastMade.status as string] ?? 'Not made'}
-        </span>
-      </div>
-      <div className="row">
-        <span className="k">
-          <span className={`node ${s.objectives.shoesFound.status === 'done' ? 'done' : ''}`} />
-          Shoes
-        </span>
-        <span className="v muted">{s.objectives.shoesFound.status === 'done' ? 'Found' : 'Not checked'}</span>
-      </div>
+        {s.childAwake && (
+          <>
+            <div className="sectionhead spaced">
+              <span className="sectitle">
+                <span className="num">02</span>Activities
+              </span>
+              <span className="status">2 slots</span>
+            </div>
+            <div className="two-stat">
+              <ActivityCard s={s} who="parent" />
+              <ActivityCard s={s} who="child" />
+            </div>
+          </>
+        )}
 
-      <div className="thin" />
-      <details>
-        <summary>
+        <div className="sectionhead spaced">
+          <span className="sectitle">
+            <span className="num">{s.childAwake ? '03' : '02'}</span>Morning checklist
+          </span>
+          <span className={`status ${done === CHECKLIST.length ? 'green' : 'amber'}`}>
+            {done} of {CHECKLIST.length}
+          </span>
+        </div>
+        {CHECKLIST.map((id) => {
+          const r = objectiveRow(s, id);
+          return (
+            <div className="row" key={id}>
+              <span className="k">
+                <span className={`node ${r.node}`} />
+                {TASKS[id].label}
+              </span>
+              <span className={`v ${r.vClass}`}>{r.value}</span>
+            </div>
+          );
+        })}
+        <div className="eyebrow group-label">Prep</div>
+        <div className="row">
+          <span className="k">
+            <span className={`node ${objectiveRow(s, 'breakfastMade').node}`} />
+            Breakfast
+          </span>
+          <span className="v muted">
+            {{ done: 'Made', active: 'Making it' }[s.objectives.breakfastMade.status as string] ?? 'Not made'}
+          </span>
+        </div>
+        <div className="row">
+          <span className="k">
+            <span className={`node ${s.objectives.shoesFound.status === 'done' ? 'done' : ''}`} />
+            Shoes
+          </span>
+          <span className="v muted">{s.objectives.shoesFound.status === 'done' ? 'Found' : 'Not checked'}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function LogPanel({ s, head }: { s: GameState; head?: ReactNode }) {
+  return (
+    <div className="panel frame screen">
+      {head}
+      <div className="panel-body">
+        <div className="sectionhead">
           <span className="sectitle">Morning log</span>
-        </summary>
-        <ul className="log" style={{ marginTop: 10 }}>
+          <span className="status">{s.history.length} entries</span>
+        </div>
+        <ul className="log">
           {[...s.history].reverse().map((h, i) => (
             <li key={s.history.length - i} className={h.notable ? 'notable' : ''}>
               <span className="t">{formatClock(h.minute)}</span>
@@ -179,7 +191,7 @@ export function StatusPanel({ s }: { s: GameState }) {
             </li>
           ))}
         </ul>
-      </details>
+      </div>
     </div>
   );
 }

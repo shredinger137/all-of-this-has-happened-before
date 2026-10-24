@@ -73,21 +73,23 @@ function QuietView({ s, act }: Props) {
         <span className="sectitle">What will you do?</span>
         <span className="status">{s.wakeMinute - s.minute} min until she wakes</span>
       </div>
-      <p className="summary">
-        You have some uninterrupted time. You won't manage everything. You can also wake her earlier if you think
-        you'll need the time.
-      </p>
-      <div className="bank">
-        <ParentTaskButtons s={s} act={act} />
-      </div>
-      <p className="small" style={{ margin: '4px 0 0' }}>
-        Prep is quicker while she sleeps. To wake her early, use the switch below.
-      </p>
-      <div className="right">
-        <span className="small">Your actions move the clock. Reading and deciding don't.</span>
-        <button className="naked" onClick={() => act({ type: 'wait' })}>
-          Wait until she wakes →
-        </button>
+      <div className="panel-body">
+        <p className="summary">
+          You have some uninterrupted time. You won't manage everything. You can also wake her earlier if you think
+          you'll need the time.
+        </p>
+        <div className="bank">
+          <ParentTaskButtons s={s} act={act} />
+        </div>
+        <p className="small" style={{ margin: '4px 0 0' }}>
+          Prep is quicker while she sleeps. To wake her early, use the key in the status bar.
+        </p>
+        <div className="right">
+          <span className="small">Your actions move the clock. Reading and deciding don't.</span>
+          <button className="naked" onClick={() => act({ type: 'wait' })}>
+            Wait until she wakes →
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -109,82 +111,84 @@ function ActiveView({ s, act }: Props) {
           {left >= 0 ? `${left} min to leave` : `${-left} min past leaving time`}
         </span>
       </div>
+      <div className="panel-body">
 
-      <div className="eyebrow group-label">Your daughter</div>
-      {childBusy && ca ? (
-        <div className="mini frame" style={{ margin: '8px 0', display: 'block' }}>
-          <strong>
-            {stalled
-              ? `${TASKS[ca].doing} · waiting for you`
-              : `${TASKS[ca].doing} · about ${Math.max(1, Math.ceil((taskDuration(s, ca) - s.objectives[ca].progress) / childRate(s)))} min left`}
-          </strong>
-          <div className={`progress ${stalled ? 'paused' : ''}`}>
-            <span style={{ width: `${Math.min(100, (100 * s.objectives[ca].progress) / taskDuration(s, ca))}%` }} />
-          </div>
-          {s.parentActivity !== 'help' && (
-            <ChoiceButton
-              label={stalled ? 'Carry on with her' : 'Help her'}
-              sub={stalled ? "This needs you. It won't happen otherwise" : 'Faster together, but you do nothing else'}
-              cost="UNTIL DONE"
-              onClick={() => act({ type: 'help' })}
-            />
-          )}
-        </div>
-      ) : (
-        <p className="summary" style={{ margin: '6px 0 0' }}>
-          She's free. Giving her something to do takes no time.
-        </p>
-      )}
-      <div className="bank">
-        {CHILD_TASKS.filter((t) => !['done', 'skipped'].includes(s.objectives[t].status) && t !== ca).map((t) => {
-          const blocker = childTaskBlocker(s, t);
-          const rate = TASKS[t].supervised ? childRate({ ...s, parentActivity: 'help' }) : childRate(s);
-          const est = Math.ceil((taskDuration(s, t) - s.objectives[t].progress) / rate);
-          return (
-            <ChoiceButton
-              key={t}
-              label={childBusy ? `Switch to: ${TASKS[t].action.toLowerCase()}` : TASKS[t].action}
-              sub={blocker ?? TASKS[t].hint(s)}
-              cost={`~${est} MIN`}
-              tag={TASKS[t].supervised ? 'You both' : undefined}
-              disabled={!!blocker}
-              onClick={() => act({ type: 'assignChild', task: t })}
-            />
-          );
-        })}
-      </div>
-
-      {deferred.length > 0 && (
-        <>
-          <div className="eyebrow group-label">Put off</div>
-          <div className="bank">
-            {deferred.map((inc) => (
+        <div className="eyebrow group-label">Your daughter</div>
+        {childBusy && ca ? (
+          <div className="mini frame" style={{ margin: '8px 0', display: 'block' }}>
+            <strong>
+              {stalled
+                ? `${TASKS[ca].doing} · waiting for you`
+                : `${TASKS[ca].doing} · about ${Math.max(1, Math.ceil((taskDuration(s, ca) - s.objectives[ca].progress) / childRate(s)))} min left`}
+            </strong>
+            <div className={`progress ${stalled ? 'paused' : ''}`}>
+              <span style={{ width: `${Math.min(100, (100 * s.objectives[ca].progress) / taskDuration(s, ca))}%` }} />
+            </div>
+            {s.parentActivity !== 'help' && (
               <ChoiceButton
-                key={inc.uid}
-                label={`Deal with: ${INCIDENTS[inc.id].title.toLowerCase()}`}
-                sub={inc.note ?? INCIDENTS[inc.id].headline(s)}
-                cost={formatClock(inc.minute)}
-                onClick={() => act({ type: 'reopen', uid: inc.uid })}
+                label={stalled ? 'Carry on with her' : 'Help her'}
+                sub={stalled ? "This needs you. It won't happen otherwise" : 'Faster together, but you do nothing else'}
+                cost="UNTIL DONE"
+                onClick={() => act({ type: 'help' })}
               />
-            ))}
+            )}
           </div>
-        </>
-      )}
+        ) : (
+          <p className="summary" style={{ margin: '6px 0 0' }}>
+            She's free. Giving her something to do takes no time.
+          </p>
+        )}
+        <div className="bank">
+          {CHILD_TASKS.filter((t) => !['done', 'skipped'].includes(s.objectives[t].status) && t !== ca).map((t) => {
+            const blocker = childTaskBlocker(s, t);
+            const rate = TASKS[t].supervised ? childRate({ ...s, parentActivity: 'help' }) : childRate(s);
+            const est = Math.ceil((taskDuration(s, t) - s.objectives[t].progress) / rate);
+            return (
+              <ChoiceButton
+                key={t}
+                label={childBusy ? `Switch to: ${TASKS[t].action.toLowerCase()}` : TASKS[t].action}
+                sub={blocker ?? TASKS[t].hint(s)}
+                cost={`~${est} MIN`}
+                tag={TASKS[t].supervised ? 'You both' : undefined}
+                disabled={!!blocker}
+                onClick={() => act({ type: 'assignChild', task: t })}
+              />
+            );
+          })}
+        </div>
 
-      <div className="eyebrow group-label">You</div>
-      {s.parentActivity && s.parentActivity !== 'help' && (
-        <p className="small" style={{ margin: '6px 0' }}>
-          Currently: {TASKS[s.parentActivity].doing.toLowerCase()}.
-        </p>
-      )}
-      <div className="bank">
-        <ParentTaskButtons s={s} act={act} />
-        <ChoiceButton
-          label={idle ? 'Wait a few minutes' : 'Carry on'}
-          sub={idle ? 'Nothing is happening. Time still passes' : 'Until something needs you'}
-          cost={idle ? '5 MIN' : '…'}
-          onClick={() => act({ type: 'wait' })}
-        />
+        {deferred.length > 0 && (
+          <>
+            <div className="eyebrow group-label">Put off</div>
+            <div className="bank">
+              {deferred.map((inc) => (
+                <ChoiceButton
+                  key={inc.uid}
+                  label={`Deal with: ${INCIDENTS[inc.id].title.toLowerCase()}`}
+                  sub={inc.note ?? INCIDENTS[inc.id].headline(s)}
+                  cost={formatClock(inc.minute)}
+                  onClick={() => act({ type: 'reopen', uid: inc.uid })}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="eyebrow group-label">You</div>
+        {s.parentActivity && s.parentActivity !== 'help' && (
+          <p className="small" style={{ margin: '6px 0' }}>
+            Currently: {TASKS[s.parentActivity].doing.toLowerCase()}.
+          </p>
+        )}
+        <div className="bank">
+          <ParentTaskButtons s={s} act={act} />
+          <ChoiceButton
+            label={idle ? 'Wait a few minutes' : 'Carry on'}
+            sub={idle ? 'Nothing is happening. Time still passes' : 'Until something needs you'}
+            cost={idle ? '5 MIN' : '…'}
+            onClick={() => act({ type: 'wait' })}
+          />
+        </div>
       </div>
     </div>
   );
@@ -264,7 +268,7 @@ function IncidentView({ s, act, inc }: Props & { inc: OpenIncident }) {
           ) : (
             <span />
           )}
-          {inc.id !== 'bathroom' && <span className="small">Or leave it and go: the switch below still works.</span>}
+          {inc.id !== 'bathroom' && <span className="small">Or leave it and go: the key in the status bar still works.</span>}
         </div>
       </div>
       <div className="crisis-foot">

@@ -2,9 +2,9 @@ import { MOOD_LABELS } from '../sim/content';
 import { formatClock } from '../sim/constants';
 import type { Results } from '../sim/engine';
 
-type Props = { r: Results; seed: number; onRetry: () => void; onReplay: () => void };
+type Props = { r: Results; seed: number };
 
-export function Debrief({ r, seed, onRetry, onReplay }: Props) {
+export function Debrief({ r, seed }: Props) {
   const late = r.lateness > 0;
   return (
     <div className="report-wrap">
@@ -91,23 +91,6 @@ export function Debrief({ r, seed, onRetry, onReplay }: Props) {
           <span>End of report</span>
           <span className="code">FILED {formatClock(r.arrived)} · 1/1</span>
         </div>
-      </div>
-
-      <div className="report-actions">
-        <button className="btnline frame" onClick={onRetry}>
-          <span>
-            <span className="label">Try another morning</span>
-            <span className="sub">New seed, new surprises</span>
-          </span>
-          <span className="cost">→</span>
-        </button>
-        <button className="btnline frame" onClick={onReplay}>
-          <span>
-            <span className="label">Same morning again</span>
-            <span className="sub">Same surprises, if you make the same choices</span>
-          </span>
-          <span className="cost">↺</span>
-        </button>
       </div>
     </div>
   );
