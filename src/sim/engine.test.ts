@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEPARTURE_DEADLINE, NATURAL_WAKE, START_MINUTE } from './constants';
-import { createGame, currentIncident, offered, reduce, results } from './engine';
+import { collapseStart, createGame, currentIncident, offered, reduce, results } from './engine';
 import type { Action, EventId, GameState } from './types';
 
 const run = (s: GameState, ...actions: Action[]) => actions.reduce(reduce, s);
@@ -206,6 +206,90 @@ const INCIDENT_FALLBACK: Record<string, string> = {
   phone: 'ignore',
   doorbell: 'sign',
 };
+
+describe('the endgame', () => {
+  /** Get her fully ready with nothing interrupting, then stand around. */
+  function readyAndWaiting(seed: number): GameState {
+    let s = run(createGame(seed), { type: 'wakeNow' });
+    for (let i = 0; i < 300 && !s.ended && s.minute < s.departureDeadline - 12; i++) {
+      const inc = currentIncident(s);
+      if (inc) {
+        s = reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[inc.id] });
+        continue;
+      }
+      if (!s.childActivity) {
+        const t = (['breakfastEaten', 'dressed', 'shoesOn'] as const).find((c) => s.objectives[c].status === 'todo');
+        if (t) {
+          s = reduce(s, { type: 'assignChild', task: t });
+          continue;
+        }
+      }
+      s = reduce(s, { type: 'wait' });
+    }
+    return s;
+  }
+
+  it('no contacts before the collapse point; then they appear with warning, and stop the clock', () => {
+    // Step through a morning until the first contact appears.
+    let s = run(createGame(11), { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' });
+    for (let i = 0; i < 200 && s.threats.length === 0 && !s.ended; i++) {
+      s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
+    }
+    expect(s.threats.length).toBe(1);
+    const th = s.threats[0];
+    expect(th.spawned).toBeGreaterThanOrEqual(collapseStart(s));
+    expect(th.at - th.spawned).toBe(4);
+    expect(s.minute).toBe(th.spawned); // the clock stopped when it appeared
+  });
+
+  it('a contact left alone lands and undoes finished work; an intercepted one does not', () => {
+    let found = 0;
+    for (let seed = 1; seed < 400 && found < 2; seed++) {
+      let s = readyAndWaiting(seed);
+      for (let i = 0; i < 20 && !s.threats.some((t) => t.id === 'shoesOff') && !s.ended; i++) {
+        s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
+      }
+      const th = s.threats.find((t) => t.id === 'shoesOff');
+      if (!th || s.objectives.shoesOn.status !== 'done') continue;
+      found++;
+      const stopped = reduce(s, { type: 'intercept', uid: th.uid });
+      expect(stopped.threats.find((t) => t.uid === th.uid)).toBeUndefined();
+      expect(stopped.minute).toBe(s.minute + 1);
+
+      let landed = s;
+      while (!landed.ended && landed.minute < th.at) {
+        landed = currentIncident(landed) ? reduce(landed, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(landed)!.id] }) : reduce(landed, { type: 'wait' });
+      }
+      if (!landed.ended) expect(landed.objectives.shoesOn.status).toBe('todo');
+    }
+    expect(found).toBeGreaterThan(0);
+  });
+
+  it('contacts come closer together as it gets later', () => {
+    let s = readyAndWaiting(21);
+    const spawns: number[] = [];
+    for (let i = 0; i < 200 && s.minute < s.departureDeadline + 15 && !s.ended; i++) {
+      const before = s.threats.map((t) => t.uid);
+      s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
+      for (const t of s.threats) if (!before.includes(t.uid)) spawns.push(t.spawned);
+    }
+    const gaps = spawns.slice(1).map((m, i) => m - spawns[i]);
+    expect(gaps.length).toBeGreaterThan(2);
+    expect(gaps.at(-1)!).toBeLessThan(gaps[0]);
+  });
+
+  it('arriving more than ten minutes late means the gate had shut: a serious miss', () => {
+    let s = run(ordinary(), { type: 'wakeNow' });
+    while (!s.ended && s.minute < 8 * 60) {
+      s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
+    }
+    while (!s.ended) s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'leave' });
+    const r = results(s);
+    expect(r.lateness).toBeGreaterThan(10);
+    expect(r.misses.find((m) => m.id === 'gate')?.severity).toBe('severe');
+    expect(s.threats).toHaveLength(0); // leaving leaves them behind
+  });
+});
 
 describe('tension', () => {
   it('a problem put off too long comes back, worse, and costs mood', () => {

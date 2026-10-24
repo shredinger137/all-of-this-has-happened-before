@@ -25,6 +25,11 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
   free-ish and confidently unreliable (E5). Messaging another parent costs a **fate point**.
 - **She's up.** You do one thing, she does one thing. Problems interrupt; the phone and doorbell
   interrupt *you*. Put a problem off for too long and it comes back worse.
+- **The endgame.** From about ten minutes before leaving time the house sends contacts: each appears
+  on the morning plot four minutes before it lands, saying what finished work it will undo (shoes off,
+  juice on the clean top, the bag emptied on the floor). Intercept it (a minute or two), let it land, or
+  leave before it arrives. They come faster the longer you stay; put-off problems and a low mood bring
+  them sooner. Arrive more than ten minutes late and the gate has shut.
 - **Leave.** The status bar always shows what leaving now means. What you leave behind is weighted:
   missing a stuffy on stuffy day is serious; a packed lunch is not.
 - **Evening.** Pick two preparations for tomorrow. Keep your promises.
@@ -72,6 +77,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 
 ## Balance snapshot (`npm run balance`)
 
-Careful bots are on time 63–82% of mornings. Trusting the calendar misses the day's event about
+Careful bots (who intercept every contact) are on time 56–79% of mornings with few serious misses;
+hasty bots ignore contacts, leave earlier, and lose more of what they'd finished. Trusting the calendar misses the day's event about
 1 time in 6; reading the email first nearly never does, but costs ~10 points of on-time rate.
 Hasty bots are on time more often and leave more behind. Needs human playtesting.

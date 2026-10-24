@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CHILD_TASKS, INCIDENTS, INTEL_TASKS, PARENT_TASKS, TASKS, type ResponseDef } from '../sim/content';
+import { CHILD_TASKS, INCIDENTS, INTEL_TASKS, PARENT_TASKS, TASKS, THREATS, type ResponseDef } from '../sim/content';
 import { formatClock } from '../sim/constants';
 import {
   childRate,
@@ -24,10 +24,11 @@ function ChoiceButton(props: {
   risky?: boolean;
   tag?: string;
   disabled?: boolean;
+  urgent?: boolean;
   onClick: () => void;
 }) {
   return (
-    <button className="btnline frame" disabled={props.disabled} onClick={props.onClick}>
+    <button className={`btnline frame ${props.urgent ? 'urgent' : ''}`} disabled={props.disabled} onClick={props.onClick}>
       <span>
         <span className="label">
           {props.label}
@@ -115,6 +116,31 @@ function ActiveView({ s, act }: Props) {
         </span>
       </div>
       <div className="panel-body">
+
+        {s.threats.length > 0 && (
+          <>
+            <div className="eyebrow group-label inbound-head">Inbound · {s.threats.length}</div>
+            <div className="bank">
+              {[...s.threats]
+                .sort((a, b) => a.at - b.at)
+                .map((th) => {
+                  const def = THREATS[th.id];
+                  const left = th.at - s.minute;
+                  return (
+                    <ChoiceButton
+                      key={th.uid}
+                      label={def.intercept}
+                      sub={`${def.warning} ${def.risk} at risk.`}
+                      cost={`${def.minutes} MIN`}
+                      tag={left <= 1 ? 'Now' : `In ${left} min`}
+                      urgent
+                      onClick={() => act({ type: 'intercept', uid: th.uid })}
+                    />
+                  );
+                })}
+            </div>
+          </>
+        )}
 
         <div className="eyebrow group-label">Your daughter</div>
         {childBusy && ca ? (

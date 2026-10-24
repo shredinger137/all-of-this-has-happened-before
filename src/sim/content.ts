@@ -9,6 +9,7 @@ import type {
   Owner,
   PerkId,
   TaskId,
+  ThreatId,
 } from './types';
 
 const done = (s: GameState, t: TaskId) => s.objectives[t].status === 'done';
@@ -931,6 +932,93 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
 /** Order matters: the first incident that hits for a task wins. */
 export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'bug', 'stuffyWash', 'phone', 'doorbell'];
 export const COMPOUND_MINUTES = 8;
+
+// ---------------------------------------------------------------------------
+// The endgame: as leaving time nears, the house starts undoing your work
+// ---------------------------------------------------------------------------
+
+export type ThreatDef = {
+  name: string; // the contact, as it shows on the plot
+  warning: string; // what you see coming
+  risk: string; // what it will cost
+  intercept: string; // what stops it
+  minutes: number;
+  landed: string; // log line when it lands
+  /** Only sent when there's something for it to undo. */
+  applies: (s: GameState) => boolean;
+};
+
+export const THREATS: Record<ThreatId, ThreatDef> = {
+  juice: {
+    name: 'Juice',
+    warning: 'She is carrying a full glass of juice. In her clean top.',
+    risk: 'Clean top',
+    intercept: 'Take the juice',
+    minutes: 1,
+    landed: 'Juice, all down her top.',
+    applies: (s) => done(s, 'dressed') && !has(s, 'stainedShirt'),
+  },
+  shoesOff: {
+    name: 'Shoes',
+    warning: 'She is sitting on the stairs, looking at her shoes.',
+    risk: 'Shoes on',
+    intercept: 'Stand her by the door',
+    minutes: 1,
+    landed: 'She took her shoes off. Both of them.',
+    applies: (s) => done(s, 'shoesOn'),
+  },
+  coatOff: {
+    name: 'Coat',
+    warning: 'She says the coat is too hot.',
+    risk: 'Coat on',
+    intercept: 'Unzip it a little',
+    minutes: 1,
+    landed: 'The coat is off and back on its hook.',
+    applies: (s) => done(s, 'coat'),
+  },
+  hairMess: {
+    name: 'Hair',
+    warning: 'She has found the hood of her jumper.',
+    risk: 'Hair done',
+    intercept: 'Hood off, hat on',
+    minutes: 1,
+    landed: 'Hood on, hood off, eleven times. The hair is gone.',
+    applies: (s) => done(s, 'hair'),
+  },
+  hungry: {
+    name: 'Snack',
+    warning: 'She is opening and closing the fridge.',
+    risk: 'Breakfast',
+    intercept: 'Pocket a snack for her',
+    minutes: 1,
+    landed: 'She is hungry again. Very hungry. Now.',
+    applies: (s) => done(s, 'breakfastEaten') && !has(s, 'hungry'),
+  },
+  bagRaid: {
+    name: 'Bag',
+    warning: 'She has opened her school bag to show you something.',
+    risk: 'Bag checked',
+    intercept: 'Zip the bag shut',
+    minutes: 1,
+    landed: 'Half the bag is on the hall floor.',
+    applies: (s) => done(s, 'bagChecked'),
+  },
+  wobble: {
+    name: 'Wobble',
+    warning: 'Her lip is going. Something is coming.',
+    risk: 'Mood',
+    intercept: 'A proper hug',
+    minutes: 2,
+    landed: 'Tears, about nothing in particular.',
+    applies: (s) => s.householdMood >= 1,
+  },
+};
+
+export const THREAT_POOL: ThreatId[] = ['juice', 'shoesOff', 'coatOff', 'hairMess', 'hungry', 'bagRaid', 'wobble'];
+/** Minutes before leaving time when the house starts sending contacts. */
+export const COLLAPSE_LEAD = 10;
+export const THREAT_WARNING = 4; // minutes between a contact appearing and landing
+export const GATE_CLOSES_AFTER = 10; // arriving this many minutes late: the gate is shut, sign in at the office
 export const PE_LAUNDRY_CHANCE = 0.4;
 
 export const LIBRARY_CHANCE = 0.6;

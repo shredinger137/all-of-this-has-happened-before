@@ -58,6 +58,13 @@ export function alert() {
   tone(494, 0.2, 0.28, 0.05, 'triangle');
 }
 
+/** A new contact on the plot. */
+export function ping() {
+  if (!ready()) return;
+  tone(1320, 0, 0.09, 0.035, 'sine');
+  tone(1320, 0.14, 0.09, 0.02, 'sine');
+}
+
 export function done() {
   if (!ready()) return;
   tone(523, 0, 0.12, 0.04, 'triangle');

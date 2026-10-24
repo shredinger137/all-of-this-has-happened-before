@@ -94,6 +94,11 @@ export type LogEntry = { minute: number; text: string; notable?: boolean };
 
 export type Mood = 0 | 1 | 2 | 3 | 4 | 5;
 
+export type ThreatId = 'juice' | 'shoesOff' | 'coatOff' | 'hairMess' | 'hungry' | 'bagRaid' | 'wobble';
+
+/** A contact on the plot: something that will undo finished work at `at`, unless you stop it or leave. */
+export type Threat = { uid: number; id: ThreatId; spawned: number; at: number };
+
 export type Weather = 'clear' | 'rain' | 'cold';
 export type EventId = 'stuffy' | 'pe' | 'picture' | 'library' | 'dressUp' | 'trip';
 export type PerkId = 'shoeRack' | 'chart' | 'spoons' | 'hooks' | 'calendar';
@@ -144,6 +149,8 @@ export type GameState = {
   childTendency: ChildTendency;
   day: Day;
   intel: Intel[];
+  threats: Threat[]; // the endgame: contacts inbound, landing at a known minute
+  nextThreatAt?: number;
   fate: number; // fate points carried by the run; spent here
   perks: PerkId[];
   history: LogEntry[];
@@ -161,6 +168,7 @@ export type Action =
   | { type: 'respond'; response: string; fate?: boolean }
   | { type: 'ask' }
   | { type: 'favour' }
+  | { type: 'intercept'; uid: number }
   | { type: 'defer' }
   | { type: 'reopen'; uid: number }
   | { type: 'leave' };

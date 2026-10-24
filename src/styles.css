@@ -120,7 +120,7 @@ button { font: inherit; color: inherit; }
 @keyframes blink { to { background: #3a1410; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .node.blocked, .lamp.on.alarm i, .contact, .crisis, .tab.alert, .projection.red, .crisis-head .queue { animation: none; }
+  .node.blocked, .lamp.on.alarm i, .contact, .crisis, .tab.alert, .projection.red, .crisis-head .queue, .inbound::before { animation: none; }
 }
 
 /* Micro labels: the tiny caps legends printed on every Colonial screen strip. */
@@ -206,6 +206,16 @@ button { font: inherit; color: inherit; }
 .tick.school { color: var(--red); }
 /* Afterglow behind the sweep line, and a hostile contact for the open problem. */
 .sweep { position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; background: linear-gradient(90deg, transparent 75%, rgba(143, 227, 239, 0.13)); }
+/* Inbound contacts: a red marker where it will land, a dashed trail back to now, a label and a countdown. */
+.inbound { position: absolute; top: -4px; bottom: -4px; width: 0; z-index: 2; }
+.inbound::before { content: ''; position: absolute; left: -5px; top: -2px; border: 5px solid transparent; border-top: 7px solid var(--dradis); filter: drop-shadow(0 0 4px var(--dradis)); animation: contactblink 0.9s steps(2, start) infinite; }
+.inbound::after { content: ''; position: absolute; left: -1px; top: 4px; bottom: 0; width: 2px; background: var(--dradis); box-shadow: 0 0 6px var(--dradis); }
+.inbound-trail { position: absolute; right: 0; top: 50%; height: 0; border-top: 1px dashed rgba(255, 79, 109, 0.6); }
+.inbound-label { position: absolute; left: 6px; bottom: calc(100% - 2px); white-space: nowrap; font: 600 9px/1 var(--mono); color: var(--dradis); text-shadow: 0 0 4px #000, 0 0 6px var(--dradis); }
+.inbound.below .inbound-label { bottom: auto; top: calc(100% + 1px); }
+.inbound-head { color: var(--red); }
+.btnline.urgent { --frame-edge: var(--red); }
+.btnline.urgent .tag { border-color: var(--red); color: var(--red); }
 .contact { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px solid var(--dradis); transform: rotate(45deg); box-shadow: 0 0 8px var(--dradis); animation: contactblink 0.9s steps(2, start) infinite; z-index: 1; }
 @keyframes contactblink { to { border-color: transparent; box-shadow: none; } }
 

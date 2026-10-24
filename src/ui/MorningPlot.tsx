@@ -1,4 +1,4 @@
-import { TASKS } from '../sim/content';
+import { TASKS, THREATS } from '../sim/content';
 import { formatClock, SCHOOL_START, START_MINUTE } from '../sim/constants';
 import { childRate, childStalled, currentIncident, parentRate, taskDuration } from '../sim/engine';
 import type { GameState, Span } from '../sim/types';
@@ -58,6 +58,23 @@ function Lane({ s, lane }: { s: GameState; lane: Span['lane'] }) {
       {!s.ended && <div className="sweep" style={{ width: pct(s.minute) }} />}
       {!s.ended && <div className="mark now" style={{ left: pct(s.minute) }} />}
       {inc && lane === contactLane && <div className="contact" style={{ left: pct(s.minute) }} title="Problem" />}
+      {lane === 'child' &&
+        // Soonest first; alternate labels above and below the lane so close contacts stay readable.
+        [...s.threats]
+          .sort((a, b) => a.at - b.at)
+          .map((th, i) => (
+          <div
+            key={th.uid}
+            className={`inbound ${i % 2 ? 'below' : ''}`}
+            style={{ left: pct(th.at) }}
+            title={`${THREATS[th.id].warning} Lands ${formatClock(th.at)}.`}
+          >
+            <span className="inbound-trail" style={{ width: width(s.minute, th.at) }} />
+            <span className="inbound-label">
+              {THREATS[th.id].name} {th.at - s.minute}m
+            </span>
+          </div>
+        ))}
     </div>
   );
 }

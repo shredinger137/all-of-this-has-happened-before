@@ -29,6 +29,7 @@ function Lamps({ s }: { s: GameState }) {
     { label: 'Coffee', on: s.coffeeBuffer, tone: 'amber' },
     { label: 'Problem', on: !!currentIncident(s), tone: 'alarm' },
     { label: 'Late', on: s.minute >= s.departureDeadline, tone: 'alarm' },
+    { label: `Inbound${s.threats.length ? ` ${s.threats.length}` : ''}`, on: s.threats.length > 0, tone: 'alarm' },
   ];
   return (
     <div className="lamps" aria-hidden>
@@ -44,12 +45,13 @@ function Lamps({ s }: { s: GameState }) {
 
 /** What leaving this minute means: the one number that matters, always in view. */
 function Projection({ s }: { s: GameState }) {
-  const { arrive, spare } = leaveNowProjection(s);
+  const { arrive, spare, gateShut } = leaveNowProjection(s);
   const tone = spare < 0 ? 'red' : spare <= 5 ? 'amber' : 'green';
   return (
     <div className={`projection ${tone}`}>
       Leave now: in by {formatClock(arrive)} ·{' '}
       {spare >= 0 ? `${spare} min to spare` : `${-spare} min late`}
+      {gateShut && ' · gate shut: sign in at the office'}
     </div>
   );
 }

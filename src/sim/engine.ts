@@ -4,7 +4,12 @@ import {
   CALENDAR_RIGHT,
   CHECKLIST,
   COLD_CHANCE,
+  COLLAPSE_LEAD,
   COMPOUND_MINUTES,
+  GATE_CLOSES_AFTER,
+  THREAT_POOL,
+  THREAT_WARNING,
+  THREATS,
   EARLY_START_MINUTES,
   EVENT_CHANCE,
   EVENT_POOL,
@@ -45,6 +50,7 @@ import type {
   PerkId,
   Span,
   TaskId,
+  ThreatId,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -105,6 +111,7 @@ export function createGame(seed: number, setup: MorningSetup = {}): GameState {
       meeting: !!setup.meeting,
     },
     intel: [],
+    threats: [],
     fate: setup.fate ?? 0,
     perks: setup.perks ?? [],
     history: [],
@@ -438,7 +445,8 @@ function onParentComplete(s: GameState, task: TaskId) {
         addIntel(s, 'School bag', bagNote('pe'), 'A1', 'pe');
         confirmEvent(s);
       } else if (e === 'library') {
-        if (rand(s) < LIBRARY_CHANCE) {
+        if (hasFlag(s, 'bookFound')) log(s, 'Library book back in the bag.');
+        else if (rand(s) < LIBRARY_CHANCE) {
           addIntel(s, 'School bag', 'A library reminder in the bag. No book.', 'A1', 'library');
           confirmEvent(s);
           openIncident(s, 'library');
@@ -555,6 +563,27 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean }): boole
     }
   }
 
+  // Contacts land: whatever they were heading for comes undone.
+  for (const th of s.threats.filter((x) => x.at <= s.minute)) {
+    s.threats = s.threats.filter((x) => x.uid !== th.uid);
+    if (!THREATS[th.id].applies(s)) continue; // nothing left for it to undo
+    landThreat(s, th.id);
+    event = true;
+  }
+
+  // The endgame: from the collapse point the house sends contacts, closer together as time runs out.
+  if (s.childAwake && !s.ended && s.minute >= collapseStart(s) && s.minute >= (s.nextThreatAt ?? 0)) {
+    const inbound = s.threats.map((x) => x.id);
+    const pool = THREAT_POOL.filter((id) => !inbound.includes(id) && THREATS[id].applies(s));
+    if (pool.length) {
+      const id = pool[Math.floor(rand(s) * pool.length)];
+      s.threats.push({ uid: s.nextUid++, id, spawned: s.minute, at: s.minute + THREAT_WARNING });
+      log(s, `Contact: ${THREATS[id].warning}`, true);
+      event = true;
+    }
+    s.nextThreatAt = s.minute + threatInterval(s);
+  }
+
   // Problems put off too long come back, worse.
   for (const inc of s.incidents) {
     if (inc.status !== 'deferred' || inc.worse || inc.deferredAt === undefined) continue;
@@ -576,12 +605,12 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean }): boole
 }
 
 /** If you left this minute: when you'd arrive and how early (+) or late (−), using only what you know. */
-export function leaveNowProjection(s: GameState): { arrive: number; spare: number } {
+export function leaveNowProjection(s: GameState): { arrive: number; spare: number; gateShut: boolean } {
   const d = s.day;
   const walk = COMMUTE_MINUTES + (d.weatherKnown && d.weather === 'rain' ? RAIN_WALK_MINUTES : 0);
   const start = d.meeting || (d.eventKnown && d.event === 'trip') ? d.schoolStart : SCHOOL_START;
   const arrive = s.minute + walk;
-  return { arrive, spare: start - arrive };
+  return { arrive, spare: start - arrive, gateShut: start - arrive < -GATE_CLOSES_AFTER };
 }
 
 export function nothingRunning(s: GameState): boolean {
@@ -627,8 +656,60 @@ function downTools(s: GameState) {
   s.childActivity = undefined;
 }
 
+/**
+ * When the house starts sending contacts: ten minutes before leaving time, sooner if problems
+ * have been put off or she's already upset.
+ */
+export function collapseStart(s: GameState): number {
+  const deferred = s.incidents.filter((i) => i.status === 'deferred').length;
+  return s.departureDeadline - COLLAPSE_LEAD - 2 * deferred - (s.householdMood <= 2 ? 3 : 0);
+}
+
+/** Minutes between contacts: six at first, down to two. */
+function threatInterval(s: GameState): number {
+  const elapsed = s.minute - collapseStart(s);
+  return Math.max(2, 6 - Math.floor(elapsed / 4));
+}
+
+function reopenTask(s: GameState, t: TaskId) {
+  const o = s.objectives[t];
+  o.status = 'todo';
+  o.progress = 0;
+  o.pending = undefined;
+  o.rolled = true; // undoing it is the problem; no second incident on top
+}
+
+function landThreat(s: GameState, id: ThreatId) {
+  switch (id) {
+    case 'juice':
+      setFlag(s, 'stainedShirt');
+      break;
+    case 'shoesOff':
+      reopenTask(s, 'shoesOn');
+      break;
+    case 'coatOff':
+      reopenTask(s, 'coat');
+      break;
+    case 'hairMess':
+      reopenTask(s, 'hair');
+      break;
+    case 'hungry':
+      setFlag(s, 'hungry');
+      changeMood(s, -1);
+      break;
+    case 'bagRaid':
+      reopenTask(s, 'bagChecked');
+      break;
+    case 'wobble':
+      changeMood(s, -1);
+      break;
+  }
+  log(s, THREATS[id].landed, true);
+}
+
 function endMorning(s: GameState) {
   s.ended = true;
+  s.threats = []; // whatever was inbound never arrives: you left
   s.departedAt = s.minute;
   s.parentActivity = undefined;
   s.childActivity = undefined;
@@ -804,6 +885,17 @@ export function reduce(prev: GameState, action: Action): GameState {
       return s;
     }
 
+    case 'intercept': {
+      // Get to it before it lands. Costs you the minutes; she carries on.
+      const th = s.threats.find((x) => x.uid === action.uid);
+      if (open || !th) return prev;
+      s.threats = s.threats.filter((x) => x.uid !== th.uid);
+      log(s, `${THREATS[th.id].intercept}. Stopped it.`);
+      spend(s, THREATS[th.id].minutes, false);
+      checkCutoff(s);
+      return s;
+    }
+
     case 'ask': {
       // Ask her what's on today. She'll answer with total confidence.
       if (open || !s.childAwake || s.day.eventKnown || hasFlag(s, 'askedHer')) return prev;
@@ -833,7 +925,9 @@ export function reduce(prev: GameState, action: Action): GameState {
       // Leaving mid-incident is allowed: the problem simply goes unresolved.
       if (open?.id === 'bathroom' || !s.childAwake) return prev;
       if (open) open.status = 'deferred';
-      if (!s.firedIncidents.includes('bathroom') && rand(s) < BATHROOM_CHANCE) {
+      // The later it gets, the likelier the door holds you up.
+      const doorChance = Math.min(0.9, BATHROOM_CHANCE + 0.03 * Math.max(0, s.minute - s.departureDeadline));
+      if (!s.firedIncidents.includes('bathroom') && rand(s) < doorChance) {
         downTools(s);
         openIncident(s, 'bathroom');
         return s;
@@ -907,6 +1001,7 @@ export function requirements(s: GameState): Requirement[] {
   if (hasFlag(s, 'smellyKit')) extra('smellyKit', 'A clean PE kit');
   if (hasFlag(s, 'stuffyDamp')) extra('stuffyDamp', 'A dry stuffy');
   if (s.householdMood <= 1) extra('mood', 'A peaceful morning', 'moderate');
+  if (hasFlag(s, 'hungry') && s.objectives.breakfastEaten.status === 'done') extra('hungry', 'A breakfast that lasted', 'minor');
   return reqs;
 }
 
@@ -933,6 +1028,9 @@ export function results(s: GameState): Results {
   const lateness = arrived - d.schoolStart;
 
   const reqs = requirements(s);
+  if (lateness > GATE_CLOSES_AFTER) {
+    reqs.push({ id: 'gate', label: 'Gate', missing: 'Signed in at the office: the gate had shut', severity: 'severe', met: false, known: true });
+  }
   const completed = reqs.filter((r) => r.met).map((r) => r.label);
   const misses = reqs.filter((r) => !r.met);
   const leftBehind = misses.map((r) => r.missing);

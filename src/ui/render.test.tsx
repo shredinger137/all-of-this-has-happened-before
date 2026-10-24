@@ -25,6 +25,7 @@ function legalActions(s: GameState): Action[] {
   for (const t of [...PARENT_TASKS, ...INTEL_TASKS]) if (offered(s, t) && !parentTaskBlocker(s, t)) acts.push({ type: 'startParent', task: t });
   for (const t of CHILD_TASKS) if (offered(s, t) && !childTaskBlocker(s, t)) acts.push({ type: 'assignChild', task: t });
   for (const i of s.incidents) if (i.status === 'deferred') acts.push({ type: 'reopen', uid: i.uid });
+  for (const t of s.threats) acts.push({ type: 'intercept', uid: t.uid });
   if (!s.childAwake) acts.push({ type: 'wakeNow' });
   if (s.childAwake) acts.push({ type: 'ask' });
   if (s.fate > 0) acts.push({ type: 'favour' });

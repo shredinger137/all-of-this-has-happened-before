@@ -110,6 +110,22 @@ what the day actually was ("It was stuffy day. She was the only one without one.
 - Track → tier mapping is a single constant, chosen by measuring each track's loudness/energy (Claude can't
   listen). Separate **Music** toggle next to Sound; starts on the first click (browser autoplay rules).
 
+### 7. The endgame: waiting makes things fall apart (added 2026-10-24)
+
+The user's reference: in BSG and Scattered Hopes, as a mission ends everything goes wrong at once, and
+waiting longer means nobody gets out. The morning had no equivalent: waiting only cost minutes.
+
+- From the **collapse point** (leaving time − 10, minus 2 per put-off problem, minus 3 if mood is low)
+  the house sends **contacts**. Each is **telegraphed**: it appears on the plot (and in an Inbound list
+  at the top of the actions) **4 minutes before it lands**, names what it threatens, and stops the clock
+  so you can react (the Into the Breach rule: you see the attack before it happens).
+- A landed contact **undoes finished work**: shoes off, coat off, hair undone, juice on the clean top,
+  the bag emptied, hungry again, a wobble (mood −1).
+- **Intercept** costs 1–2 minutes. **Leaving** takes you out of reach: inbound contacts never land.
+- Contacts arrive every 6 minutes at first, down to every 2. The door gets stickier the later you are
+  (bathroom chance +3% per minute late), and arriving 10+ minutes late means **the gate had shut**:
+  a serious miss.
+
 ## Build order
 
 1. **Run + day model** (engine): `RunState`, day generation, weather, events, event objectives, intel,

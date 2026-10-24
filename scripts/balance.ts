@@ -19,6 +19,10 @@ function step(s: GameState, strat: Strategy): GameState {
     const pick = strat.careful ? options[0] : [...options].sort((a, b) => a.minutes - b.minutes)[0];
     return reduce(s, { type: 'respond', response: pick.id });
   }
+  if (strat.careful && s.threats.length) {
+    const soonest = [...s.threats].sort((a, b) => a.at - b.at)[0];
+    return reduce(s, { type: 'intercept', uid: soonest.uid });
+  }
   if (!s.childAwake && strat.wakeAt !== null && s.minute >= strat.wakeAt) return reduce(s, { type: 'wakeNow' });
   if (s.childAwake) {
     const ready = READY.filter((t) => offered(s, t)).every((t) => ['done', 'skipped'].includes(s.objectives[t].status));
