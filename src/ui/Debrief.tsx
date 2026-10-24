@@ -2,9 +2,9 @@ import { MOOD_LABELS } from '../sim/content';
 import { formatClock } from '../sim/constants';
 import type { Results } from '../sim/engine';
 
-type Props = { r: Results; seed: number };
+type Props = { r: Results; seed: number; label: string };
 
-export function Debrief({ r, seed }: Props) {
+export function Debrief({ r, seed, label }: Props) {
   const late = r.lateness > 0;
   return (
     <div className="report-wrap">
@@ -15,9 +15,10 @@ export function Debrief({ r, seed }: Props) {
         </div>
         <div className="report-title">
           <div>
-            <div className="context">Tuesday</div>
+            <div className="context">{label}</div>
             <h2>Morning complete</h2>
             <p>Everyone got out of the house.</p>
+            {r.revealed.length > 0 && <p className="revealed">{r.revealed.join(' ')}</p>}
           </div>
           <div className={`stamp ${late ? 'late' : 'ok'}`}>
             {late ? 'Late' : 'On time'}
@@ -63,13 +64,14 @@ export function Debrief({ r, seed }: Props) {
             </ul>
           </div>
           <div>
-            <h3>Left behind · {r.leftBehind.length}</h3>
+            <h3>Left behind · {r.misses.length}</h3>
             <ul>
-              {r.leftBehind.length === 0 && <li>Nothing.</li>}
-              {r.leftBehind.map((c) => (
-                <li key={c}>
+              {r.misses.length === 0 && <li>Nothing.</li>}
+              {r.misses.map((m) => (
+                <li key={m.id} className={m.severity}>
                   <span className="node" />
-                  {c}
+                  {m.missing}
+                  {m.severity === 'severe' && <span className="sev">Serious</span>}
                 </li>
               ))}
             </ul>

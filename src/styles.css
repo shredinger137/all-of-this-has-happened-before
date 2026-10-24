@@ -134,7 +134,8 @@ button { font: inherit; color: inherit; }
 @media (min-width: 1700px) { :root { --zoom: 1.2; } }
 @media (min-width: 2200px) { :root { --zoom: 1.4; } }
 .site-top { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 4px 8px; }
-.brand { font: 400 20px/1 var(--font-wide); letter-spacing: 0.38em; color: #dfe4e7; text-shadow: 0 1px 0 #000; }
+.brand { font: 400 20px/1 var(--font-wide); letter-spacing: 0.38em; color: #dfe4e7; text-shadow: 0 1px 0 #000; white-space: nowrap; }
+.brand span { margin-left: 10px; font-size: 9px; letter-spacing: 0.22em; color: var(--khaki); text-transform: uppercase; vertical-align: 3px; }
 .tool { --c: 6px; --bw: 1.5px; --frame-edge: var(--salmon); --frame-fill: var(--glass); border: none; padding: 9px 14px; font: 400 9.5px/1 var(--font-wide); letter-spacing: 0.16em; color: var(--salmon-ink); cursor: pointer; text-transform: uppercase; }
 .tool:hover { --frame-fill: var(--salmon-deep); }
 
@@ -335,6 +336,15 @@ button { font: inherit; color: inherit; }
 .readout.risk-moderate b { color: var(--amber); }
 .readout.risk-high { border-left-color: var(--red); }
 .readout.risk-high b { color: var(--red); }
+.readout.risk-fate { border-left-color: var(--cyan); }
+.readout.risk-fate b { color: var(--cyan); }
+
+/* Fate: a small lit toggle under the responses. */
+.fate-toggle { display: flex; align-items: center; gap: 10px; margin: 10px 0 0; padding: 7px 10px; border: 1px dashed #2b4148; background: transparent; color: var(--cyan-dim); font: 400 8.5px/1.3 var(--font-wide); letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; width: 100%; text-align: left; }
+.fate-toggle i { width: 9px; height: 9px; transform: rotate(45deg); border: 1.5px solid var(--cyan-dim); flex: none; }
+.fate-toggle:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+.fate-toggle.on { color: var(--cyan); border-style: solid; border-color: var(--cyan); text-shadow: var(--glow); }
+.fate-toggle.on i { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
 
 .naked { border: none; background: transparent; color: var(--salmon-ink); font: 400 9px/1 var(--font-wide); letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; text-decoration: underline; text-underline-offset: 5px; padding: 8px 0; }
 .naked:hover { text-shadow: var(--glow); }
@@ -407,6 +417,7 @@ button { font: inherit; color: inherit; }
 /* ---------------------------------------------------------------- debrief: Colonial printout */
 
 .workarea.report { display: block; overflow-y: auto; }
+.workarea.report > .panel { min-height: 100%; }
 .report-wrap { padding: 0 0 2px; }
 .paper { --c: 12px; --bw: 1px; --frame-fill: var(--paper); --frame-edge: var(--paper-edge); color: var(--paper-ink); padding: 14px 18px 15px; }
 .paper .doc-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; margin-bottom: 12px; border-bottom: 1px solid #b6ae98; font: 400 9px/1.3 var(--font-wide); letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-dim); }
@@ -450,6 +461,9 @@ button { font: inherit; color: inherit; }
 .report-cols ul { list-style: none; margin: 0; padding: 0; }
 .report-cols li { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; font-size: 14px; }
 .report-cols li .t { font: 500 12px/1.2 var(--mono); color: var(--paper-dim); flex: none; }
+.report-cols li.severe { color: var(--stamp-late); font-weight: 600; }
+.report-cols li .sev { margin-left: auto; padding: 1px 5px; border: 1px solid currentColor; font: 400 7.5px/1.3 var(--font-wide); letter-spacing: 0.12em; text-transform: uppercase; }
+.paper p.revealed { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--stamp-late); background: rgba(162, 58, 46, 0.07); font-size: 14.5px; }
 .report-cols .node { background: #c9c1ab; margin-right: 4px; }
 .report-cols .node.done { background: var(--stamp-ok); }
 .report-summary { margin: 20px 0 0; padding-top: 12px; border-top: 1px solid #b6ae98; font-size: 16px; font-style: italic; }
@@ -457,10 +471,58 @@ button { font: inherit; color: inherit; }
 .paper .doc-foot .code { font: 500 10.5px/1.3 var(--mono); letter-spacing: 0.04em; }
 
 .caption { flex: 1; text-align: right; color: #6f7b80; font-size: 12px; }
+.caption a { color: var(--salmon-ink); }
+
+/* ---------------------------------------------------------------- run: week strip, fate, intel */
+
+.head-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; }
+.weekstrip { display: inline-flex; gap: 3px; }
+.weekstrip i { width: 15px; height: 13px; display: grid; place-items: center; font: 400 7px/1 var(--font-wide); font-style: normal; color: #5f6a6f; background: #1a2124; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
+.weekstrip i.ok { background: var(--green-dim); color: #d9f5de; }
+.weekstrip i.late { background: #6a2a22; color: #ffd3cb; }
+.weekstrip i.today { background: var(--amber); color: #1b1404; }
+.fate { display: inline-flex; align-items: center; gap: 4px; color: var(--cyan-dim); }
+.fate i { width: 7px; height: 7px; margin-left: 2px; transform: rotate(45deg); border: 1px solid var(--cyan-dim); }
+.fate i.on { background: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 5px var(--cyan); }
+
+.unconfirmed { margin-left: 8px; padding: 1px 5px; border: 1px solid var(--amber-dim); font: 400 7px/1.3 var(--font-wide); letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); vertical-align: 1px; text-shadow: none; }
+.tag.must { border-color: #7a3a30; color: var(--salmon-ink); }
+.row.unknown .k { color: var(--amber-dim); font-style: italic; }
+.node.unknown { background: transparent; box-shadow: inset 0 0 0 1px var(--amber-dim); }
+
+.intel-list { list-style: none; margin: 0; padding: 0; }
+.intel { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed var(--rule); }
+.intel:last-child { border-bottom: none; }
+.intel .grade { flex: none; width: 30px; padding: 4px 0; text-align: center; font: 600 11px/1 var(--mono); border: 1px solid currentColor; }
+.intel.good .grade { color: var(--green); text-shadow: var(--glow); }
+.intel.fair .grade { color: var(--amber); }
+.intel.poor .grade { color: var(--red); }
+.intel .what { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.intel .source { font: 400 8.5px/1.3 var(--font-wide); letter-spacing: 0.14em; text-transform: uppercase; color: var(--khaki); }
+.intel .source .t { color: var(--khaki-dim); font: 500 10px/1 var(--mono); letter-spacing: 0; margin-left: 4px; }
+.intel .text { color: var(--cyan); font-size: 14px; }
+.intel.poor .text { color: #b9d4d9; }
+
+/* Evening cards and weekly perks: pick, then commit from the status bar. */
+.card.picked { --frame-edge: var(--amber); --frame-fill: #1d1607; }
+.card.picked .label { color: var(--amber); text-shadow: var(--glow); }
+.summary.amber { color: var(--amber); }
+.summary.red { color: var(--red); }
+.weektable { width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: 13.5px; }
+.weektable th, .weektable td { padding: 7px 8px; border-bottom: 1px solid var(--rule); text-align: left; color: #b9d4d9; }
+.weektable th { font: 400 9px/1.2 var(--font-wide); letter-spacing: 0.14em; text-transform: uppercase; color: var(--khaki); }
+.weektable td.num { text-align: right; font: 600 13px/1 var(--mono); color: var(--amber); }
+.weektable td.red { color: var(--red); }
+.weektable td.green { color: var(--green); }
+.weektable tr.total th, .weektable tr.total td { border-bottom: none; border-top: 1px solid var(--khaki-dim); }
 
 /* ---------------------------------------------------------------- small screens */
 
 @media (max-width: 730px) {
+  .brand { letter-spacing: 0.24em; }
+  .brand span { display: none; }
+  .head-eyebrow { gap: 4px 10px; }
+  .intel .text { font-size: 13px; }
   .site { padding: 6px 6px 6px; min-height: 480px; }
   .site-top { margin: 2px 6px 6px; }
   .caption { display: none; }

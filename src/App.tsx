@@ -1,14 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GameScreen } from './ui/GameScreen';
+import { RunScreen } from './ui/RunScreen';
 import * as sound from './ui/sound';
 import { createGame, currentIncident, reduce } from './sim/engine';
 import { randomSeed } from './sim/rng';
-import type { Action } from './sim/types';
+import { chooseCards, choosePerk, finishMorning, newRun, startMorning, type CardId, type RunState } from './sim/run';
+import type { Action, GameState, PerkId } from './sim/types';
 
-function initialSeed(): number {
+// A run lives in this browser. ?seed=N plays a single standalone morning (a drill) instead.
+const SAVE_KEY = 'cic.run.v1';
+type Saved = { run: RunState; game?: GameState };
+
+function loadRun(): Saved | undefined {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    const v = raw ? (JSON.parse(raw) as Saved) : undefined;
+    return v?.run?.version === 1 ? v : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function saveRun(v: Saved) {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(v));
+  } catch {
+    // Private windows and full storage: the run just won't survive a reload.
+  }
+}
+
+function drillSeed(): number | undefined {
   const param = new URLSearchParams(window.location.search).get('seed');
   const n = param ? Number.parseInt(param, 10) : NaN;
-  return Number.isFinite(n) ? n : randomSeed();
+  return Number.isFinite(n) ? n : undefined;
 }
 
 function setSeedInUrl(seed: number) {
@@ -17,38 +41,101 @@ function setSeedInUrl(seed: number) {
   window.history.replaceState(null, '', url);
 }
 
+function freshRun(): Saved {
+  const run = newRun(randomSeed());
+  return { run, game: startMorning(run) };
+}
+
+function initial(): { run?: RunState; game?: GameState; drill?: number } {
+  const drill = drillSeed();
+  if (drill !== undefined) return { drill, game: createGame(drill) };
+  const saved = loadRun() ?? freshRun();
+  if (saved.run.phase === 'morning' && !saved.game) saved.game = startMorning(saved.run);
+  return saved;
+}
+
 export default function App() {
-  const [seed, setSeed] = useState(initialSeed);
-  const [game, setGame] = useState(() => createGame(seed));
+  const [init] = useState(initial);
+  const [drill, setDrill] = useState(init.drill);
+  const [run, setRun] = useState(init.run);
+  const [game, setGame] = useState(init.game);
   const [muted, setMuted] = useState(sound.isMuted());
+  const [confirmReset, setConfirmReset] = useState(false);
   const prev = useRef(game);
 
-  useEffect(() => setSeedInUrl(seed), [seed]);
+  useEffect(() => {
+    if (drill !== undefined) setSeedInUrl(drill);
+  }, [drill]);
+  useEffect(() => {
+    if (run) saveRun({ run, game });
+  }, [run, game]);
+  useEffect(() => {
+    if (!confirmReset) return;
+    const t = setTimeout(() => setConfirmReset(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmReset]);
 
   // Sounds follow state changes rather than button presses.
   useEffect(() => {
     const before = prev.current;
     prev.current = game;
-    if (before === game) return;
+    if (!game || !before || before === game) return;
     if (game.ended && !before.ended) sound.done();
     else if (currentIncident(game) && currentIncident(game)?.uid !== currentIncident(before)?.uid) sound.alert();
     else sound.click();
   }, [game]);
 
-  const act = useCallback((a: Action) => setGame((g) => reduce(g, a)), []);
+  const act = useCallback((a: Action) => setGame((g) => (g ? reduce(g, a) : g)), []);
 
-  const start = (newSeed: number) => {
-    setSeed(newSeed);
-    const g = createGame(newSeed);
+  const startDrill = (seed: number) => {
+    setDrill(seed);
+    const g = createGame(seed);
     prev.current = g;
     setGame(g);
+  };
+
+  const toEvening = () => {
+    if (!run || !game) return;
+    setRun(finishMorning(run, game));
+    setGame(undefined);
+  };
+  const pickCards = (picks: CardId[]) => {
+    if (!run) return;
+    const next = chooseCards(run, picks);
+    const g = startMorning(next);
+    prev.current = g;
+    setRun(next);
+    setGame(g);
+  };
+  const pickPerk = (perk?: PerkId) => run && setRun(choosePerk(run, perk));
+  const resetRun = () => {
+    const fresh = freshRun();
+    prev.current = fresh.game;
+    setRun(fresh.run);
+    setGame(fresh.game);
+    setConfirmReset(false);
   };
 
   return (
     <div className="site">
       <div className="site-top">
-        <div className="brand">TUESDAY</div>
-        <div className="caption">Prototype · seed {seed} · share the URL to replay this morning</div>
+        <div className="brand">
+          C·I·C <span>Child Information Center</span>
+        </div>
+        <div className="caption">
+          {drill !== undefined ? (
+            <>
+              Drill · seed {drill} · share the URL to replay this morning · <a href="./">back to the week</a>
+            </>
+          ) : (
+            'Your week is saved in this browser'
+          )}
+        </div>
+        {drill === undefined && (
+          <button className="tool frame" onClick={() => (confirmReset ? resetRun() : setConfirmReset(true))}>
+            {confirmReset ? 'Really start over?' : 'New run'}
+          </button>
+        )}
         <button
           className="tool frame"
           onClick={() => {
@@ -61,8 +148,19 @@ export default function App() {
         </button>
       </div>
 
-      <GameScreen game={game} seed={seed} act={act} onRetry={() => start(randomSeed())} onReplay={() => start(seed)} />
-
+      {game ? (
+        <GameScreen
+          game={game}
+          seed={drill ?? game.seed}
+          act={act}
+          run={drill === undefined ? run : undefined}
+          onNext={toEvening}
+          onRetry={() => startDrill(randomSeed())}
+          onReplay={() => startDrill(drill ?? game.seed)}
+        />
+      ) : (
+        run && <RunScreen run={run} onCards={pickCards} onPerk={pickPerk} />
+      )}
     </div>
   );
 }

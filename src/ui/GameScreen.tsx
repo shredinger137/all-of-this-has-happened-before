@@ -6,7 +6,10 @@ import { ActionPanel } from './ActionPanel';
 import { Debrief } from './Debrief';
 import { Dock } from './Dock';
 import { MorningPlot } from './MorningPlot';
+import { IntelPanel } from './IntelPanel';
 import { LogPanel, StatusPanel } from './StatusPanel';
+import { WeekStrip, FatePips } from './RunScreen';
+import type { RunState } from '../sim/run';
 
 const SEGMENT_MINUTES = 5;
 // Below this width the two screens don't fit side by side, so they become tabs. Matches styles.css.
@@ -33,8 +36,8 @@ function useNarrow(): boolean {
   return narrow;
 }
 
-type Tab = 'actions' | 'status' | 'log';
-const TAB_LABELS: Record<Tab, string> = { actions: 'Actions', status: 'Status', log: 'Log' };
+type Tab = 'actions' | 'intel' | 'status' | 'log';
+const TAB_LABELS: Record<Tab, string> = { actions: 'Actions', intel: 'Intel', status: 'Status', log: 'Log' };
 
 function Tabs({ tabs, value, onChange, alert }: { tabs: Tab[]; value: Tab; onChange: (t: Tab) => void; alert?: Tab }) {
   return (
@@ -58,14 +61,17 @@ type Props = {
   game: GameState;
   seed: number;
   act: (a: Action) => void;
-  onRetry: () => void;
-  onReplay: () => void;
+  run?: RunState; // absent for a standalone drill
+  onNext: () => void; // run: on to the evening
+  onRetry: () => void; // drill: a new morning
+  onReplay: () => void; // drill: the same morning again
 };
 
 /** The console itself: housing, clock, plot, screens, status bar. Pure view of a game state. */
-export function GameScreen({ game, seed, act, onRetry, onReplay }: Props) {
+export function GameScreen({ game, seed, act, run, onNext, onRetry, onReplay }: Props) {
   const narrow = useNarrow();
-  const [tab, setTab] = useState<Tab>(narrow ? 'actions' : 'status');
+  // The briefing comes first: on a phone the actions, on a wide screen the intel beside them.
+  const [tab, setTab] = useState<Tab>(narrow ? 'actions' : 'intel');
   const inc = currentIncident(game);
 
   // A new problem always brings the actions screen forward on a phone.
@@ -74,7 +80,7 @@ export function GameScreen({ game, seed, act, onRetry, onReplay }: Props) {
   }, [inc?.uid, narrow]);
   // Switching layouts: a phone has no separate actions column, a wide screen has no actions tab.
   useEffect(() => {
-    setTab((t) => (narrow ? t : t === 'actions' ? 'status' : t));
+    setTab((t) => (narrow ? t : t === 'actions' ? 'intel' : t));
   }, [narrow]);
 
   const r = game.ended ? results(game) : undefined;
@@ -99,28 +105,42 @@ export function GameScreen({ game, seed, act, onRetry, onReplay }: Props) {
   if (r) {
     work = (
       <div className="workarea report">
-        <Debrief r={r} seed={seed} />
+        <Debrief r={r} seed={seed} label={game.day.label} />
       </div>
     );
   } else if (narrow) {
     const panel =
-      tab === 'actions' ? <ActionPanel s={game} act={act} /> : tab === 'status' ? <StatusPanel s={game} /> : <LogPanel s={game} />;
+      tab === 'actions' ? (
+        <ActionPanel s={game} act={act} />
+      ) : tab === 'intel' ? (
+        <IntelPanel s={game} act={act} />
+      ) : tab === 'status' ? (
+        <StatusPanel s={game} />
+      ) : (
+        <LogPanel s={game} />
+      );
     work = (
       <div className="workarea single">
-        <Tabs tabs={['actions', 'status', 'log']} value={tab} onChange={setTab} alert={inc ? 'actions' : undefined} />
+        <Tabs tabs={['actions', 'intel', 'status', 'log']} value={tab} onChange={setTab} alert={inc ? 'actions' : undefined} />
         {panel}
       </div>
     );
   } else {
-    const side = tab === 'log' ? 'log' : 'status';
+    const side = tab === 'actions' ? 'intel' : tab;
     const head = (
       <div className="sectionhead tabhead">
-        <Tabs tabs={['status', 'log']} value={side} onChange={setTab} />
+        <Tabs tabs={['intel', 'status', 'log']} value={side} onChange={setTab} />
       </div>
     );
     work = (
       <div className="workarea">
-        {side === 'log' ? <LogPanel s={game} head={head} /> : <StatusPanel s={game} head={head} />}
+        {side === 'log' ? (
+          <LogPanel s={game} head={head} />
+        ) : side === 'status' ? (
+          <StatusPanel s={game} head={head} />
+        ) : (
+          <IntelPanel s={game} act={act} head={head} />
+        )}
         <ActionPanel s={game} act={act} />
       </div>
     );
@@ -130,7 +150,11 @@ export function GameScreen({ game, seed, act, onRetry, onReplay }: Props) {
     <div className="terminal frame">
       <header className="head">
         <div className="head-title">
-          <div className="eyebrow">Morning {String(seed).padStart(6, '0')}</div>
+          <div className="eyebrow head-eyebrow">
+            <span>{run ? game.day.label : `Drill ${String(seed).padStart(6, '0')}`}</span>
+            {run && <WeekStrip run={run} today={game.day.weekday} />}
+            <FatePips fate={game.fate} />
+          </div>
           <h1>{title}</h1>
           <div className="small">{sub}</div>
         </div>
@@ -151,7 +175,7 @@ export function GameScreen({ game, seed, act, onRetry, onReplay }: Props) {
 
       {work}
 
-      <Dock s={game} r={r} act={act} onRetry={onRetry} onReplay={onReplay} />
+      <Dock s={game} r={r} act={act} run={run} onNext={onNext} onRetry={onRetry} onReplay={onReplay} />
     </div>
   );
 }

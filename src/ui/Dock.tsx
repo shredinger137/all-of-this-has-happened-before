@@ -1,14 +1,19 @@
-import { CHILD_TASKS, TASKS } from '../sim/content';
 import { formatClock, SAFETY_CUTOFF } from '../sim/constants';
-import { currentIncident, earliness, isGroggy, type Results } from '../sim/engine';
-import type { Action, GameState } from '../sim/types';
+import { currentIncident, earliness, isGroggy, requirements, type Results } from '../sim/engine';
+import type { RunState } from '../sim/run';
+import type { Action, GameState, TaskId } from '../sim/types';
+
+const ORDER = { severe: 0, moderate: 1, minor: 2 };
 
 function leaveWarning(s: GameState): string {
-  const missing = CHILD_TASKS.concat(['lunch', 'parentReady'])
-    .filter((t) => s.objectives[t].status !== 'done')
-    .map((t) => TASKS[t].missing.toLowerCase());
-  if (missing.length === 0) return 'Everything important is done.';
-  return `Not done: ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? '…' : '.'}`;
+  // Known, unfinished things, the ones that matter most first. Loose ends are already lost.
+  const missing = requirements(s)
+    .filter((r) => r.known && !r.met && (s.objectives[r.id as TaskId] || r.id.startsWith('event:') || r.id === 'coat'))
+    .sort((a, b) => ORDER[a.severity] - ORDER[b.severity])
+    .map((r) => (r.severity === 'severe' ? `${r.missing.toUpperCase()}` : r.missing.toLowerCase()));
+  const unsure = !s.day.eventKnown ? ' School event unconfirmed.' : '';
+  if (missing.length === 0) return `Everything known is done.${unsure}`;
+  return `Not done: ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? '…' : '.'}${unsure}`;
 }
 
 function wakeWarning(s: GameState): string {
@@ -41,12 +46,14 @@ type Props = {
   s: GameState;
   r?: Results;
   act: (a: Action) => void;
+  run?: RunState;
+  onNext: () => void;
   onRetry: () => void;
   onReplay: () => void;
 };
 
 /** Status bar along the bottom of the console: lamps, latest message, and the leave (or wake) key. */
-export function Dock({ s, r, act, onRetry, onReplay }: Props) {
+export function Dock({ s, r, act, run, onNext, onRetry, onReplay }: Props) {
   if (r) {
     return (
       <div className="dock frame screen ended">
@@ -56,14 +63,20 @@ export function Dock({ s, r, act, onRetry, onReplay }: Props) {
             {r.lateness > 0 ? 'Morning over. School has begun.' : 'Morning over. The bell has not gone yet.'}
           </div>
         </div>
-        <div className="dock-keys">
-          <button className="dock-key tone-salmon" onClick={onReplay} title="Same surprises, if you make the same choices">
-            Same again
+        {run ? (
+          <button className="dock-key tone-amber" onClick={onNext}>
+            {s.day.weekday === 4 ? 'Week report →' : 'Evening →'}
           </button>
-          <button className="dock-key tone-amber" onClick={onRetry} title="New seed, new surprises">
-            New morning
-          </button>
-        </div>
+        ) : (
+          <div className="dock-keys">
+            <button className="dock-key tone-salmon" onClick={onReplay} title="Same surprises, if you make the same choices">
+              Same again
+            </button>
+            <button className="dock-key tone-amber" onClick={onRetry} title="New seed, new surprises">
+              New morning
+            </button>
+          </div>
+        )}
       </div>
     );
   }

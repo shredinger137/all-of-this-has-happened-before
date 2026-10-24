@@ -1,4 +1,5 @@
-import { CHILD_TASKS, INCIDENTS, PARENT_TASKS, TASKS, type ResponseDef } from '../sim/content';
+import { useState } from 'react';
+import { CHILD_TASKS, INCIDENTS, INTEL_TASKS, PARENT_TASKS, TASKS, type ResponseDef } from '../sim/content';
 import { formatClock } from '../sim/constants';
 import {
   childRate,
@@ -7,6 +8,7 @@ import {
   currentIncident,
   escalationChance,
   nothingRunning,
+  offered,
   parentRate,
   parentTaskBlocker,
   taskDuration,
@@ -46,7 +48,7 @@ function remaining(s: GameState, t: TaskId) {
 function ParentTaskButtons({ s, act }: Props) {
   return (
     <>
-      {PARENT_TASKS.filter((t) => s.objectives[t].status !== 'done').map((t) => {
+      {[...PARENT_TASKS, ...INTEL_TASKS].filter((t) => offered(s, t) && s.objectives[t].status !== 'done').map((t) => {
         const blocker = parentTaskBlocker(s, t);
         const resumed = s.objectives[t].progress > 0;
         return (
@@ -55,6 +57,7 @@ function ParentTaskButtons({ s, act }: Props) {
             label={resumed ? `Finish: ${TASKS[t].action.toLowerCase()}` : TASKS[t].action}
             sub={blocker ?? TASKS[t].hint(s)}
             cost={`${remaining(s, t)} MIN`}
+            tag={TASKS[t].intel ? 'Intel' : undefined}
             disabled={!!blocker}
             onClick={() => act({ type: 'startParent', task: t })}
           />
@@ -139,7 +142,7 @@ function ActiveView({ s, act }: Props) {
           </p>
         )}
         <div className="bank">
-          {CHILD_TASKS.filter((t) => !['done', 'skipped'].includes(s.objectives[t].status) && t !== ca).map((t) => {
+          {CHILD_TASKS.filter((t) => offered(s, t) && !['done', 'skipped'].includes(s.objectives[t].status) && t !== ca).map((t) => {
             const blocker = childTaskBlocker(s, t);
             const rate = TASKS[t].supervised ? childRate({ ...s, parentActivity: 'help' }) : childRate(s);
             const est = Math.ceil((taskDuration(s, t) - s.objectives[t].progress) / rate);
@@ -194,18 +197,20 @@ function ActiveView({ s, act }: Props) {
   );
 }
 
-/** Risk band shown before choosing, from the live escalation chance. */
-function riskBand(s: GameState, r: ResponseDef): { label: string; cls: string } {
-  if (!r.risky) return { label: 'None', cls: 'risk-none' };
-  if (s.coffeeBuffer) return { label: 'Low', cls: 'risk-low' }; // coffee absorbs one escalation
+/** Chance a response upsets her, from the live escalation model. Coffee or fate takes it to zero. */
+function riskBand(s: GameState, r: ResponseDef, fated: boolean): { label: string; cls: string } {
+  if (!r.risky) return { label: '—', cls: 'risk-none' };
+  if (fated) return { label: 'Fate', cls: 'risk-fate' };
+  if (s.coffeeBuffer) return { label: 'Coffee', cls: 'risk-low' }; // coffee absorbs one escalation
   const p = escalationChance(s, r.riskBase);
-  if (p < 0.3) return { label: 'Low', cls: 'risk-low' };
-  if (p < 0.5) return { label: 'Some', cls: 'risk-moderate' };
-  return { label: 'High', cls: 'risk-high' };
+  const label = `${Math.round(p * 100)}%`;
+  if (p < 0.3) return { label, cls: 'risk-low' };
+  if (p < 0.5) return { label, cls: 'risk-moderate' };
+  return { label, cls: 'risk-high' };
 }
 
-function ResponseCard({ s, r, onClick }: { s: GameState; r: ResponseDef; onClick: () => void }) {
-  const risk = riskBand(s, r);
+function ResponseCard({ s, r, fated, onClick }: { s: GameState; r: ResponseDef; fated: boolean; onClick: () => void }) {
+  const risk = riskBand(s, r, fated && !!r.risky);
   return (
     <button className="btnline frame choice" onClick={onClick}>
       <span className="what">
@@ -229,7 +234,7 @@ function ResponseCard({ s, r, onClick }: { s: GameState; r: ResponseDef; onClick
           Time <b>{r.minutes}m</b>
         </span>
         <span className={`readout ${risk.cls}`}>
-          Risk <b>{risk.label}</b>
+          Upset <b>{risk.label}</b>
         </span>
       </span>
     </button>
@@ -240,6 +245,10 @@ function IncidentView({ s, act, inc }: Props & { inc: OpenIncident }) {
   const def = INCIDENTS[inc.id];
   const urgent = s.minute >= s.departureDeadline;
   const stuck = s.minute - inc.minute;
+  // Fate: arm it, then pick a risky response. It is certain to go your way.
+  const [fated, setFated] = useState(false);
+  const options = def.responses.filter((r) => !r.available || r.available(s, inc));
+  const anyRisky = options.some((r) => r.risky);
   return (
     <div className={`crisis frame actions ${urgent ? 'urgent' : ''}`}>
       <div className="crisis-head">
@@ -255,11 +264,21 @@ function IncidentView({ s, act, inc }: Props & { inc: OpenIncident }) {
           <h2>{def.headline(s)}</h2>
           <p>{inc.note ?? def.detail(s)}</p>
         </div>
-        {def.responses
-          .filter((r) => !r.available || r.available(s, inc))
-          .map((r) => (
-            <ResponseCard key={r.id} s={s} r={r} onClick={() => act({ type: 'respond', response: r.id })} />
-          ))}
+        {options.map((r) => (
+          <ResponseCard
+            key={r.id}
+            s={s}
+            r={r}
+            fated={fated}
+            onClick={() => act({ type: 'respond', response: r.id, fate: fated && !!r.risky })}
+          />
+        ))}
+        {anyRisky && s.fate > 0 && (
+          <button className={`fate-toggle ${fated ? 'on' : ''}`} aria-pressed={fated} onClick={() => setFated(!fated)}>
+            <i />
+            {fated ? 'Fate armed: the next risky choice goes your way' : `Spend a fate point (${s.fate} left) on a risky choice`}
+          </button>
+        )}
         <div className="right">
           {def.deferrable ? (
             <button className="naked" onClick={() => act({ type: 'defer' })}>

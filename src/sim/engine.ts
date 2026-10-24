@@ -921,7 +921,7 @@ export function results(s: GameState): Results {
 
   let summary: string;
   if (lateness <= 0 && misses.length === 0) summary = 'On time, with everything done. Suspiciously smooth.';
-  else if (lateness <= 0 && severeMisses === 0) summary = `On time. ${leftBehind[0]} can wait until tomorrow.`;
+  else if (lateness <= 0 && severeMisses === 0) summary = `On time. Left behind: ${leftBehind.join(', ').toLowerCase()}.`;
   else if (lateness <= 0) summary = `On time, but without ${leftBehind.find((_, i) => misses[i].severity === 'severe')!.toLowerCase()}.`;
   else if (lateness <= 5 && misses.length <= 1) summary = `${lateness} minutes late, with most things finished.`;
   else if (misses.length >= 4) summary = `${lateness} minutes late and only partly ready. Tomorrow is another morning.`;

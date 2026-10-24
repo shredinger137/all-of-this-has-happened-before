@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { CHECKLIST, CONDITIONS, MOOD_LABELS, TASKS, TENDENCIES } from '../sim/content';
+import { CONDITIONS, EVENTS, MOOD_LABELS, TASKS, TENDENCIES } from '../sim/content';
 import { formatClock } from '../sim/constants';
-import { childRate, childStalled, isGroggy, parentRate, taskDuration } from '../sim/engine';
+import { childRate, childStalled, isGroggy, parentRate, requirements, taskDuration } from '../sim/engine';
 import type { GameState, TaskId } from '../sim/types';
 import { Ring } from './MorningPlot';
 
@@ -14,6 +14,10 @@ export function MoodBar({ mood }: { mood: number }) {
     </div>
   );
 }
+
+const LOOSE_ENDS = new Set(['noSocks', 'wellies', 'stainedShirt', 'messyKitchen', 'smellyKit', 'stuffyDamp', 'mood']);
+const DONE_ROW = { node: 'done', value: 'Done', vClass: 'muted' };
+const TODO_ROW = { node: '', value: 'Not yet', vClass: 'muted' };
 
 function objectiveRow(s: GameState, id: TaskId) {
   const o = s.objectives[id];
@@ -75,7 +79,11 @@ function ActivityCard({ s, who }: { s: GameState; who: 'parent' | 'child' }) {
 
 /** `head` is the fixed strip above the scrolling body (the tab strip on wide screens). */
 export function StatusPanel({ s, head }: { s: GameState; head?: ReactNode }) {
-  const done = CHECKLIST.filter((t) => s.objectives[t].status === 'done').length;
+  const reqs = requirements(s);
+  // Things to get done (known ones), versus loose ends left by how the morning went.
+  const needed = reqs.filter((r) => r.known && !LOOSE_ENDS.has(r.id));
+  const looseEnds = reqs.filter((r) => LOOSE_ENDS.has(r.id));
+  const done = needed.filter((r) => r.met).length;
   const mood = s.householdMood;
   const groggy = isGroggy(s);
   return (
@@ -136,22 +144,56 @@ export function StatusPanel({ s, head }: { s: GameState; head?: ReactNode }) {
           <span className="sectitle">
             <span className="num">{s.childAwake ? '03' : '02'}</span>Morning checklist
           </span>
-          <span className={`status ${done === CHECKLIST.length ? 'green' : 'amber'}`}>
-            {done} of {CHECKLIST.length}
+          <span className={`status ${done === needed.length ? 'green' : 'amber'}`}>
+            {done} of {needed.length}
           </span>
         </div>
-        {CHECKLIST.map((id) => {
-          const r = objectiveRow(s, id);
+        {needed.map((r) => {
+          const task = r.id.startsWith('event:') ? (s.day.event && EVENTS[s.day.event].task) : (r.id as TaskId);
+          const row = task && TASKS[task] ? objectiveRow(s, task) : r.met ? DONE_ROW : TODO_ROW;
           return (
-            <div className="row" key={id}>
+            <div className="row" key={r.id}>
               <span className="k">
-                <span className={`node ${r.node}`} />
-                {TASKS[id].label}
+                <span className={`node ${row.node}`} />
+                {r.label}
+                {r.severity === 'severe' && <span className="tag must">Must</span>}
               </span>
-              <span className={`v ${r.vClass}`}>{r.value}</span>
+              <span className={`v ${row.vClass}`}>{r.met && !task ? 'OK' : row.value}</span>
             </div>
           );
         })}
+        {!s.day.eventKnown && (
+          <div className="row unknown">
+            <span className="k">
+              <span className="node unknown" />
+              School event?
+            </span>
+            <span className="v amber">Unconfirmed</span>
+          </div>
+        )}
+        {!s.day.weatherKnown && s.day.weather !== 'cold' && (
+          <div className="row unknown">
+            <span className="k">
+              <span className="node unknown" />
+              Coat?
+            </span>
+            <span className="v amber">{Math.round(s.day.rainChance * 100)}% rain</span>
+          </div>
+        )}
+        {looseEnds.length > 0 && (
+          <>
+            <div className="eyebrow group-label">Loose ends</div>
+            {looseEnds.map((r) => (
+              <div className="row" key={r.id}>
+                <span className="k">
+                  <span className="node skipped" />
+                  {r.missing}
+                </span>
+                <span className="v amber">{r.severity}</span>
+              </div>
+            ))}
+          </>
+        )}
         <div className="eyebrow group-label">Prep</div>
         <div className="row">
           <span className="k">
