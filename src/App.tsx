@@ -3,6 +3,7 @@ import { GameScreen } from './ui/GameScreen';
 import { RunScreen } from './ui/RunScreen';
 import * as music from './ui/music';
 import * as sound from './ui/sound';
+import { EVENTS } from './sim/content';
 import { createGame, currentIncident, reduce } from './sim/engine';
 import { randomSeed } from './sim/rng';
 import { chooseCards, choosePerk, finishMorning, newRun, startMorning, type CardId, type RunState } from './sim/run';
@@ -16,8 +17,12 @@ function loadRun(): Saved | undefined {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     const v = raw ? (JSON.parse(raw) as Saved) : undefined;
-    if (v?.game) v.game.waves ??= 0; // saved before the endgame existed
-    return v?.run?.version === 1 ? v : undefined;
+    if (v?.run?.version !== 1) return undefined;
+    // A morning saved by an older build (different events and tasks) restarts; the week carries on.
+    if (v.game && !v.game.objectives.project) v.game = undefined;
+    for (const d of v.run.weekLog) if (d.event && !EVENTS[d.event]) d.event = undefined;
+    if (v.run.lastEvent && !EVENTS[v.run.lastEvent]) v.run.lastEvent = undefined;
+    return v;
   } catch {
     return undefined;
   }
