@@ -104,7 +104,7 @@ function Weekly({ run, perk, setPerk }: { run: RunState; perk?: PerkId; setPerk:
       <div className="sectionhead">
         <span className="sectitle">Week {run.week} in review</span>
         <span className={`status ${late >= LATE_MARKS_FOR_MEETING ? 'red' : late ? 'amber' : 'green'}`}>
-          {late} late mark{late === 1 ? '' : 's'}
+          {late} {late === 1 ? 'tardy' : 'tardies'}
         </span>
       </div>
       <div className="panel-body">
@@ -130,7 +130,7 @@ function Weekly({ run, perk, setPerk }: { run: RunState; perk?: PerkId; setPerk:
         </table>
         {run.meetingMonday && (
           <p className="summary red">
-            {late} late marks. The head teacher would like a word on Monday: be there by 07:50.
+            {late} tardies. The principal would like a word on Monday: be there by 07:50.
           </p>
         )}
         {run.perkOffer.length > 0 && (

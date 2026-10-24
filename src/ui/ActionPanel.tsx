@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CHILD_TASKS, INCIDENTS, INTEL_TASKS, PARENT_TASKS, TASKS, type ResponseDef } from '../sim/content';
+import { BREAKFAST_ORDER, BREAKFASTS, CHILD_TASKS, INCIDENTS, INTEL_TASKS, PARENT_TASKS, TASKS, type ResponseDef } from '../sim/content';
 import { formatClock } from '../sim/constants';
 import {
   childRate,
@@ -45,12 +45,58 @@ function remaining(s: GameState, t: TaskId) {
   return Math.max(1, Math.ceil((taskDuration(s, t) - s.objectives[t].progress) / parentRate(s) - 1e-6));
 }
 
+/** What to make. She has a preference today; you may only have a clue. */
+function BreakfastChooser({ s, act, close }: Props & { close: () => void }) {
+  const asked = s.flags.includes('askedBreakfast');
+  return (
+    <div className="chooser frame">
+      <div className="chooser-head">
+        <span>Make breakfast: what?</span>
+        <button className="naked" onClick={close}>
+          Cancel
+        </button>
+      </div>
+      <div className="bank">
+        {BREAKFAST_ORDER.map((b) => (
+          <ChoiceButton
+            key={b}
+            label={BREAKFASTS[b].name}
+            sub={asked && b === s.breakfastWant ? 'What she asked for' : b === 'pancakes' ? 'Slow. A treat' : b === 'cereal' ? 'Quick. Slower to eat' : 'A safe bet?'}
+            cost={`${Math.max(1, Math.ceil(BREAKFASTS[b].minutes / parentRate(s)))} MIN`}
+            onClick={() => {
+              close();
+              act({ type: 'startParent', task: 'breakfastMade', variant: b });
+            }}
+          />
+        ))}
+        {s.childAwake && !asked && (
+          <ChoiceButton label="Ask her first" sub="She knows exactly what she wants. Takes you both" cost="1 MIN" onClick={() => act({ type: 'askBreakfast' })} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ParentTaskButtons({ s, act }: Props) {
+  const [choosing, setChoosing] = useState(false);
+  if (choosing) return <BreakfastChooser s={s} act={act} close={() => setChoosing(false)} />;
   return (
     <>
       {[...PARENT_TASKS, ...INTEL_TASKS].filter((t) => offered(s, t) && s.objectives[t].status !== 'done').map((t) => {
         const blocker = parentTaskBlocker(s, t);
         const resumed = s.objectives[t].progress > 0;
+        if (t === 'breakfastMade' && !resumed) {
+          return (
+            <ChoiceButton
+              key={t}
+              label="Make breakfast…"
+              sub={blocker ?? 'Choose what. She may want something else'}
+              cost="2–12 MIN"
+              disabled={!!blocker}
+              onClick={() => setChoosing(true)}
+            />
+          );
+        }
         return (
           <ChoiceButton
             key={t}
@@ -209,13 +255,13 @@ function riskBand(s: GameState, r: ResponseDef, fated: boolean): { label: string
   return { label, cls: 'risk-high' };
 }
 
-function ResponseCard({ s, r, fated, onClick }: { s: GameState; r: ResponseDef; fated: boolean; onClick: () => void }) {
+function ResponseCard({ s, inc, r, fated, onClick }: { s: GameState; inc: OpenIncident; r: ResponseDef; fated: boolean; onClick: () => void }) {
   const risk = riskBand(s, r, fated && !!r.risky);
   return (
     <button className="btnline frame choice" onClick={onClick}>
       <span className="what">
         <span className="label">
-          {r.label}
+          {r.labelFor ? r.labelFor(s, inc) : r.label}
           {r.both && <span className="tag">You both</span>}
         </span>
         <span className={`sub ${r.risky ? 'risky' : ''}`}>{r.hint}</span>
@@ -231,7 +277,7 @@ function ResponseCard({ s, r, fated, onClick }: { s: GameState; r: ResponseDef; 
       </span>
       <span className="readouts">
         <span className="readout duration">
-          Time <b>{r.minutes}m</b>
+          Time <b>{r.minutesFor?.(s) ?? r.minutes}m</b>
         </span>
         <span className={`readout ${risk.cls}`}>
           Upset <b>{risk.label}</b>
@@ -266,13 +312,23 @@ function IncidentView({ s, act, inc }: Props & { inc: OpenIncident }) {
       <div className="crisis-body">
         <div className="message">
           <div className="context">{inc.worse ? 'Put off. Now back' : def.context}</div>
-          <h2>{def.headline(s)}</h2>
-          <p>{inc.note ?? def.detail(s)}</p>
+          {def.speaks ? (
+            <>
+              <h2>“{inc.note ?? def.detail(s)}”</h2>
+              <p>{def.headline(s)}</p>
+            </>
+          ) : (
+            <>
+              <h2>{def.headline(s)}</h2>
+              <p>{inc.note ?? def.detail(s)}</p>
+            </>
+          )}
         </div>
         {options.map((r) => (
           <ResponseCard
             key={r.id}
             s={s}
+            inc={inc}
             r={r}
             fated={fated}
             onClick={() => act({ type: 'respond', response: r.id, fate: fated && !!r.risky })}
@@ -313,7 +369,48 @@ function IncidentView({ s, act, inc }: Props & { inc: OpenIncident }) {
   );
 }
 
+/** What your choice did. Stays until you carry on, so every choice has a visible result. */
+function OutcomeView({ s, act }: Props) {
+  const o = s.outcome!;
+  const next = currentIncident(s);
+  return (
+    <div className={`crisis frame actions outcome ${o.good ? 'good' : 'bad'}`}>
+      <div className="crisis-head">
+        <span className="tri" aria-hidden>
+          ■
+        </span>
+        <span className="title">Result · {o.title}</span>
+      </div>
+      <div className="crisis-body">
+        <div className="message">
+          <div className="context">You: {o.choice.toLowerCase()}</div>
+          {o.lines.map((l, i) => (
+            <p key={i} className={i === o.lines.length - 1 ? 'last' : ''}>
+              {l}
+            </p>
+          ))}
+        </div>
+        <div className="costs">
+          {o.costs.map((c) => (
+            <span key={c} className="cost-chip">
+              {c}
+            </span>
+          ))}
+        </div>
+        <button className="btnline frame continue" autoFocus onClick={() => act({ type: 'ack' })}>
+          <span>
+            <span className="label">{next ? `Next: ${INCIDENTS[next.id].title.toLowerCase()}` : 'Carry on'}</span>
+            <span className="sub">{next ? 'Something else needs you' : 'Back to the morning'}</span>
+          </span>
+          <span className="cost">→</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ActionPanel({ s, act }: Props) {
+  if (s.outcome) return <OutcomeView s={s} act={act} />;
   const inc = currentIncident(s);
   // Keyed so each new problem re-runs the alert flash.
   if (inc) return <IncidentView key={inc.uid} s={s} act={act} inc={inc} />;

@@ -2,7 +2,7 @@
  * Visual language: a Colonial CIC console, after Battlestar Galactica (2004).
  * See docs/ui-reference-notes.md for the references and what we deliberately left out.
  *  - octagons everywhere: every window, button and printout has all four corners trimmed at 45°
- *  - black CRT glass with scanlines; text colour by function (cyan message, green status, amber
+ *  - black CRT glass with scanlines; text color by function (cyan message, green status, amber
  *    confirm/time, red alarm); wide extended caps for labels and headlines
  *  - salmon-outlined screen buttons; khaki-bezelled message windows with micro-label strips
  *  - a DRADIS-style plot: red-magenta chrome, blue grid, green friendlies, red hostiles
@@ -381,6 +381,19 @@ button { font: inherit; color: inherit; }
 .crisis-foot .micro { color: var(--khaki-dim); }
 .crisis-foot .micro b { color: var(--khaki); font-weight: 400; }
 
+/* Result card: what your choice did. Green bezel when it went well, salmon when it cost you. */
+.outcome.good { --frame-edge: var(--green-dim); }
+.outcome.bad { --frame-edge: #9a4a35; }
+.outcome .crisis-head { color: var(--cyan); }
+.outcome .message p { color: #a9dbe3; margin: 6px 0 0; font: 15px/1.5 var(--font-ui); text-transform: none; letter-spacing: 0; }
+.outcome .message p.last { color: var(--cyan); font-size: 17px; text-shadow: var(--glow); }
+.outcome .costs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 4px 0 12px; }
+.cost-chip { padding: 4px 9px; border: 1px solid #2b4148; font: 400 8.5px/1.3 var(--font-wide); letter-spacing: 0.12em; text-transform: uppercase; color: var(--khaki); }
+.outcome .continue { --frame-edge: var(--amber-dim); }
+
+/* Breakfast chooser: a small panel in place of your task list. */
+.chooser { --c: 10px; --bw: 1.5px; --frame-edge: var(--amber-dim); --frame-fill: #0d0f08; padding: 10px 12px; grid-column: 1 / -1; }
+.chooser-head { display: flex; justify-content: space-between; align-items: center; font: 400 9.5px/1.3 var(--font-wide); letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); }
 .risk { font: 400 8.5px/1 var(--font-wide); letter-spacing: 0.14em; color: var(--red); text-shadow: var(--glow); }
 
 /* ---------------------------------------------------------------- log + footer */

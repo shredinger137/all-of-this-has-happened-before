@@ -52,7 +52,13 @@ export type IncidentId =
   | 'juice'
   | 'hungryAgain'
   | 'bagRaid'
-  | 'wobble';
+  | 'wobble'
+  // follow-through: what a choice can lead to
+  | 'upset'
+  | 'wrongBreakfast'
+  | 'braids'
+  | 'joke'
+  | 'closedDoor';
 
 export type OpenIncident = {
   uid: number;
@@ -63,6 +69,8 @@ export type OpenIncident = {
   note?: string; // replaces the default detail line after a partial resolution
   deferredAt?: number; // put off at this minute; it comes back worse if left too long
   worse?: boolean;
+  joke?: number; // which joke she is telling
+  stage?: number; // how far into it you are
 };
 
 export type MorningCondition = 'ordinary' | 'lateBedtime' | 'shoesByDoor' | 'noBread' | 'earlyBird';
@@ -83,7 +91,10 @@ export type Flag =
   | 'stuffyDamp'
   | 'promisedDress'
   | 'promisedBug'
-  | 'formFound';
+  | 'formFound'
+  | 'promisedBraids'
+  | 'sulking'
+  | 'askedBreakfast';
 
 /** What a lane (you / her) was doing over a stretch of minutes, for the morning plot. */
 export type Span = {
@@ -97,6 +108,11 @@ export type Span = {
 export type LogEntry = { minute: number; text: string; notable?: boolean };
 
 export type Mood = 0 | 1 | 2 | 3 | 4 | 5;
+
+export type Breakfast = 'toast' | 'oatmeal' | 'pancakes' | 'cereal';
+
+/** What a choice in a problem window did: shown before the next thing happens. */
+export type Outcome = { title: string; choice: string; lines: string[]; costs: string[]; good: boolean };
 
 /** The endgame: a wave of contacts, announced in advance. When it lands, each one becomes a problem. */
 export type Wave = { at: number; size: number; announced: number };
@@ -125,7 +141,7 @@ export type Day = {
   eventKnown: boolean; // event (or its absence) confirmed
   weatherKnown: boolean;
   schoolStart: number; // real start (a trip or a meeting moves it)
-  meeting: boolean; // the head teacher wants a word: be there by 07:50
+  meeting: boolean; // the principal wants a word: be there by 07:50
 };
 
 export type GameState = {
@@ -151,6 +167,11 @@ export type GameState = {
   childTendency: ChildTendency;
   day: Day;
   intel: Intel[];
+  breakfastWant: Breakfast; // what she'll want today; hidden
+  breakfastChoice?: Breakfast; // what you're making (or made)
+  hairWant: 'braids' | 'simple';
+  caffeinatedUntil?: number; // coffee: you work faster until then
+  outcome?: Outcome; // the result of the last choice, until you carry on
   wave?: Wave; // inbound, if any
   waves: number; // how many have landed this morning
   nextWaveAt?: number;
@@ -163,14 +184,16 @@ export type GameState = {
 };
 
 export type Action =
-  | { type: 'startParent'; task: TaskId }
+  | { type: 'startParent'; task: TaskId; variant?: Breakfast }
+  | { type: 'askBreakfast' }
+  | { type: 'ack' }
   | { type: 'help' }
   | { type: 'assignChild'; task: TaskId }
   | { type: 'wakeNow' }
   | { type: 'wait' }
   | { type: 'respond'; response: string; fate?: boolean }
   | { type: 'ask' }
-  | { type: 'favour' }
+  | { type: 'favor' }
   | { type: 'defer' }
   | { type: 'reopen'; uid: number }
   | { type: 'leave' };

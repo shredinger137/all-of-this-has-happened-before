@@ -19,7 +19,7 @@ function loadRun(): Saved | undefined {
     const v = raw ? (JSON.parse(raw) as Saved) : undefined;
     if (v?.run?.version !== 1) return undefined;
     // A morning saved by an older build (different events and tasks) restarts; the week carries on.
-    if (v.game && !v.game.objectives.project) v.game = undefined;
+    if (v.game && (!v.game.objectives.project || !v.game.breakfastWant)) v.game = undefined;
     for (const d of v.run.weekLog) if (d.event && !EVENTS[d.event]) d.event = undefined;
     if (v.run.lastEvent && !EVENTS[v.run.lastEvent]) v.run.lastEvent = undefined;
     return v;

@@ -123,7 +123,12 @@ export function StatusPanel({ s, head }: { s: GameState; head?: ReactNode }) {
           <span className={`v ${mood <= 1 ? 'red' : mood === 2 ? 'amber' : 'green'}`}>{MOOD_LABELS[mood]}</span>
         </div>
         <MoodBar mood={mood} />
-        {s.coffeeBuffer && <div className="small" style={{ marginTop: 8 }}>Coffee in hand. You'll keep your cool once.</div>}
+        {((s.caffeinatedUntil ?? 0) > s.minute || s.coffeeBuffer) && (
+          <div className="small" style={{ marginTop: 8 }}>
+            {(s.caffeinatedUntil ?? 0) > s.minute ? `Coffee: you're working faster until ${formatClock(s.caffeinatedUntil!)}.` : ''}
+            {s.coffeeBuffer ? " You'll keep your cool once." : ''}
+          </div>
+        )}
 
         {s.childAwake && (
           <>

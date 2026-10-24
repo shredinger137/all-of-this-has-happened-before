@@ -11,7 +11,7 @@ export type CardId = 'clothes' | 'bag' | 'lunch' | 'shoes' | 'bedtime' | 'newsle
 /** Evening preparations: pick two of four each night. */
 export const CARDS: Record<CardId, { name: string; note: string; prepares?: TaskId }> = {
   clothes: { name: 'Lay out her clothes', note: 'Dressing goes faster, with fewer arguments.', prepares: 'clothesOut' },
-  bag: { name: 'Pack the school bag', note: 'Any forms or books in it are found tonight.', prepares: 'bagChecked' },
+  bag: { name: 'Pack her backpack', note: 'Any forms or books in it are found tonight.', prepares: 'bagChecked' },
   lunch: { name: 'Make lunch tonight', note: 'One less job in the morning.', prepares: 'lunch' },
   shoes: { name: 'Find her shoes', note: 'By the door, where they belong.', prepares: 'shoesFound' },
   bedtime: { name: 'Early bedtime', note: 'She wakes rested and in a better mood.' },
@@ -25,10 +25,11 @@ export const CARDS_PER_EVENING = 2;
 export const MAX_FATE = 3;
 export const LATE_MARKS_FOR_MEETING = 3;
 
-export type PromiseId = 'dress' | 'bug';
+export type PromiseId = 'dress' | 'bug' | 'braids';
 export const PROMISE_TEXT: Record<PromiseId, string> = {
   dress: 'the yellow dress',
   bug: 'looking at the bug after school',
+  braids: 'braids on Saturday',
 };
 
 export type DaySummary = {
@@ -148,6 +149,7 @@ export function finishMorning(prev: RunState, game: GameState): RunState {
   run.promises = [];
   if (game.flags.includes('promisedDress')) run.promises.push('dress');
   if (game.flags.includes('promisedBug')) run.promises.push('bug');
+  if (game.flags.includes('promisedBraids')) run.promises.push('braids');
   if (game.day.event === 'library') run.overdueBook = !game.flags.includes('bookFound');
   run.lastEvent = game.day.event;
   if (game.day.meeting) run.meetingMonday = false;

@@ -4,7 +4,7 @@ import { formatClock } from '../sim/constants';
 import { currentIncident, offered, parentRate, suspectedEvents } from '../sim/engine';
 import type { Action, GameState, Intel, TaskId } from '../sim/types';
 
-/** Reliability grade colour: confirmed (A), plausible (B–C), doubtful (D–F). */
+/** Reliability grade color: confirmed (A), plausible (B–C), doubtful (D–F). */
 function gradeTone(grade: string): string {
   const g = grade[0];
   return g === 'A' ? 'good' : g === 'B' || g === 'C' ? 'fair' : 'poor';
@@ -88,7 +88,7 @@ export function IntelPanel({ s, act, head }: { s: GameState; act: (a: Action) =>
         </div>
         {d.meeting && (
           <div className="row">
-            <span className="k">Head teacher</span>
+            <span className="k">Principal</span>
             <span className="v red">Be there by 07:50</span>
           </div>
         )}
@@ -152,7 +152,7 @@ export function IntelPanel({ s, act, head }: { s: GameState; act: (a: Action) =>
                 sub={s.fate > 0 ? 'Certain, and takes no time. Costs a fate point' : 'Needs a fate point'}
                 cost="1 FATE"
                 disabled={busy || s.fate <= 0}
-                onClick={() => act({ type: 'favour' })}
+                onClick={() => act({ type: 'favor' })}
               />
             )}
           </>

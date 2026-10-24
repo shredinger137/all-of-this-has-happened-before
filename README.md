@@ -24,7 +24,10 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 - **Confirm or bet.** The school email (3 min) and looking outside (1 min) are certain. Asking her is
   free-ish and confidently unreliable (E5). Messaging another parent costs a **fate point**.
 - **She's up.** You do one thing, she does one thing. Problems interrupt; the phone and doorbell
-  interrupt *you*. Put a problem off for too long and it comes back worse.
+  interrupt *you*. Put a problem off for too long and it comes back worse. Every choice shows its result;
+  some lead to more choices (she's upset now; the door is shut).
+- **Small decisions.** Breakfast: what will you make? She has a preference today and you only have a clue
+  (or ask her, once she's up). Hair: some days, braided pigtails. Jokes: you hear the whole thing.
 - **The endgame.** From about ten minutes before leaving time, waves of contacts. Each wave is
   announced on the plot and in the status bar ("Contacts inbound: 2 · landing 07:43") five minutes
   before it lands. When it lands, each contact is a problem that can undo finished work: shoes off,
@@ -35,7 +38,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
   the walk plays out, then the after-action report. A wave still inbound lands on an empty house. What you leave behind is weighted:
   missing a stuffy on stuffy day is serious; a packed lunch is not.
 - **Evening.** Pick two preparations for tomorrow. Keep your promises.
-- **Friday.** The week report. Three late marks means a word with the head teacher on Monday.
+- **Friday.** The week report. Three tardies means a word with the principal on Monday.
   Pick one permanent household improvement. No game over: the weeks just keep coming.
 
 ## Layout
@@ -69,7 +72,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 
 - **Prep is 25% slower once she's awake** ("she keeps needing you").
 - **Supervised tasks**: teeth and hair only progress while you help. **Help her**: 1.5× speed.
-- **Coffee** cancels one escalation from a risky response. **Fate** makes one risky choice certain.
+- **Coffee**: 15% faster for 20 minutes, and cancels one escalation. **Fate** makes one risky choice certain.
 - Risky responses show their odds ("Upset 45%"); escalation costs mood, time, and 2 minutes for both.
 - **Leaving mid-incident** is allowed; the problem goes unresolved. The toilet is no longer an ambush at
   the door: it arrives with a wave, announced.

@@ -26,7 +26,7 @@ function Lamps({ s }: { s: GameState }) {
   const lamps = [
     { label: s.childAwake ? 'Awake' : 'Asleep', on: s.childAwake, tone: 'green' },
     { label: 'Groggy', on: isGroggy(s), tone: 'amber' },
-    { label: 'Coffee', on: s.coffeeBuffer, tone: 'amber' },
+    { label: 'Coffee', on: s.coffeeBuffer || (s.caffeinatedUntil ?? 0) > s.minute, tone: 'amber' },
     { label: 'Problem', on: !!currentIncident(s), tone: 'alarm' },
     { label: 'Late', on: s.minute >= s.departureDeadline, tone: 'alarm' },
     { label: s.wave ? `Inbound ×${s.wave.size}` : 'Inbound', on: !!s.wave, tone: 'alarm' },

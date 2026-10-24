@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEPARTURE_DEADLINE, NATURAL_WAKE, START_MINUTE } from './constants';
-import { collapseStart, createGame, currentIncident, offered, reduce, results } from './engine';
+import { collapseStart, createGame, currentIncident, offered, parentRate, reduce, results } from './engine';
+import { INCIDENTS } from './content';
 import type { Action, EventId, GameState } from './types';
 
 const run = (s: GameState, ...actions: Action[]) => actions.reduce(reduce, s);
@@ -31,7 +32,7 @@ describe('morning start', () => {
 
   it('wakes her naturally at 07:00 and pauses there', () => {
     let s = ordinary();
-    s = run(s, { type: 'startParent', task: 'lunch' }, { type: 'startParent', task: 'breakfastMade' }, { type: 'startParent', task: 'parentReady' });
+    s = run(s, { type: 'startParent', task: 'lunch' }, { type: 'startParent', task: 'breakfastMade', variant: 'oatmeal' }, { type: 'startParent', task: 'parentReady' });
     expect(s.minute).toBe(START_MINUTE + 23);
     s = run(s, { type: 'startParent', task: 'bagChecked' });
     // bag check may raise the library incident; either way 07:00 is not crossed silently
@@ -206,6 +207,11 @@ const INCIDENT_FALLBACK: Record<string, string> = {
   hungryAgain: 'snack',
   bagRaid: 'repack',
   wobble: 'hug',
+  upset: 'hug',
+  wrongBreakfast: 'remake',
+  braids: 'clip',
+  joke: 'interrupt',
+  closedDoor: 'sorry',
 };
 
 /** Play on without leaving: respond to whatever comes up, otherwise wait. */
@@ -286,6 +292,114 @@ describe('the endgame', () => {
   });
 });
 
+describe('follow-through', () => {
+  it('every choice leaves a result to show, which clears when you carry on', () => {
+    let s: GameState | undefined;
+    for (let seed = 1; seed < 500 && !s; seed++) {
+      const g = run(createGame(seed), { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' }, { type: 'startParent', task: 'lunch' });
+      if (currentIncident(g)) s = g;
+    }
+    const inc = currentIncident(s!)!;
+    const after = reduce(s!, { type: 'respond', response: INCIDENT_FALLBACK[inc.id] });
+    expect(after.outcome?.choice).toBeTruthy();
+    expect(after.outcome!.costs.length).toBeGreaterThan(0);
+    expect(after.outcome!.lines.length).toBeGreaterThan(0);
+    const acked = reduce(after, { type: 'ack' });
+    expect(acked.outcome).toBeUndefined();
+    expect(acked.minute).toBe(after.minute);
+  });
+
+  it('a risky choice that backfires opens a follow-up: she is upset now', () => {
+    let found = false;
+    for (let seed = 1; seed < 2000 && !found; seed++) {
+      let s = run(createGame(seed), { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' });
+      if (currentIncident(s)?.id !== 'spoon') {
+        s = reduce(s, { type: 'startParent', task: 'lunch' });
+        if (currentIncident(s)?.id !== 'spoon') continue;
+      }
+      const after = reduce(s, { type: 'respond', response: 'insist' });
+      if (currentIncident(after)?.id !== 'upset') continue;
+      found = true;
+      expect(after.outcome!.good).toBe(false);
+      expect(after.householdMood).toBe(s.householdMood - 1);
+    }
+    expect(found).toBe(true);
+  });
+
+  it('making the wrong breakfast in advance starts breakfast with an argument', () => {
+    const s = seedWhere((g) => g.breakfastWant !== 'cereal');
+    let g = run(s, { type: 'startParent', task: 'breakfastMade', variant: 'cereal' }, { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' });
+    expect(currentIncident(g)?.id).toBe('wrongBreakfast');
+    g = reduce(g, { type: 'respond', response: 'remake' });
+    expect(g.breakfastChoice).toBe(s.breakfastWant);
+  });
+
+  it('the right breakfast goes down without a word; asking her tells you what that is', () => {
+    const s = seedWhere((g) => g.breakfastWant === 'oatmeal');
+    const asked = run(s, { type: 'wakeNow' }, { type: 'askBreakfast' });
+    expect(asked.intel.at(-1)?.text.toLowerCase()).toContain('oatmeal');
+    const g = run(asked, { type: 'startParent', task: 'breakfastMade', variant: 'oatmeal' }, { type: 'assignChild', task: 'breakfastEaten' });
+    expect(currentIncident(g)?.id).not.toBe('wrongBreakfast');
+  });
+
+  it('some days she wants braids, and you have to decide what to do about it', () => {
+    const s = seedWhere((g) => g.hairWant === 'braids');
+    const g = run(s, { type: 'wakeNow' }, { type: 'assignChild', task: 'hair' });
+    expect(currentIncident(g)?.id).toBe('braids');
+    const braided = reduce(g, { type: 'respond', response: 'braids' });
+    expect(braided.objectives.hair.extra).toBe(8);
+  });
+
+  it('a joke goes all the way through, line by line, and ends with a laugh', () => {
+    let found = false;
+    for (let seed = 1; seed < 3000 && !found; seed++) {
+      let s = run(createGame(seed), { type: 'wakeNow' }, { type: 'assignChild', task: 'dressed' });
+      for (let i = 0; i < 6 && !currentIncident(s); i++) s = reduce(s, { type: 'startParent', task: 'lunch' });
+      if (currentIncident(s)?.id !== 'joke') continue;
+      found = true;
+      const lines = [currentIncident(s)!.note];
+      let steps = 0;
+      while (currentIncident(s)?.id === 'joke' && steps++ < 6) {
+        const inc = currentIncident(s)!;
+        const last = inc.stage === undefined ? false : !INCIDENTS.joke.responses[0].available!(s, inc);
+        s = reduce(s, { type: 'respond', response: last ? 'laugh' : 'listen' });
+        if (currentIncident(s)?.id === 'joke') {
+          lines.push(currentIncident(s)!.note);
+          expect(s.outcome).toBeUndefined(); // the conversation carries on in the window
+        }
+      }
+      expect(lines.length).toBeGreaterThanOrEqual(3);
+      expect(lines[0]).toBe('Knock knock.');
+      expect(s.outcome?.good).toBe(true);
+    }
+    expect(found).toBe(true);
+  });
+
+  it('interrupting the joke: she shuts her door, and the next job opens the door first', () => {
+    let found = false;
+    for (let seed = 1; seed < 3000 && !found; seed++) {
+      let s = run(createGame(seed), { type: 'wakeNow' }, { type: 'assignChild', task: 'dressed' });
+      for (let i = 0; i < 6 && !currentIncident(s); i++) s = reduce(s, { type: 'startParent', task: 'lunch' });
+      if (currentIncident(s)?.id !== 'joke') continue;
+      found = true;
+      s = reduce(s, { type: 'respond', response: 'interrupt' });
+      expect(s.flags).toContain('sulking');
+      expect(s.childActivity).toBeUndefined();
+      s = reduce(s, { type: 'assignChild', task: 'teeth' });
+      expect(currentIncident(s)?.id).toBe('closedDoor');
+      s = reduce(s, { type: 'respond', response: 'sorry' });
+      expect(s.flags).not.toContain('sulking');
+    }
+    expect(found).toBe(true);
+  });
+
+  it('coffee makes you faster for a while', () => {
+    const s = run(ordinary(), { type: 'startParent', task: 'coffee' });
+    expect(parentRate(s)).toBeGreaterThan(1);
+    expect(s.caffeinatedUntil).toBe(s.minute + 20);
+  });
+});
+
 describe('tension', () => {
   it('a problem put off too long comes back, worse, and costs mood', () => {
     // Find a morning where getting dressed is interrupted by socks or the outfit (both deferrable).
@@ -331,7 +445,7 @@ describe('the day: weather, school events, intel', () => {
 
   it('every morning has a forecast and a calendar entry', () => {
     const s = createGame(3);
-    expect(s.intel.map((i) => i.source)).toEqual(['Forecast', 'Fridge calendar']);
+    expect(s.intel.map((i) => i.source).slice(0, 2)).toEqual(['Forecast', 'Fridge calendar']);
     expect(s.day.eventKnown).toBe(false);
   });
 
@@ -393,11 +507,11 @@ describe('the day: weather, school events, intel', () => {
 
   it('a fate point confirms the event without spending minutes', () => {
     const s = createGame(5, { fate: 1 });
-    const f = reduce(s, { type: 'favour' });
+    const f = reduce(s, { type: 'favor' });
     expect(f.day.eventKnown).toBe(true);
     expect(f.fate).toBe(0);
     expect(f.minute).toBe(s.minute);
-    expect(reduce(f, { type: 'favour' })).toBe(f);
+    expect(reduce(f, { type: 'favor' })).toBe(f);
   });
 
   it('festival clothes count as getting dressed', () => {

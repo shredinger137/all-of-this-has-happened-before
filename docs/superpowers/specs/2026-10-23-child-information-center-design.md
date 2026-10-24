@@ -140,6 +140,39 @@ dressed), project due (10-minute leaf collage, or an evening card), paperwork du
 bag), assembly (school shirt preferred, moderate miss; school starts 5 minutes early), picture day and
 library day.
 
+### 9. Follow-through: every choice shows a result (2026-10-24)
+
+The user: "if I select an action, I need to see a result, or have more choices." Choices used to resolve
+in one click and vanish into the log.
+
+- **Result card** after every choice: what happened, and what it cost (minutes, mood, a stained top,
+  a task undone, coffee or fate used). Carry on, or "Next: …" if another problem is queued.
+- **Follow-ups**: a risky choice that backfires opens "She is upset now" (hug / give her a minute /
+  carry on regardless) instead of silently costing two minutes.
+- **Decisions inside jobs**: breakfast asks *what* (cereal 2 / toast 5 / oatmeal 7 / pancakes 12). She
+  has a hidden preference; a "last night" clue (C3) appears most mornings; once she's up you can ask her
+  (1 min, certain). Made the wrong thing in advance: breakfast opens with an argument. Hair: some days she
+  wants braided pigtails (+8 min, a clip that might work, or a promise for Saturday that carries over).
+- **Her jokes**: a knock-knock joke you must go through line by line ("Cowgoes." / "Cowgoes who?" /
+  "No, cows go MOO!"), a minute each, no result card between lines. "Not now, sweetheart" is always there:
+  she shuts herself in her room, and the next job you give her opens a closed door first.
+- **Coffee** now does something you can feel: you work 15% faster for 20 minutes, and it still keeps you
+  calm once (named on the result card when it does).
+
+### 10. Voice
+
+She's in an American kindergarten: American English on screen (rain boots, principal, tardies, oatmeal,
+backpack, °F). 24-hour time stays: it reads as military time, which is the console's joke.
+
+## Future directions (noted, not built)
+
+- **Something to spend and hoard**, like fuel and supply in Scattered Hopes, but abstract. Candidates:
+  *patience* (yours; spent on negotiations and waiting out sulks, restored by coffee and good mornings),
+  *goodwill* (hers; banked by listening to jokes and keeping promises, spent when you need her to just do
+  the thing), *clean clothes* or *groceries* over a week (laundry and shopping as evening choices). Fate
+  points are the seed of this. The user asked to keep it in mind for how it might weave through, not to
+  build it yet.
+
 ## Build order
 
 1. **Run + day model** (engine): `RunState`, day generation, weather, events, event objectives, intel,

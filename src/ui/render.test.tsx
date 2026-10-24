@@ -1,7 +1,7 @@
 // Smoke test: render every panel across many randomly played mornings, and a few whole weeks.
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { CHILD_TASKS, INCIDENTS, INTEL_TASKS, PARENT_TASKS } from '../sim/content';
+import { BREAKFAST_ORDER, CHILD_TASKS, INCIDENTS, INTEL_TASKS, PARENT_TASKS } from '../sim/content';
 import { childTaskBlocker, createGame, currentIncident, offered, parentTaskBlocker, reduce, results } from '../sim/engine';
 import { nextRandom } from '../sim/rng';
 import { chooseCards, choosePerk, finishMorning, newRun, startMorning, type RunState } from '../sim/run';
@@ -22,13 +22,16 @@ function legalActions(s: GameState): Action[] {
     if (INCIDENTS[inc.id].deferrable) acts.push({ type: 'defer' });
     return acts;
   }
+  if (s.outcome) return [{ type: 'ack' }];
   const acts: Action[] = [{ type: 'wait' }];
   for (const t of [...PARENT_TASKS, ...INTEL_TASKS]) if (offered(s, t) && !parentTaskBlocker(s, t)) acts.push({ type: 'startParent', task: t });
+  for (const b of BREAKFAST_ORDER) if (!parentTaskBlocker(s, 'breakfastMade')) acts.push({ type: 'startParent', task: 'breakfastMade', variant: b });
+  if (s.childAwake) acts.push({ type: 'askBreakfast' });
   for (const t of CHILD_TASKS) if (offered(s, t) && !childTaskBlocker(s, t)) acts.push({ type: 'assignChild', task: t });
   for (const i of s.incidents) if (i.status === 'deferred') acts.push({ type: 'reopen', uid: i.uid });
   if (!s.childAwake) acts.push({ type: 'wakeNow' });
   if (s.childAwake) acts.push({ type: 'ask' });
-  if (s.fate > 0) acts.push({ type: 'favour' });
+  if (s.fate > 0) acts.push({ type: 'favor' });
   if (s.childActivity) acts.push({ type: 'help' });
   if (s.childAwake && s.minute > 450) acts.push({ type: 'leave' });
   return acts;

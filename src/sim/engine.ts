@@ -1,5 +1,12 @@
 import {
   ASK_RIGHT,
+  BRAIDS_CHANCE,
+  BREAKFAST_CLUE_CHANCE,
+  BREAKFAST_CLUE_RIGHT,
+  BREAKFAST_ORDER,
+  BREAKFASTS,
+  COFFEE_MINUTES,
+  COFFEE_SPEED,
   CALENDAR_RIGHT,
   CHECKLIST,
   COLD_CHANCE,
@@ -12,6 +19,7 @@ import {
   EVENT_POOL,
   EVENTS,
   INCIDENTS,
+  JOKES,
   LIBRARY_CHANCE,
   RAIN_CHANCES,
   RAIN_WALK_MINUTES,
@@ -34,6 +42,8 @@ import {
 import { nextRandom } from './rng';
 import type {
   Action,
+  Breakfast,
+  Outcome,
   ChildTendency,
   EventId,
   Flag,
@@ -68,7 +78,7 @@ export type MorningSetup = {
   readNewsletter?: boolean; // today's event is known from the start
   forceEvent?: EventId | null; // overdue book makes it a library day; null = no event
   notEvent?: EventId; // yesterday's event doesn't repeat
-  meeting?: boolean; // the head teacher wants a word
+  meeting?: boolean; // the principal wants a word
   earlyBedtime?: boolean; // no late bedtime, and she starts in a better mood
   coffeeTimer?: boolean;
 };
@@ -108,6 +118,8 @@ export function createGame(seed: number, setup: MorningSetup = {}): GameState {
     },
     intel: [],
     waves: 0,
+    breakfastWant: 'toast',
+    hairWant: 'simple',
     fate: setup.fate ?? 0,
     perks: setup.perks ?? [],
     history: [],
@@ -118,6 +130,7 @@ export function createGame(seed: number, setup: MorningSetup = {}): GameState {
   s.childTendency = TENDENCY_POOL[Math.floor(rand(s) * TENDENCY_POOL.length)];
   if (setup.earlyBedtime && s.morningCondition === 'lateBedtime') s.morningCondition = 'ordinary';
   rollDay(s, setup);
+  rollPreferences(s);
 
   if (s.morningCondition === 'earlyBird') s.wakeMinute = NATURAL_WAKE - 10;
   const rackHelps = s.perks.includes('shoeRack') && rand(s) < 0.5;
@@ -158,10 +171,10 @@ function rollDay(s: GameState, setup: MorningSetup) {
   const earlier = d.event ? (EVENTS[d.event].earlier ?? 0) : 0;
   if (earlier) d.schoolStart = Math.min(d.schoolStart, SCHOOL_START - earlier);
 
-  const temp = d.weather === 'cold' ? '2°C' : rain ? '9°C' : '12°C';
+  const temp = d.weather === 'cold' ? '36°F' : rain ? '48°F' : '54°F';
   addIntel(s, 'Forecast', `Rain ${Math.round(d.rainChance * 100)}% · ${temp}`, 'B2');
 
-  if (d.meeting) addIntel(s, 'Letter from school', 'The head teacher would like a word. Please arrive by 07:50.', 'A1');
+  if (d.meeting) addIntel(s, 'Letter from school', 'The principal would like a word. Please arrive by 07:50.', 'A1');
 
   if (setup.forceEvent === 'library') {
     addIntel(s, 'Overdue notice', 'The library book is overdue. It has to go back today.', 'A1', 'library');
@@ -179,6 +192,17 @@ function rollDay(s: GameState, setup: MorningSetup) {
     const grade = s.perks.includes('calendar') ? 'A2' : 'C3';
     addIntel(s, 'Fridge calendar', claim === 'none' ? 'Nothing written for today.' : `"${EVENTS[claim].calendar}" scrawled on today.`, grade, claim);
   }
+}
+
+/** What she'll want today: breakfast and hair. Hidden, with a clue now and then. */
+function rollPreferences(s: GameState) {
+  s.breakfastWant = BREAKFAST_ORDER[Math.floor(rand(s) * BREAKFAST_ORDER.length)];
+  if (rand(s) < BREAKFAST_CLUE_CHANCE) {
+    const said: Breakfast =
+      rand(s) < BREAKFAST_CLUE_RIGHT ? s.breakfastWant : BREAKFAST_ORDER.filter((b) => b !== s.breakfastWant)[Math.floor(rand(s) * 3)];
+    addIntel(s, 'Last night', `She asked for ${BREAKFASTS[said].name.toLowerCase()} for breakfast.`, 'C3');
+  }
+  s.hairWant = rand(s) < BRAIDS_CHANCE ? 'braids' : 'simple';
 }
 
 function otherEvent(s: GameState, not?: EventId): EventId {
@@ -207,7 +231,7 @@ function packedBag(s: GameState) {
   if (e === 'paperwork') setFlag(s, 'formFound');
   if (e === 'library') setFlag(s, 'bookFound');
   if (e === 'paperwork' || e === 'library') {
-    addIntel(s, 'School bag', bagNote(e), 'A1', e);
+    addIntel(s, 'Backpack', bagNote(e), 'A1', e);
     confirmEvent(s);
   }
 }
@@ -291,7 +315,8 @@ export function currentIncident(s: GameState): OpenIncident | undefined {
 
 /** Prep is quicker while she sleeps: once she's up, she keeps needing you. */
 export function parentRate(s: GameState): number {
-  return s.childAwake ? 0.8 : 1;
+  const coffee = s.caffeinatedUntil !== undefined && s.minute < s.caffeinatedUntil ? COFFEE_SPEED : 1;
+  return (s.childAwake ? 0.8 : 1) * coffee;
 }
 
 /** Supervised tasks stall unless you are helping. */
@@ -355,8 +380,15 @@ function wake(s: GameState, natural: boolean) {
   log(s, e > 0.5 ? 'You woke her early. She is very tired.' : 'You woke her a little early.', true);
 }
 
-function openIncident(s: GameState, id: IncidentId, task?: TaskId) {
-  s.incidents.push({ uid: s.nextUid++, id, task, minute: s.minute, status: 'open' });
+function openIncident(s: GameState, id: IncidentId, task?: TaskId, front = false) {
+  const inc: OpenIncident = { uid: s.nextUid++, id, task, minute: s.minute, status: 'open' };
+  if (id === 'joke') {
+    inc.joke = Math.floor(rand(s) * JOKES.length);
+    inc.stage = 0;
+    inc.note = JOKES[inc.joke].lines[0].her;
+  }
+  if (front) s.incidents.unshift(inc);
+  else s.incidents.push(inc);
   if (!s.firedIncidents.includes(id)) s.firedIncidents.push(id);
   if (s.parentActivity === 'help') s.parentActivity = undefined;
   log(s, INCIDENTS[id].headline(s), true);
@@ -383,7 +415,10 @@ function completeTask(s: GameState, task: TaskId) {
   }
   if (s.parentActivity === task) s.parentActivity = undefined;
 
-  if (task === 'coffee') s.coffeeBuffer = true;
+  if (task === 'coffee') {
+    s.coffeeBuffer = true;
+    s.caffeinatedUntil = s.minute + COFFEE_MINUTES;
+  }
   // Festival clothes are getting dressed, as far as anyone at school is concerned.
   if (task === 'festivalClothes' && s.objectives.dressed.status !== 'done') {
     if (s.childActivity === 'dressed') s.childActivity = undefined;
@@ -436,17 +471,17 @@ function onParentComplete(s: GameState, task: TaskId) {
     case 'bagChecked':
       if (e === 'paperwork') {
         setFlag(s, 'formFound');
-        addIntel(s, 'School bag', bagNote('paperwork'), 'A1', 'paperwork');
+        addIntel(s, 'Backpack', bagNote('paperwork'), 'A1', 'paperwork');
         confirmEvent(s);
       } else if (e === 'library') {
         if (hasFlag(s, 'bookFound')) log(s, 'Library book back in the bag.');
         else if (rand(s) < LIBRARY_CHANCE) {
-          addIntel(s, 'School bag', 'A library reminder in the bag. No book.', 'A1', 'library');
+          addIntel(s, 'Backpack', 'A library reminder in the bag. No book.', 'A1', 'library');
           confirmEvent(s);
           openIncident(s, 'library');
         } else {
           setFlag(s, 'bookFound');
-          addIntel(s, 'School bag', bagNote('library'), 'A1', 'library');
+          addIntel(s, 'Backpack', bagNote('library'), 'A1', 'library');
           confirmEvent(s);
         }
       } else log(s, 'Nothing unusual in the bag.');
@@ -669,6 +704,60 @@ function endMorning(s: GameState) {
   log(s, 'Everyone left the house.', true);
 }
 
+const FLAG_RESULT: Partial<Record<Flag, [string, boolean]>> = {
+  stainedShirt: ['Top stained', false],
+  messyKitchen: ['Kitchen left as it is', false],
+  noSocks: ['No socks', false],
+  wellies: ['Rain boots', false],
+  hungry: ['She will be hungry later', false],
+  stuffyDamp: ['Damp stuffy', false],
+  bookFound: ['Library book found', true],
+  bookLeft: ['Library book stays home', false],
+  promisedDress: ['A promise: the yellow dress', true],
+  promisedBug: ['A promise: the bug, after school', true],
+  promisedBraids: ['A promise: braids on Saturday', true],
+};
+
+/** The result of a choice, from what actually changed: shown before the next thing happens. */
+function outcomeOf(a: GameState, b: GameState, title: string, choice: string): Outcome {
+  const costs: string[] = [];
+  let good = true;
+  const minutes = b.minute - a.minute;
+  costs.push(minutes > 0 ? `${minutes} min` : 'No time');
+  const mood = b.householdMood - a.householdMood;
+  if (mood > 0) costs.push('Mood ↑');
+  if (mood < 0) {
+    costs.push('Mood ↓');
+    good = false;
+  }
+  if (a.coffeeBuffer && !b.coffeeBuffer) costs.push('Coffee: you stayed calm');
+  if (b.fate < a.fate) costs.push('Fate point spent');
+  for (const f of b.flags) {
+    if (a.flags.includes(f) || !FLAG_RESULT[f]) continue;
+    const [text, ok] = FLAG_RESULT[f]!;
+    costs.push(text);
+    if (!ok) good = false;
+  }
+  for (const t of Object.keys(b.objectives) as TaskId[]) {
+    const from = a.objectives[t].status;
+    const to = b.objectives[t].status;
+    if (from === to) continue;
+    if (to === 'done') costs.push(`${TASKS[t].label} ✓`);
+    else if (to === 'skipped') {
+      costs.push(`${TASKS[t].label}: skipped`);
+      good = false;
+    } else if (from === 'done') {
+      costs.push(`${TASKS[t].label}: undone`);
+      good = false;
+    }
+  }
+  const extra = (Object.keys(b.objectives) as TaskId[]).reduce((n, t) => n + b.objectives[t].extra - a.objectives[t].extra, 0);
+  if (extra > 0) costs.push(`+${extra} min later`);
+  if (b.incidents.some((i) => i.id === 'upset' && !a.incidents.some((x) => x.uid === i.uid))) good = false;
+  const lines = b.history.slice(a.history.length).map((h) => h.text);
+  return { title, choice, lines, costs, good };
+}
+
 // ---------------------------------------------------------------------------
 // Availability (shared by reducer guards and UI)
 // ---------------------------------------------------------------------------
@@ -697,17 +786,39 @@ export function reduce(prev: GameState, action: Action): GameState {
   if (prev.ended) return prev;
   const s = structuredClone(prev);
   const open = currentIncident(s);
+  if (action.type !== 'respond') s.outcome = undefined;
 
   switch (action.type) {
+    case 'ack':
+      return prev.outcome ? s : prev;
+
     case 'startParent': {
       const { task } = action;
       if (open || TASKS[task].owner !== 'parent' || !offered(s, task) || parentTaskBlocker(s, task)) return prev;
       const was = s.parentActivity;
       if (was && was !== 'help' && was !== task) s.objectives[was].status = 'todo';
+      if (task === 'breakfastMade') {
+        // Changing your mind about breakfast starts it again.
+        const variant = action.variant ?? s.breakfastChoice ?? 'toast';
+        if (s.breakfastChoice && s.breakfastChoice !== variant) s.objectives.breakfastMade.progress = 0;
+        s.breakfastChoice = variant;
+      }
       s.parentActivity = task;
       s.objectives[task].status = 'active';
       if (s.childAwake) rollIncident(s, task);
       advance(s);
+      return s;
+    }
+
+    case 'askBreakfast': {
+      // Ask her what she wants. Once she's up, she knows. Today.
+      if (open || !s.childAwake || hasFlag(s, 'askedBreakfast')) return prev;
+      setFlag(s, 'askedBreakfast');
+      spend(s, 1, true);
+      const want = BREAKFASTS[s.breakfastWant].name.toLowerCase();
+      addIntel(s, 'Her, at breakfast time', `"${want[0].toUpperCase()}${want.slice(1)}. Definitely ${want}."`, 'A2');
+      log(s, `You asked her about breakfast. ${BREAKFASTS[s.breakfastWant].name}.`);
+      checkCutoff(s);
       return s;
     }
 
@@ -732,6 +843,22 @@ export function reduce(prev: GameState, action: Action): GameState {
       if (task === 'shoesOn' && s.objectives.shoesFound.status !== 'done') {
         s.objectives.shoesOn.status = 'blocked';
         openIncident(s, 'shoesMissing', 'shoesOn');
+        return s;
+      }
+      if (hasFlag(s, 'sulking')) {
+        s.objectives[task].status = 'blocked';
+        openIncident(s, 'closedDoor', task);
+        return s;
+      }
+      const made = s.objectives.breakfastMade.status === 'done';
+      if (task === 'breakfastEaten' && made && s.breakfastChoice !== s.breakfastWant && !s.firedIncidents.includes('wrongBreakfast')) {
+        s.objectives.breakfastEaten.status = 'blocked';
+        openIncident(s, 'wrongBreakfast', 'breakfastEaten');
+        return s;
+      }
+      if (task === 'hair' && s.hairWant === 'braids' && !s.firedIncidents.includes('braids')) {
+        s.objectives.hair.status = 'blocked';
+        openIncident(s, 'braids', 'hair');
         return s;
       }
       s.objectives[task].status = 'active';
@@ -767,11 +894,12 @@ export function reduce(prev: GameState, action: Action): GameState {
       // Fate: a risky call that is certain to go your way.
       const charmed = !!action.fate && !!resp.risky && s.fate > 0;
       if (action.fate && !charmed) return prev;
+      const before = structuredClone(s);
       if (charmed) {
         s.fate -= 1;
         log(s, 'You spent a fate point. This one goes your way.', true);
       }
-      spend(s, resp.minutes, !!resp.both);
+      spend(s, resp.minutesFor?.(s) ?? resp.minutes, !!resp.both);
       let kept: string | undefined;
       const ctx: ResolveCtx = {
         s,
@@ -787,10 +915,11 @@ export function reduce(prev: GameState, action: Action): GameState {
             log(s, 'It nearly went badly. The coffee helped; you stayed calm.', true);
             return false;
           }
+          // It went badly, and that's a problem of its own.
           changeMood(s, -1);
           if (open.task) s.objectives[open.task].extra += extra;
-          spend(s, 2, true);
-          log(s, 'She got upset. It took a while to settle her.', true);
+          log(s, 'She got upset.', true);
+          if (!s.incidents.some((i) => i.id === 'upset' && i.status === 'open')) openIncident(s, 'upset', undefined, true);
           return true;
         },
         addExtra: (m) => {
@@ -803,6 +932,10 @@ export function reduce(prev: GameState, action: Action): GameState {
         },
         spend: (m) => spend(s, m, !!resp.both),
         reopen: (task) => reopenTask(s, task),
+        followUp: (id) => openIncident(s, id, undefined, true),
+        unflag: (f) => {
+          s.flags = s.flags.filter((x) => x !== f);
+        },
       };
       resp.apply(ctx);
 
@@ -813,6 +946,7 @@ export function reduce(prev: GameState, action: Action): GameState {
         removeIncident(s, open.uid);
         unblock(s, open.task);
       }
+      if (kept === undefined) s.outcome = outcomeOf(before, s, def.title, resp.labelFor?.(before, open) ?? resp.label);
       checkCutoff(s);
       return s;
     }
@@ -849,7 +983,7 @@ export function reduce(prev: GameState, action: Action): GameState {
       return s;
     }
 
-    case 'favour': {
+    case 'favor': {
       // Message another parent. Costs a fate point, not minutes.
       if (open || s.day.eventKnown || s.fate <= 0) return prev;
       s.fate -= 1;
@@ -932,7 +1066,7 @@ export function requirements(s: GameState): Requirement[] {
   const extra = (id: string, missing: string, severity: Severity = 'minor') =>
     reqs.push({ id, label: missing, missing, severity, met: false, known: true });
   if (hasFlag(s, 'noSocks')) extra('noSocks', 'Socks');
-  if (hasFlag(s, 'wellies') && d.weather !== 'rain') extra('wellies', 'Proper shoes');
+  if (hasFlag(s, 'wellies') && d.weather !== 'rain') extra('wellies', 'Real shoes');
   if (hasFlag(s, 'stainedShirt') && d.event !== 'picture' && d.event !== 'assembly') extra('stainedShirt', 'A clean top');
   if (hasFlag(s, 'messyKitchen')) extra('messyKitchen', 'A clean kitchen');
   if (hasFlag(s, 'stuffyDamp')) extra('stuffyDamp', 'A dry stuffy');
@@ -984,7 +1118,7 @@ export function results(s: GameState): Results {
   if (d.event) revealed.push(`${EVENTS[d.event].reveal}${d.eventKnown ? '' : ' You never confirmed it.'}`);
   else if (!d.eventKnown) revealed.push('Nothing special on at school, as it turned out.');
   if (d.weather === 'rain') revealed.push('It rained on the way.');
-  if (d.meeting) revealed.push('The head teacher was waiting at 07:50.');
+  if (d.meeting) revealed.push('The principal was waiting at 07:50.');
   if (s.wave) revealed.push(`You got out ${s.wave.at - departed} min before ${s.wave.size} more contacts landed.`);
 
   let summary: string;

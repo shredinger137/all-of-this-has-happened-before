@@ -1,4 +1,5 @@
 import type {
+  Breakfast,
   ChildTendency,
   EventId,
   Flag,
@@ -62,10 +63,10 @@ export const TASKS: Record<TaskId, TaskDef> = {
     label: 'Breakfast ready',
     action: 'Make breakfast',
     doing: 'Making breakfast',
-    hint: () => 'She can eat as soon as she sits down',
+    hint: (s) => (s.breakfastChoice ? `${BREAKFASTS[s.breakfastChoice].name}. If it's what she wants` : 'Pick what to make. If she wants something else, there will be words'),
     scored: false,
     missing: 'A cooked breakfast',
-    duration: () => 7,
+    duration: (s) => BREAKFASTS[s.breakfastChoice ?? 'toast'].minutes,
     unavailable: (s) =>
       s.objectives.breakfastEaten.progress > 0 || done(s, 'breakfastEaten') ? "She's already eating" : undefined,
   },
@@ -99,7 +100,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     label: 'Coffee',
     action: 'Have a coffee',
     doing: 'Drinking coffee',
-    hint: () => 'Helps you keep your composure once',
+    hint: () => 'You work faster for 20 minutes, and keep your cool once',
     scored: false,
     missing: 'Coffee',
     duration: () => 5,
@@ -108,7 +109,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     id: 'bagChecked',
     owner: 'parent',
     label: 'Bag checked',
-    action: 'Check the school bag',
+    action: 'Check her backpack',
     doing: 'Checking the bag',
     hint: () => 'Make sure everything is in it',
     scored: true,
@@ -308,6 +309,9 @@ export type ResolveCtx = {
   spend: (minutes: number) => void;
   /** Something finished comes undone and goes back on the list. */
   reopen: (task: TaskId) => void;
+  /** The conversation isn't over: another problem follows straight on from this one. */
+  followUp: (id: IncidentId) => void;
+  unflag: (f: Flag) => void;
 };
 
 export type ResponseTag = { text: string; tone: 'good' | 'bad' | 'neutral' };
@@ -317,6 +321,8 @@ export type ResponseDef = {
   label: string;
   hint: string;
   minutes: number;
+  minutesFor?: (s: GameState) => number; // when it depends on the morning
+  labelFor?: (s: GameState, inc: OpenIncident) => string; // when the words depend on where you are
   both?: boolean; // requires parent and child together
   risky?: boolean;
   riskBase?: number; // escalation base chance passed to escalate(); default 0.4
@@ -337,6 +343,7 @@ export type IncidentDef = {
   external?: boolean; // the outside world, not her: tiredness and mood don't change the odds
   endgame?: (s: GameState) => boolean; // a contact a wave can bring, if it has something to undo
   worse?: string; // what it turns into if put off too long
+  speaks?: boolean; // a conversation: her current line is the headline
   responses: ResponseDef[];
 };
 
@@ -645,16 +652,16 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       },
       {
         id: 'wellies',
-        label: 'She can wear her wellies',
+        label: 'She can wear her rain boots',
         hint: 'Quick; she may object',
         minutes: 1,
-        tags: [{ text: 'Wellies', tone: 'bad' }],
+        tags: [{ text: 'Rain boots', tone: 'bad' }],
         riskBase: 0.3,
         risky: true,
         apply: (c) => {
           c.flag('wellies');
           c.completeTask('shoesFound');
-          if (!c.escalate({ extra: 2 })) c.log('Wellies on. It is not raining.', true);
+          if (!c.escalate({ extra: 2 })) c.log('Rain boots on. It is not raining.', true);
         },
       },
     ],
@@ -663,7 +670,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
   library: {
     id: 'library',
     title: 'Library book',
-    context: 'Checking the school bag',
+    context: 'Checking her backpack',
     worse: 'She has remembered the book. She is upset that you forgot.',
     headline: () => "The library book isn't in her bag.",
     detail: (s) => (s.day.event === 'library' && !s.day.eventKnown ? "If it's library day, it's due back." : "It's due back today."),
@@ -718,7 +725,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'bathroom',
     title: 'Bathroom',
     context: 'Contact',
-    headline: () => 'She needs the toilet. Now.',
+    headline: () => 'She has to go to the bathroom. Now.',
     detail: () => 'Of course she does.',
     deferrable: false,
     responses: [
@@ -849,7 +856,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Doorbell',
     context: 'While you were busy',
     headline: () => 'Someone is at the door.',
-    detail: () => 'A parcel that needs a signature.',
+    detail: () => 'A package that needs a signature.',
     deferrable: false,
     external: true,
     tasks: ['lunch', 'breakfastMade', 'parentReady', 'shoesFound', 'clothesOut', 'bagChecked', 'coffee'],
@@ -858,10 +865,10 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       {
         id: 'sign',
         label: 'Sign for it',
-        hint: 'Quick, if the courier is',
+        hint: 'Quick, if the delivery driver is',
         minutes: 2,
         tags: [{ text: 'Reliable', tone: 'neutral' }],
-        apply: (c) => c.log('Signed for a parcel. It was for next door.', true),
+        apply: (c) => c.log('Signed for a package. It was for the neighbors.', true),
       },
       {
         id: 'ignore',
@@ -873,8 +880,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           if (c.roll() < 0.5) {
             c.spend(2);
-            c.log('She answered the door. In her pyjamas. The courier was charmed.', true);
-          } else c.log('The courier left a card.', true);
+            c.log('She answered the door. In her pajamas. The delivery driver was charmed.', true);
+          } else c.log('The driver left a note.', true);
         },
       },
     ],
@@ -918,7 +925,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Coat off',
     context: 'Contact',
     headline: () => 'The coat is off. Too hot, apparently.',
-    detail: () => 'It is on the floor of the hall.',
+    detail: () => 'It is on the hallway floor.',
     deferrable: false,
     endgame: (s) => done(s, 'coat'),
     responses: [
@@ -1027,7 +1034,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'A banana for the walk',
         hint: 'Quick',
         minutes: 1,
-        tags: [{ text: 'Sorted', tone: 'neutral' }],
+        tags: [{ text: 'Handled', tone: 'neutral' }],
         apply: (c) => c.log('Banana in hand. Crisis averted.', true),
       },
       {
@@ -1049,7 +1056,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'bagRaid',
     title: 'Bag',
     context: 'Contact',
-    headline: () => 'Half her bag is on the hall floor.',
+    headline: () => 'Half her backpack is on the hallway floor.',
     detail: () => 'She wanted to show you a drawing. It is at the bottom.',
     deferrable: false,
     endgame: (s) => done(s, 'bagChecked'),
@@ -1076,6 +1083,254 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     ],
   },
 
+  joke: {
+    id: 'joke',
+    title: 'A joke',
+    context: 'She has something to tell you',
+    headline: () => 'She has a joke.',
+    detail: () => 'Knock knock.',
+    speaks: true,
+    deferrable: false,
+    tasks: ['breakfastEaten', 'dressed', 'shoesOn', 'coat'],
+    chance: (s) => (s.childTendency === 'cheerful' ? 0.3 : 0.15),
+    endgame: () => true,
+    responses: [
+      {
+        id: 'listen',
+        label: 'Go on',
+        labelFor: (_s, inc) => JOKES[inc.joke ?? 0].lines[inc.stage ?? 0].you,
+        hint: 'All the way through. There is no other way',
+        minutes: 1,
+        both: true,
+        tags: [{ text: 'She is delighted', tone: 'good' }],
+        available: (_s, inc) => (inc.stage ?? 0) < JOKES[inc.joke ?? 0].lines.length - 1,
+        apply: (c) => {
+          const joke = JOKES[c.incident.joke ?? 0];
+          const stage = (c.incident.stage ?? 0) + 1;
+          c.incident.stage = stage;
+          c.keepOpen(joke.lines[stage].her);
+        },
+      },
+      {
+        id: 'laugh',
+        label: 'Laugh',
+        labelFor: (_s, inc) => JOKES[inc.joke ?? 0].lines[inc.stage ?? 0].you,
+        hint: 'Properly. She will check',
+        minutes: 1,
+        both: true,
+        tags: [{ text: 'Mood ↑', tone: 'good' }],
+        available: (_s, inc) => (inc.stage ?? 0) === JOKES[inc.joke ?? 0].lines.length - 1,
+        apply: (c) => {
+          c.mood(1);
+          c.log(JOKES[c.incident.joke ?? 0].landed, true);
+        },
+      },
+      {
+        id: 'interrupt',
+        label: 'Not now, sweetheart',
+        hint: 'Free now. She will take it personally',
+        minutes: 0,
+        tags: [{ text: 'Door shut', tone: 'bad' }, { text: 'Next job refused', tone: 'bad' }],
+        apply: (c) => {
+          c.flag('sulking');
+          c.mood(-1);
+          if (c.s.childActivity) {
+            c.s.objectives[c.s.childActivity].status = 'todo';
+            c.s.childActivity = undefined;
+          }
+          c.log('She went to her room and shut the door.', true);
+        },
+      },
+    ],
+  },
+
+  closedDoor: {
+    id: 'closedDoor',
+    title: 'Closed door',
+    context: 'Her bedroom',
+    headline: () => 'The door is shut. She is not coming out.',
+    detail: () => 'You did not let her finish the joke.',
+    deferrable: false,
+    responses: [
+      {
+        id: 'joke',
+        label: 'Ask to hear the joke after all',
+        hint: 'She has been waiting for you to ask',
+        minutes: 2,
+        both: true,
+        tags: [{ text: 'Door opens', tone: 'good' }, { text: 'Mood ↑', tone: 'good' }],
+        apply: (c) => {
+          c.unflag('sulking');
+          c.mood(1);
+          c.log('You heard the joke through the door. Then the door opened.', true);
+        },
+      },
+      {
+        id: 'sorry',
+        label: 'Knock, and say sorry',
+        hint: 'Takes a little while',
+        minutes: 3,
+        both: true,
+        tags: [{ text: 'Door opens', tone: 'good' }],
+        apply: (c) => {
+          c.unflag('sulking');
+          c.log('Apology accepted. Eventually.', true);
+        },
+      },
+      {
+        id: 'wait',
+        label: 'Leave her to it',
+        hint: 'She will come out when she is ready',
+        minutes: 6,
+        tags: [{ text: 'Slow', tone: 'bad' }],
+        apply: (c) => {
+          c.unflag('sulking');
+          c.log('She came out in her own time.', true);
+        },
+      },
+    ],
+  },
+
+  upset: {
+    id: 'upset',
+    title: 'Upset',
+    context: 'It went badly',
+    headline: () => 'She is upset now.',
+    detail: () => 'Arms folded. Bottom lip out. Not moving.',
+    deferrable: false,
+    responses: [
+      {
+        id: 'hug',
+        label: 'Kneel down, hug it out',
+        hint: 'Takes a moment. Works',
+        minutes: 2,
+        both: true,
+        tags: [{ text: 'Mood ↑', tone: 'good' }],
+        apply: (c) => {
+          c.mood(1);
+          c.log('A hug, a sniff, a nod. Back on track.', true);
+        },
+      },
+      {
+        id: 'wait',
+        label: 'Give her a minute',
+        hint: 'She will come round. Eventually',
+        minutes: 3,
+        tags: [{ text: 'Slow', tone: 'bad' }],
+        apply: (c) => c.log('She came round in her own time.', true),
+      },
+      {
+        id: 'carry',
+        label: 'Carry on regardless',
+        hint: 'Free. She stays upset',
+        minutes: 0,
+        tags: [{ text: 'Mood stays down', tone: 'bad' }],
+        apply: (c) => c.log('You carried on. So did the sulk.', true),
+      },
+    ],
+  },
+
+  wrongBreakfast: {
+    id: 'wrongBreakfast',
+    title: 'Breakfast',
+    context: 'Sitting down to breakfast',
+    headline: (s) => `She wanted ${BREAKFASTS[s.breakfastWant].name.toLowerCase()}.`,
+    detail: (s) => `That is ${BREAKFASTS[s.breakfastChoice ?? 'toast'].name.toLowerCase()}. She has noticed.`,
+    deferrable: false,
+    responses: [
+      {
+        id: 'negotiate',
+        label: 'Talk her round',
+        hint: 'Honey on top? Takes a minute or two',
+        minutes: 2,
+        both: true,
+        risky: true,
+        riskBase: 0.45,
+        tags: [{ text: 'She might eat it', tone: 'neutral' }],
+        apply: (c) => {
+          if (!c.escalate({ extra: 2 })) c.log('She ate it. With a lot of honey.', true);
+        },
+      },
+      {
+        id: 'remake',
+        label: 'Make what she asked for',
+        hint: 'She will eat it happily. Costs you the time',
+        minutes: 5,
+        minutesFor: (s) => BREAKFASTS[s.breakfastWant].minutes,
+        tags: [{ text: 'Mood ↑', tone: 'good' }],
+        apply: (c) => {
+          c.s.breakfastChoice = c.s.breakfastWant;
+          c.mood(1);
+          c.log(`Made the ${BREAKFASTS[c.s.breakfastWant].name.toLowerCase()} after all.`, true);
+        },
+      },
+      {
+        id: 'insist',
+        label: 'This, or nothing',
+        hint: 'Quick. She may choose nothing',
+        minutes: 0,
+        risky: true,
+        riskBase: 0.6,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
+        apply: (c) => {
+          if (!c.escalate({ extra: 3 })) c.log('She looked at you for a long time. Then ate it.', true);
+        },
+      },
+    ],
+  },
+
+  braids: {
+    id: 'braids',
+    title: 'Hair',
+    context: 'Doing her hair',
+    headline: () => 'She wants braided pigtails.',
+    detail: () => 'Two of them. Like Ava. Today.',
+    deferrable: false,
+    responses: [
+      {
+        id: 'braids',
+        label: 'Braided pigtails it is',
+        hint: 'She will be thrilled. It takes ages',
+        minutes: 0,
+        tags: [{ text: 'Hair +8 min', tone: 'bad' }, { text: 'Mood ↑', tone: 'good' }],
+        apply: (c) => {
+          c.addExtra(8);
+          c.mood(1);
+          c.log('Braids it is. Hold still.', true);
+        },
+      },
+      {
+        id: 'clip',
+        label: 'Ponytail, with the sparkly clip',
+        hint: 'Quick, if the clip is enough',
+        minutes: 1,
+        both: true,
+        risky: true,
+        riskBase: 0.45,
+        tags: [{ text: 'She may not buy it', tone: 'neutral' }],
+        apply: (c) => {
+          if (!c.escalate({ extra: 1 })) c.log('The sparkly clip carried the day.', true);
+        },
+      },
+      {
+        id: 'promise',
+        label: 'Braids on Saturday. Promise',
+        hint: 'She will hold you to it',
+        minutes: 1,
+        both: true,
+        risky: true,
+        riskBase: 0.2,
+        tags: [{ text: 'A promise', tone: 'neutral' }],
+        apply: (c) => {
+          if (!c.escalate({ extra: 1 })) {
+            c.flag('promisedBraids');
+            c.log('Braids promised for Saturday. Pinky swear.', true);
+          }
+        },
+      },
+    ],
+  },
+
   wobble: {
     id: 'wobble',
     title: 'Wobble',
@@ -1087,7 +1342,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     responses: [
       {
         id: 'hug',
-        label: 'A proper hug',
+        label: 'A big hug',
         hint: 'Usually works',
         minutes: 2,
         both: true,
@@ -1111,14 +1366,66 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
 };
 
 /** Order matters: the first incident that hits for a task wins. */
-export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'bug', 'stuffyWash', 'phone', 'doorbell'];
+export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'bug', 'joke', 'stuffyWash', 'phone', 'doorbell'];
 export const COMPOUND_MINUTES = 8;
+
+// ---------------------------------------------------------------------------
+// Breakfast: what you make, against what she wants today
+// ---------------------------------------------------------------------------
+
+export const BREAKFASTS: Record<Breakfast, { name: string; minutes: number }> = {
+  cereal: { name: 'Cereal', minutes: 2 },
+  toast: { name: 'Toast', minutes: 5 },
+  oatmeal: { name: 'Oatmeal', minutes: 7 },
+  pancakes: { name: 'Pancakes', minutes: 12 },
+};
+export const BREAKFAST_ORDER: Breakfast[] = ['cereal', 'toast', 'oatmeal', 'pancakes'];
+export const BREAKFAST_CLUE_CHANCE = 0.6; // she said something about it last night
+export const BREAKFAST_CLUE_RIGHT = 0.75; // and still wants it this morning
+export const BRAIDS_CHANCE = 0.35;
+export const COFFEE_MINUTES = 20;
+export const COFFEE_SPEED = 1.15;
 
 // ---------------------------------------------------------------------------
 // The endgame: as leaving time nears, waves of contacts. Each wave is announced, then lands.
 // ---------------------------------------------------------------------------
 
-export const ENDGAME_POOL: IncidentId[] = ['shoesOff', 'coatOff', 'hairMess', 'juice', 'hungryAgain', 'bagRaid', 'wobble', 'bathroom'];
+export const ENDGAME_POOL: IncidentId[] = ['shoesOff', 'coatOff', 'hairMess', 'juice', 'hungryAgain', 'bagRaid', 'wobble', 'bathroom', 'joke'];
+
+// ---------------------------------------------------------------------------
+// Her jokes. You go through all of it; there is no other way.
+// ---------------------------------------------------------------------------
+
+export type Joke = { lines: { her: string; you: string }[]; landed: string };
+
+export const JOKES: Joke[] = [
+  {
+    lines: [
+      { her: 'Knock knock.', you: "Who's there?" },
+      { her: 'Cowgoes.', you: 'Cowgoes who?' },
+      { her: 'No, cows go MOO!', you: 'Laugh' },
+    ],
+    landed: 'Cows go moo. She is still laughing.',
+  },
+  {
+    lines: [
+      { her: 'Knock knock.', you: "Who's there?" },
+      { her: 'Who.', you: 'Who who?' },
+      { her: 'You sound like an owl!', you: 'Laugh' },
+    ],
+    landed: 'You sound like an owl. She hoots at you for a while.',
+  },
+  {
+    // One of her own.
+    lines: [
+      { her: 'Knock knock.', you: "Who's there?" },
+      { her: 'Blanket.', you: 'Blanket who?' },
+      { her: '…', you: 'Wait for it' },
+      { her: "…blankets can't talk!", you: 'Laugh anyway' },
+    ],
+    landed: 'Blankets cannot talk. She is very proud of that one.',
+  },
+];
 /** Minutes before leaving time when the first wave is announced. */
 export const COLLAPSE_LEAD = 10;
 export const WAVE_WARNING = 5; // minutes between a wave being announced and landing
@@ -1165,7 +1472,7 @@ export const EVENTS: Record<EventId, EventDef> = {
     name: 'Stuffy day',
     calendar: 'STUFFY DAY ✿',
     ask: "It's stuffy day! I think.",
-    email: 'Bring a favourite soft toy for stuffy day.',
+    email: 'Bring a favorite stuffed animal for stuffy day.',
     task: 'stuffy',
     missing: 'A stuffy, on stuffy day',
     reveal: 'It was stuffy day.',
@@ -1231,7 +1538,7 @@ export const COLD_CHANCE = 0.25;
 export const CALENDAR_RIGHT = 0.5;
 export const ASK_RIGHT = 0.7;
 export const RAIN_WALK_MINUTES = 3;
-export const EARLY_START_MINUTES = 10; // a meeting with the head teacher
+export const EARLY_START_MINUTES = 10; // a meeting with the principal
 
 // ---------------------------------------------------------------------------
 // Run: weekly perks
@@ -1242,7 +1549,7 @@ export const PERKS: Record<PerkId, { name: string; note: string }> = {
   chart: { name: 'Morning chart', note: 'She gets on with things a little faster.' },
   spoons: { name: 'Spare blue spoons', note: 'The spoon question never comes up.' },
   hooks: { name: 'Coat hooks by the door', note: 'Coats take a minute, not three.' },
-  calendar: { name: 'Family calendar', note: 'The fridge calendar is always right.' },
+  calendar: { name: 'Family calendar', note: 'The calendar on the fridge is always right.' },
 };
 
 export const MOOD_LABELS = ['Meltdown', 'Upset', 'Tense', 'Calm', 'Good', 'Bright'] as const;

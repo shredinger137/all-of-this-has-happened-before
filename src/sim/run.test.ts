@@ -99,7 +99,7 @@ describe('the run', () => {
     expect([run.week, run.weekday, run.lateMarks]).toEqual([2, 0, 0]);
   });
 
-  it('three late marks in a week mean a meeting with the head teacher on Monday', () => {
+  it('three tardies in a week mean a meeting with the principal on Monday', () => {
     let run = newRun(6);
     for (let d = 0; d < 5; d++) {
       run = playDay(run, playSlowly);
@@ -111,7 +111,7 @@ describe('the run', () => {
     const monday = startMorning(run);
     expect(monday.day.meeting).toBe(true);
     expect(monday.departureDeadline).toBeLessThan(7 * 60 + 45);
-    expect(results(playQuickly(monday)).revealed.join(' ')).toContain('head teacher');
+    expect(results(playQuickly(monday)).revealed.join(' ')).toContain('principal');
   });
 
   it('an unreturned library book makes tomorrow a library day, known from the start', () => {
