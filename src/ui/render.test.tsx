@@ -2,10 +2,11 @@
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { CHILD_TASKS, INCIDENTS, INTEL_TASKS, PARENT_TASKS } from '../sim/content';
-import { childTaskBlocker, createGame, currentIncident, offered, parentTaskBlocker, reduce } from '../sim/engine';
+import { childTaskBlocker, createGame, currentIncident, offered, parentTaskBlocker, reduce, results } from '../sim/engine';
 import { nextRandom } from '../sim/rng';
 import { chooseCards, choosePerk, finishMorning, newRun, startMorning, type RunState } from '../sim/run';
 import type { Action, GameState } from '../sim/types';
+import { Debrief } from './Debrief';
 import { GameScreen } from './GameScreen';
 import { RunScreen } from './RunScreen';
 
@@ -25,7 +26,6 @@ function legalActions(s: GameState): Action[] {
   for (const t of [...PARENT_TASKS, ...INTEL_TASKS]) if (offered(s, t) && !parentTaskBlocker(s, t)) acts.push({ type: 'startParent', task: t });
   for (const t of CHILD_TASKS) if (offered(s, t) && !childTaskBlocker(s, t)) acts.push({ type: 'assignChild', task: t });
   for (const i of s.incidents) if (i.status === 'deferred') acts.push({ type: 'reopen', uid: i.uid });
-  for (const t of s.threats) acts.push({ type: 'intercept', uid: t.uid });
   if (!s.childAwake) acts.push({ type: 'wakeNow' });
   if (s.childAwake) acts.push({ type: 'ask' });
   if (s.fate > 0) acts.push({ type: 'favour' });
@@ -59,7 +59,8 @@ describe('UI renders every reachable state', () => {
       });
       expect(s.ended).toBe(true);
       const html = renderToString(<GameScreen game={s} seed={seed} act={noop} onNext={noop} onRetry={noop} onReplay={noop} />);
-      expect(html).toContain('Left home');
+      expect(html).toContain('Door shut'); // the departure plays first
+      expect(renderToString(<Debrief r={results(s)} seed={seed} label={s.day.label} />)).toContain('Left home');
     }
     expect(states).toBeGreaterThan(1000);
   });

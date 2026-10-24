@@ -1,26 +1,23 @@
 import {
   ASK_RIGHT,
-  BATHROOM_CHANCE,
   CALENDAR_RIGHT,
   CHECKLIST,
   COLD_CHANCE,
   COLLAPSE_LEAD,
   COMPOUND_MINUTES,
+  ENDGAME_POOL,
   GATE_CLOSES_AFTER,
-  THREAT_POOL,
-  THREAT_WARNING,
-  THREATS,
   EARLY_START_MINUTES,
   EVENT_CHANCE,
   EVENT_POOL,
   EVENTS,
   INCIDENTS,
   LIBRARY_CHANCE,
-  PE_LAUNDRY_CHANCE,
   RAIN_CHANCES,
   RAIN_WALK_MINUTES,
   ROLL_ORDER,
   TASKS,
+  WAVE_WARNING,
   type ResolveCtx,
 } from './content';
 import {
@@ -50,7 +47,6 @@ import type {
   PerkId,
   Span,
   TaskId,
-  ThreatId,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -111,7 +107,7 @@ export function createGame(seed: number, setup: MorningSetup = {}): GameState {
       meeting: !!setup.meeting,
     },
     intel: [],
-    threats: [],
+    waves: 0,
     fate: setup.fate ?? 0,
     perks: setup.perks ?? [],
     history: [],
@@ -159,7 +155,8 @@ function rollDay(s: GameState, setup: MorningSetup) {
     d.schoolStart -= EARLY_START_MINUTES;
     s.departureDeadline -= EARLY_START_MINUTES;
   }
-  if (d.event === 'trip') d.schoolStart = SCHOOL_START - EARLY_START_MINUTES;
+  const earlier = d.event ? (EVENTS[d.event].earlier ?? 0) : 0;
+  if (earlier) d.schoolStart = Math.min(d.schoolStart, SCHOOL_START - earlier);
 
   const temp = d.weather === 'cold' ? '2°C' : rain ? '9°C' : '12°C';
   addIntel(s, 'Forecast', `Rain ${Math.round(d.rainChance * 100)}% · ${temp}`, 'B2');
@@ -197,26 +194,26 @@ function addIntel(s: GameState, source: string, text: string, grade: string, cla
 function confirmEvent(s: GameState) {
   if (s.day.eventKnown) return;
   s.day.eventKnown = true;
-  if (s.day.event === 'trip') {
-    s.departureDeadline = Math.min(s.departureDeadline, DEPARTURE_DEADLINE - EARLY_START_MINUTES);
-    log(s, `The coach leaves at 07:50. You need to leave by ${formatClock(s.departureDeadline)}.`, true);
+  const earlier = s.day.event ? (EVENTS[s.day.event].earlier ?? 0) : 0;
+  if (earlier) {
+    s.departureDeadline = Math.min(s.departureDeadline, DEPARTURE_DEADLINE - earlier);
+    log(s, `${EVENTS[s.day.event!].name} starts early. You need to leave by ${formatClock(s.departureDeadline)}.`, true);
   }
 }
 
 /** The bag was packed the night before: notes and books in it are already known. */
 function packedBag(s: GameState) {
   const e = s.day.event;
-  if (e === 'trip') setFlag(s, 'slipFound');
+  if (e === 'paperwork') setFlag(s, 'formFound');
   if (e === 'library') setFlag(s, 'bookFound');
-  if (e === 'trip' || e === 'pe' || e === 'library') {
+  if (e === 'paperwork' || e === 'library') {
     addIntel(s, 'School bag', bagNote(e), 'A1', e);
     confirmEvent(s);
   }
 }
 
 function bagNote(e: EventId): string {
-  if (e === 'trip') return 'Permission slip in the bag. Unsigned. Trip today.';
-  if (e === 'pe') return 'A note in the bag: PE today, kit please.';
+  if (e === 'paperwork') return 'A health form in the bag. Due back today, signed.';
   return 'Library book in the bag, due back today.';
 }
 
@@ -236,12 +233,12 @@ export function offered(s: GameState, t: TaskId): boolean {
       return s.day.weather === 'cold' || !(s.day.weatherKnown && s.day.weather === 'clear');
     case 'stuffy':
       return sus.includes('stuffy');
-    case 'peKit':
-      return sus.includes('pe');
-    case 'costume':
-      return sus.includes('dressUp');
-    case 'slip':
-      return sus.includes('trip') || hasFlag(s, 'slipFound');
+    case 'festivalClothes':
+      return sus.includes('festival');
+    case 'project':
+      return sus.includes('project');
+    case 'paperwork':
+      return sus.includes('paperwork') || hasFlag(s, 'formFound');
     case 'email':
       return !s.day.eventKnown;
     case 'window':
@@ -387,8 +384,8 @@ function completeTask(s: GameState, task: TaskId) {
   if (s.parentActivity === task) s.parentActivity = undefined;
 
   if (task === 'coffee') s.coffeeBuffer = true;
-  // A costume is getting dressed, as far as anyone at school is concerned.
-  if (task === 'costume' && s.objectives.dressed.status !== 'done') {
+  // Festival clothes are getting dressed, as far as anyone at school is concerned.
+  if (task === 'festivalClothes' && s.objectives.dressed.status !== 'done') {
     if (s.childActivity === 'dressed') s.childActivity = undefined;
     s.objectives.dressed.status = 'done';
     s.objectives.dressed.pending = undefined;
@@ -437,12 +434,9 @@ function onParentComplete(s: GameState, task: TaskId) {
   const e = s.day.event;
   switch (task) {
     case 'bagChecked':
-      if (e === 'trip') {
-        setFlag(s, 'slipFound');
-        addIntel(s, 'School bag', bagNote('trip'), 'A1', 'trip');
-        confirmEvent(s);
-      } else if (e === 'pe') {
-        addIntel(s, 'School bag', bagNote('pe'), 'A1', 'pe');
+      if (e === 'paperwork') {
+        setFlag(s, 'formFound');
+        addIntel(s, 'School bag', bagNote('paperwork'), 'A1', 'paperwork');
         confirmEvent(s);
       } else if (e === 'library') {
         if (hasFlag(s, 'bookFound')) log(s, 'Library book back in the bag.');
@@ -457,15 +451,8 @@ function onParentComplete(s: GameState, task: TaskId) {
         }
       } else log(s, 'Nothing unusual in the bag.');
       break;
-    case 'peKit':
-      if (rand(s) < PE_LAUNDRY_CHANCE) {
-        s.objectives.peKit.status = 'todo';
-        s.objectives.peKit.progress = 0;
-        openIncident(s, 'peLaundry');
-      }
-      break;
-    case 'slip':
-      setFlag(s, 'slipFound');
+    case 'paperwork':
+      setFlag(s, 'formFound');
       break;
     case 'email':
       addIntel(s, 'School email', e ? EVENTS[e].email : 'Nothing special on today.', 'A1', e ?? 'none');
@@ -563,25 +550,15 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean }): boole
     }
   }
 
-  // Contacts land: whatever they were heading for comes undone.
-  for (const th of s.threats.filter((x) => x.at <= s.minute)) {
-    s.threats = s.threats.filter((x) => x.uid !== th.uid);
-    if (!THREATS[th.id].applies(s)) continue; // nothing left for it to undo
-    landThreat(s, th.id);
+  // The endgame. A wave is announced, then lands: each contact becomes a problem to deal with.
+  if (s.wave && s.minute >= s.wave.at) {
+    landWave(s);
     event = true;
-  }
-
-  // The endgame: from the collapse point the house sends contacts, closer together as time runs out.
-  if (s.childAwake && !s.ended && s.minute >= collapseStart(s) && s.minute >= (s.nextThreatAt ?? 0)) {
-    const inbound = s.threats.map((x) => x.id);
-    const pool = THREAT_POOL.filter((id) => !inbound.includes(id) && THREATS[id].applies(s));
-    if (pool.length) {
-      const id = pool[Math.floor(rand(s) * pool.length)];
-      s.threats.push({ uid: s.nextUid++, id, spawned: s.minute, at: s.minute + THREAT_WARNING });
-      log(s, `Contact: ${THREATS[id].warning}`, true);
-      event = true;
-    }
-    s.nextThreatAt = s.minute + threatInterval(s);
+  } else if (!s.wave && s.childAwake && !s.ended && s.minute >= collapseStart(s) && s.minute >= (s.nextWaveAt ?? 0)) {
+    const size = Math.min(3, 1 + s.waves);
+    s.wave = { at: s.minute + WAVE_WARNING, size, announced: s.minute };
+    log(s, `Contacts: ${size} inbound, landing ${formatClock(s.wave.at)}.`, true);
+    event = true;
   }
 
   // Problems put off too long come back, worse.
@@ -608,7 +585,8 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean }): boole
 export function leaveNowProjection(s: GameState): { arrive: number; spare: number; gateShut: boolean } {
   const d = s.day;
   const walk = COMMUTE_MINUTES + (d.weatherKnown && d.weather === 'rain' ? RAIN_WALK_MINUTES : 0);
-  const start = d.meeting || (d.eventKnown && d.event === 'trip') ? d.schoolStart : SCHOOL_START;
+  const early = d.eventKnown && d.event && EVENTS[d.event].earlier;
+  const start = d.meeting || early ? d.schoolStart : SCHOOL_START;
   const arrive = s.minute + walk;
   return { arrive, spare: start - arrive, gateShut: start - arrive < -GATE_CLOSES_AFTER };
 }
@@ -647,15 +625,6 @@ function checkCutoff(s: GameState) {
   }
 }
 
-/** Coats on at the door: whatever either of you was doing stops here. */
-function downTools(s: GameState) {
-  for (const t of [s.parentActivity, s.childActivity]) {
-    if (t && t !== 'help' && s.objectives[t].status === 'active') s.objectives[t].status = 'todo';
-  }
-  s.parentActivity = undefined;
-  s.childActivity = undefined;
-}
-
 /**
  * When the house starts sending contacts: ten minutes before leaving time, sooner if problems
  * have been put off or she's already upset.
@@ -665,51 +634,35 @@ export function collapseStart(s: GameState): number {
   return s.departureDeadline - COLLAPSE_LEAD - 2 * deferred - (s.householdMood <= 2 ? 3 : 0);
 }
 
-/** Minutes between contacts: six at first, down to two. */
-function threatInterval(s: GameState): number {
-  const elapsed = s.minute - collapseStart(s);
-  return Math.max(2, 6 - Math.floor(elapsed / 4));
-}
-
+/** Something finished comes undone: back on the list, without a second incident on top. */
 function reopenTask(s: GameState, t: TaskId) {
   const o = s.objectives[t];
   o.status = 'todo';
   o.progress = 0;
   o.pending = undefined;
-  o.rolled = true; // undoing it is the problem; no second incident on top
+  o.rolled = true;
 }
 
-function landThreat(s: GameState, id: ThreatId) {
-  switch (id) {
-    case 'juice':
-      setFlag(s, 'stainedShirt');
-      break;
-    case 'shoesOff':
-      reopenTask(s, 'shoesOn');
-      break;
-    case 'coatOff':
-      reopenTask(s, 'coat');
-      break;
-    case 'hairMess':
-      reopenTask(s, 'hair');
-      break;
-    case 'hungry':
-      setFlag(s, 'hungry');
-      changeMood(s, -1);
-      break;
-    case 'bagRaid':
-      reopenTask(s, 'bagChecked');
-      break;
-    case 'wobble':
-      changeMood(s, -1);
-      break;
+/** A wave lands: up to `size` contacts, each one something it can undo, each once per morning. */
+function landWave(s: GameState) {
+  const wave = s.wave!;
+  s.wave = undefined;
+  s.waves += 1;
+  s.nextWaveAt = s.minute + Math.max(2, 6 - 2 * s.waves); // closer together each time
+  let pool = ENDGAME_POOL.filter((id) => !s.firedIncidents.includes(id) && (INCIDENTS[id].endgame?.(s) ?? true));
+  if (!pool.length && INCIDENTS.wobble.endgame!(s)) pool = ['wobble'];
+  if (!pool.length) {
+    log(s, 'The contacts pass. Nothing left for them to undo.', true);
+    return;
   }
-  log(s, THREATS[id].landed, true);
+  for (let i = 0; i < wave.size && pool.length; i++) {
+    const id = pool.splice(Math.floor(rand(s) * pool.length), 1)[0];
+    openIncident(s, id);
+  }
 }
 
 function endMorning(s: GameState) {
-  s.ended = true;
-  s.threats = []; // whatever was inbound never arrives: you left
+  s.ended = true; // a wave still inbound never lands: you left
   s.departedAt = s.minute;
   s.parentActivity = undefined;
   s.childActivity = undefined;
@@ -849,6 +802,7 @@ export function reduce(prev: GameState, action: Action): GameState {
           kept = note;
         },
         spend: (m) => spend(s, m, !!resp.both),
+        reopen: (task) => reopenTask(s, task),
       };
       resp.apply(ctx);
 
@@ -858,10 +812,6 @@ export function reduce(prev: GameState, action: Action): GameState {
       } else {
         removeIncident(s, open.uid);
         unblock(s, open.task);
-      }
-      if (open.id === 'bathroom') {
-        setFlag(s, 'bathroomDone');
-        endMorning(s);
       }
       checkCutoff(s);
       return s;
@@ -882,17 +832,6 @@ export function reduce(prev: GameState, action: Action): GameState {
       const inc = s.incidents.find((i) => i.uid === action.uid);
       if (!inc) return prev;
       inc.status = 'open';
-      return s;
-    }
-
-    case 'intercept': {
-      // Get to it before it lands. Costs you the minutes; she carries on.
-      const th = s.threats.find((x) => x.uid === action.uid);
-      if (open || !th) return prev;
-      s.threats = s.threats.filter((x) => x.uid !== th.uid);
-      log(s, `${THREATS[th.id].intercept}. Stopped it.`);
-      spend(s, THREATS[th.id].minutes, false);
-      checkCutoff(s);
       return s;
     }
 
@@ -922,16 +861,9 @@ export function reduce(prev: GameState, action: Action): GameState {
     }
 
     case 'leave': {
-      // Leaving mid-incident is allowed: the problem simply goes unresolved.
-      if (open?.id === 'bathroom' || !s.childAwake) return prev;
+      // Leaving is final. Whatever is still open stays behind, unresolved.
+      if (!s.childAwake) return prev;
       if (open) open.status = 'deferred';
-      // The later it gets, the likelier the door holds you up.
-      const doorChance = Math.min(0.9, BATHROOM_CHANCE + 0.03 * Math.max(0, s.minute - s.departureDeadline));
-      if (!s.firedIncidents.includes('bathroom') && rand(s) < doorChance) {
-        downTools(s);
-        openIncident(s, 'bathroom');
-        return s;
-      }
       endMorning(s);
       return s;
     }
@@ -987,8 +919,13 @@ export function requirements(s: GameState): Requirement[] {
   if (e) {
     const ev = EVENTS[e];
     const met =
-      e === 'library' ? hasFlag(s, 'bookFound') : e === 'picture' ? !hasFlag(s, 'stainedShirt') : isDone(ev.task!);
-    reqs.push({ id: `event:${e}`, label: ev.name, missing: ev.missing, severity: 'severe', met, known: d.eventKnown });
+      e === 'library'
+        ? hasFlag(s, 'bookFound')
+        : e === 'picture' || e === 'assembly'
+          ? !hasFlag(s, 'stainedShirt')
+          : isDone(ev.task!);
+    const severity = e === 'assembly' ? 'moderate' : 'severe';
+    reqs.push({ id: `event:${e}`, label: ev.name, missing: ev.missing, severity, met, known: d.eventKnown });
   }
 
   // Loose ends from how things went.
@@ -996,9 +933,8 @@ export function requirements(s: GameState): Requirement[] {
     reqs.push({ id, label: missing, missing, severity, met: false, known: true });
   if (hasFlag(s, 'noSocks')) extra('noSocks', 'Socks');
   if (hasFlag(s, 'wellies') && d.weather !== 'rain') extra('wellies', 'Proper shoes');
-  if (hasFlag(s, 'stainedShirt') && !picture) extra('stainedShirt', 'A clean top');
+  if (hasFlag(s, 'stainedShirt') && d.event !== 'picture' && d.event !== 'assembly') extra('stainedShirt', 'A clean top');
   if (hasFlag(s, 'messyKitchen')) extra('messyKitchen', 'A clean kitchen');
-  if (hasFlag(s, 'smellyKit')) extra('smellyKit', 'A clean PE kit');
   if (hasFlag(s, 'stuffyDamp')) extra('stuffyDamp', 'A dry stuffy');
   if (s.householdMood <= 1) extra('mood', 'A peaceful morning', 'moderate');
   if (hasFlag(s, 'hungry') && s.objectives.breakfastEaten.status === 'done') extra('hungry', 'A breakfast that lasted', 'minor');
@@ -1049,6 +985,7 @@ export function results(s: GameState): Results {
   else if (!d.eventKnown) revealed.push('Nothing special on at school, as it turned out.');
   if (d.weather === 'rain') revealed.push('It rained on the way.');
   if (d.meeting) revealed.push('The head teacher was waiting at 07:50.');
+  if (s.wave) revealed.push(`You got out ${s.wave.at - departed} min before ${s.wave.size} more contacts landed.`);
 
   let summary: string;
   if (lateness <= 0 && misses.length === 0) summary = 'On time, with everything done. Suspiciously smooth.';

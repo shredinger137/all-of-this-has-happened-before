@@ -9,7 +9,6 @@ import type {
   Owner,
   PerkId,
   TaskId,
-  ThreatId,
 } from './types';
 
 const done = (s: GameState, t: TaskId) => s.objectives[t].status === 'done';
@@ -200,38 +199,38 @@ export const TASKS: Record<TaskId, TaskDef> = {
     missing: 'A stuffy',
     duration: () => 4,
   },
-  peKit: {
-    id: 'peKit',
-    owner: 'parent',
-    label: 'PE kit packed',
-    action: 'Pack her PE kit',
-    doing: 'Packing the PE kit',
-    hint: (s) => (s.day.eventKnown ? 'It is PE today' : 'In case it is PE today'),
-    scored: false,
-    missing: 'PE kit',
-    duration: () => 3,
-  },
-  costume: {
-    id: 'costume',
+  festivalClothes: {
+    id: 'festivalClothes',
     owner: 'child',
-    label: 'Costume on',
-    action: 'Put on her costume',
-    doing: 'Getting into costume',
-    hint: (s) => (s.day.eventKnown ? 'Dress-up day. Counts as dressed' : 'In case it is dress-up day. Counts as dressed'),
+    label: 'Festival clothes on',
+    action: 'Put on her festival clothes',
+    doing: 'Getting into festival clothes',
+    hint: (s) => (s.day.eventKnown ? 'Festival day. Counts as dressed' : 'In case it is festival day. Counts as dressed'),
     scored: false,
-    missing: 'Her costume',
+    missing: 'Festival clothes',
     duration: () => 9,
   },
-  slip: {
-    id: 'slip',
+  project: {
+    id: 'project',
     owner: 'parent',
-    label: 'Slip signed',
-    action: 'Sign the permission slip',
-    doing: 'Signing the slip',
-    hint: (s) => (has(s, 'slipFound') ? 'It is in her bag' : 'Have to find it first'),
+    label: 'Project finished',
+    action: 'Finish her project',
+    doing: 'Gluing leaves to card',
+    hint: (s) => (s.day.eventKnown ? 'Due today. The leaf collage' : 'In case the leaf collage is due'),
     scored: false,
-    missing: 'Permission slip',
-    duration: (s) => (has(s, 'slipFound') ? 2 : 5),
+    missing: 'Her project',
+    duration: () => 10,
+  },
+  paperwork: {
+    id: 'paperwork',
+    owner: 'parent',
+    label: 'Form filled in',
+    action: 'Fill in the form',
+    doing: 'Filling in the form',
+    hint: (s) => (has(s, 'formFound') ? 'It is in her bag' : 'Have to find it first'),
+    scored: false,
+    missing: 'The form',
+    duration: (s) => (has(s, 'formFound') ? 3 : 6),
   },
   email: {
     id: 'email',
@@ -267,11 +266,11 @@ export const PARENT_TASKS: TaskId[] = [
   'clothesOut',
   'coffee',
   'bagChecked',
-  'peKit',
-  'slip',
+  'project',
+  'paperwork',
 ];
 export const INTEL_TASKS: TaskId[] = ['email', 'window'];
-export const CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'hair', 'shoesOn', 'coat', 'stuffy', 'costume'];
+export const CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'hair', 'shoesOn', 'coat', 'stuffy', 'festivalClothes'];
 /** Child tasks every morning needs; the rest depend on the day. */
 export const CORE_CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'hair', 'shoesOn'];
 // Exactly the scored tasks, so the checklist count matches the debrief.
@@ -307,6 +306,8 @@ export type ResolveCtx = {
   keepOpen: (note: string) => void;
   /** More minutes than planned, for you (and her, if the response takes you both). */
   spend: (minutes: number) => void;
+  /** Something finished comes undone and goes back on the list. */
+  reopen: (task: TaskId) => void;
 };
 
 export type ResponseTag = { text: string; tone: 'good' | 'bad' | 'neutral' };
@@ -334,6 +335,7 @@ export type IncidentDef = {
   tasks?: TaskId[]; // tasks this can interrupt (rolled when the task starts)
   chance?: (s: GameState) => number; // base chance before global modifiers
   external?: boolean; // the outside world, not her: tiredness and mood don't change the odds
+  endgame?: (s: GameState) => boolean; // a contact a wave can bring, if it has something to undo
   worse?: string; // what it turns into if put off too long
   responses: ResponseDef[];
 };
@@ -715,9 +717,9 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
   bathroom: {
     id: 'bathroom',
     title: 'Bathroom',
-    context: 'At the door',
+    context: 'Contact',
     headline: () => 'She needs the toilet. Now.',
-    detail: () => 'Coat on, bag on, at the front door.',
+    detail: () => 'Of course she does.',
     deferrable: false,
     responses: [
       {
@@ -802,7 +804,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     detail: () => 'She never calls this early unless it matters. Or she has found a recipe.',
     deferrable: false,
     external: true,
-    tasks: ['lunch', 'breakfastMade', 'parentReady', 'shoesFound', 'clothesOut', 'bagChecked', 'peKit', 'email'],
+    tasks: ['lunch', 'breakfastMade', 'parentReady', 'shoesFound', 'clothesOut', 'bagChecked', 'project', 'email'],
     chance: (s) => (s.childAwake ? 0.1 : 0.04),
     responses: [
       {
@@ -878,51 +880,230 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     ],
   },
 
-  peLaundry: {
-    id: 'peLaundry',
-    title: 'PE kit',
-    context: 'Packing the PE kit',
-    worse: 'The PE kit question has come back. With a smell.',
-    headline: () => 'Her PE kit is in the laundry basket.',
-    detail: () => 'Worn once. Possibly twice.',
-    deferrable: true,
+  // The endgame. A wave lands and each contact becomes one of these.
+  shoesOff: {
+    id: 'shoesOff',
+    title: 'Shoes off',
+    context: 'Contact',
+    headline: () => 'She has taken her shoes off.',
+    detail: () => 'Both of them. She is wiggling her toes at you.',
+    deferrable: false,
+    endgame: (s) => done(s, 'shoesOn'),
     responses: [
       {
-        id: 'spare',
-        label: 'Look for the spare',
-        hint: 'There might be one',
-        minutes: 4,
-        tags: [{ text: '60%', tone: 'neutral' }],
-        available: (s) => !has(s, 'searchedKit'),
-        apply: (c) => {
-          c.flag('searchedKit');
-          if (c.roll() < 0.6) {
-            c.completeTask('peKit');
-            c.log('Found the spare PE kit at the back of a drawer.', true);
-          } else c.keepOpen('No spare. Just the one in the basket.');
-        },
+        id: 'together',
+        label: 'Back on, together',
+        hint: 'Reliable',
+        minutes: 3,
+        both: true,
+        tags: [{ text: 'Shoes stay on', tone: 'neutral' }],
+        apply: (c) => c.log('Shoes back on. Laces double-knotted.', true),
       },
       {
-        id: 'dirty',
-        label: 'Pack it as it is',
-        hint: 'Nobody will notice. Probably',
-        minutes: 1,
-        tags: [{ text: 'Smelly kit', tone: 'bad' }],
-        apply: (c) => {
-          c.flag('smellyKit');
-          c.completeTask('peKit');
-          c.log('Packed the PE kit from the laundry basket.', true);
-        },
-      },
-      {
-        id: 'skip',
-        label: 'No PE kit',
-        hint: 'She can sit it out',
+        id: 'leave',
+        label: 'She can do it herself',
+        hint: 'Free now; back on her list',
         minutes: 0,
-        tags: [{ text: 'No PE kit', tone: 'bad' }],
+        tags: [{ text: 'Shoes undone', tone: 'bad' }],
         apply: (c) => {
-          c.skipTask('peKit');
-          c.log('No PE kit today.', true);
+          c.reopen('shoesOn');
+          c.log('Shoes are hers to put back on.', true);
+        },
+      },
+    ],
+  },
+
+  coatOff: {
+    id: 'coatOff',
+    title: 'Coat off',
+    context: 'Contact',
+    headline: () => 'The coat is off. Too hot, apparently.',
+    detail: () => 'It is on the floor of the hall.',
+    deferrable: false,
+    endgame: (s) => done(s, 'coat'),
+    responses: [
+      {
+        id: 'zip',
+        label: 'Back on, zipped',
+        hint: 'Quick, if she agrees',
+        minutes: 1,
+        both: true,
+        risky: true,
+        riskBase: 0.3,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
+        apply: (c) => {
+          if (!c.escalate({ extra: 0 })) c.log('Coat back on. Zip all the way up.', true);
+        },
+      },
+      {
+        id: 'leave',
+        label: 'Leave it off',
+        hint: 'Free now',
+        minutes: 0,
+        tags: [{ text: 'Coat undone', tone: 'bad' }],
+        apply: (c) => {
+          c.reopen('coat');
+          c.log('The coat stays on the floor.', true);
+        },
+      },
+    ],
+  },
+
+  hairMess: {
+    id: 'hairMess',
+    title: 'Hair',
+    context: 'Contact',
+    headline: () => 'Hood on, hood off. Eleven times.',
+    detail: () => 'The hair is gone.',
+    deferrable: false,
+    endgame: (s) => done(s, 'hair'),
+    responses: [
+      {
+        id: 'redo',
+        label: 'Redo it',
+        hint: 'Properly',
+        minutes: 3,
+        both: true,
+        tags: [{ text: 'Hair fixed', tone: 'neutral' }],
+        apply: (c) => c.log('Hair redone. Hood confiscated.', true),
+      },
+      {
+        id: 'leave',
+        label: 'It will do',
+        hint: 'Free now',
+        minutes: 0,
+        tags: [{ text: 'Hair undone', tone: 'bad' }],
+        apply: (c) => {
+          c.reopen('hair');
+          c.log('The hair will have to do.', true);
+        },
+      },
+    ],
+  },
+
+  juice: {
+    id: 'juice',
+    title: 'Juice',
+    context: 'Contact',
+    headline: () => 'Juice, all down her top.',
+    detail: () => 'Apple. It is spreading.',
+    deferrable: false,
+    endgame: (s) => done(s, 'dressed') && !has(s, 'stainedShirt'),
+    responses: [
+      {
+        id: 'change',
+        label: 'Change her top',
+        hint: 'Slow, but clean',
+        minutes: 4,
+        both: true,
+        tags: [{ text: 'Clean top', tone: 'neutral' }],
+        apply: (c) => c.log('Changed into a clean top.', true),
+      },
+      {
+        id: 'wipe',
+        label: 'Wipe it',
+        hint: 'Quick. It will show',
+        minutes: 1,
+        tags: [{ text: 'Stained top', tone: 'bad' }],
+        apply: (c) => {
+          c.flag('stainedShirt');
+          c.log('Wiped. It still shows.', true);
+        },
+      },
+    ],
+  },
+
+  hungryAgain: {
+    id: 'hungryAgain',
+    title: 'Hungry',
+    context: 'Contact',
+    headline: () => 'She is hungry again. Very hungry. Now.',
+    detail: () => 'She is standing in front of the open fridge.',
+    deferrable: false,
+    endgame: (s) => done(s, 'breakfastEaten'),
+    responses: [
+      {
+        id: 'snack',
+        label: 'A banana for the walk',
+        hint: 'Quick',
+        minutes: 1,
+        tags: [{ text: 'Sorted', tone: 'neutral' }],
+        apply: (c) => c.log('Banana in hand. Crisis averted.', true),
+      },
+      {
+        id: 'no',
+        label: 'Not now',
+        hint: 'Free, if she accepts it',
+        minutes: 0,
+        risky: true,
+        riskBase: 0.5,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
+        apply: (c) => {
+          if (!c.escalate({ extra: 0 })) c.log('She accepted that. Surprisingly.', true);
+        },
+      },
+    ],
+  },
+
+  bagRaid: {
+    id: 'bagRaid',
+    title: 'Bag',
+    context: 'Contact',
+    headline: () => 'Half her bag is on the hall floor.',
+    detail: () => 'She wanted to show you a drawing. It is at the bottom.',
+    deferrable: false,
+    endgame: (s) => done(s, 'bagChecked'),
+    responses: [
+      {
+        id: 'repack',
+        label: 'Repack it properly',
+        hint: 'Everything back where it was',
+        minutes: 3,
+        tags: [{ text: 'Bag checked', tone: 'neutral' }],
+        apply: (c) => c.log('Bag repacked. Drawing admired.', true),
+      },
+      {
+        id: 'scoop',
+        label: 'Scoop it all back in',
+        hint: 'Quick. Who knows what is in there now',
+        minutes: 1,
+        tags: [{ text: 'Bag unchecked', tone: 'bad' }],
+        apply: (c) => {
+          c.reopen('bagChecked');
+          c.log('Everything scooped back in. Probably everything.', true);
+        },
+      },
+    ],
+  },
+
+  wobble: {
+    id: 'wobble',
+    title: 'Wobble',
+    context: 'Contact',
+    headline: () => 'Her lip is going.',
+    detail: () => 'Something is about to happen. Nobody knows what.',
+    deferrable: false,
+    endgame: (s) => s.householdMood >= 1,
+    responses: [
+      {
+        id: 'hug',
+        label: 'A proper hug',
+        hint: 'Usually works',
+        minutes: 2,
+        both: true,
+        tags: [{ text: 'Mood holds', tone: 'good' }],
+        apply: (c) => c.log('A long hug by the door. Better.', true),
+      },
+      {
+        id: 'distract',
+        label: 'Look, a bird!',
+        hint: 'Quick, sometimes',
+        minutes: 0,
+        risky: true,
+        riskBase: 0.5,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
+        apply: (c) => {
+          if (!c.escalate({ extra: 0 })) c.log('It was a very good bird.', true);
         },
       },
     ],
@@ -934,95 +1115,16 @@ export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'b
 export const COMPOUND_MINUTES = 8;
 
 // ---------------------------------------------------------------------------
-// The endgame: as leaving time nears, the house starts undoing your work
+// The endgame: as leaving time nears, waves of contacts. Each wave is announced, then lands.
 // ---------------------------------------------------------------------------
 
-export type ThreatDef = {
-  name: string; // the contact, as it shows on the plot
-  warning: string; // what you see coming
-  risk: string; // what it will cost
-  intercept: string; // what stops it
-  minutes: number;
-  landed: string; // log line when it lands
-  /** Only sent when there's something for it to undo. */
-  applies: (s: GameState) => boolean;
-};
-
-export const THREATS: Record<ThreatId, ThreatDef> = {
-  juice: {
-    name: 'Juice',
-    warning: 'She is carrying a full glass of juice. In her clean top.',
-    risk: 'Clean top',
-    intercept: 'Take the juice',
-    minutes: 1,
-    landed: 'Juice, all down her top.',
-    applies: (s) => done(s, 'dressed') && !has(s, 'stainedShirt'),
-  },
-  shoesOff: {
-    name: 'Shoes',
-    warning: 'She is sitting on the stairs, looking at her shoes.',
-    risk: 'Shoes on',
-    intercept: 'Stand her by the door',
-    minutes: 1,
-    landed: 'She took her shoes off. Both of them.',
-    applies: (s) => done(s, 'shoesOn'),
-  },
-  coatOff: {
-    name: 'Coat',
-    warning: 'She says the coat is too hot.',
-    risk: 'Coat on',
-    intercept: 'Unzip it a little',
-    minutes: 1,
-    landed: 'The coat is off and back on its hook.',
-    applies: (s) => done(s, 'coat'),
-  },
-  hairMess: {
-    name: 'Hair',
-    warning: 'She has found the hood of her jumper.',
-    risk: 'Hair done',
-    intercept: 'Hood off, hat on',
-    minutes: 1,
-    landed: 'Hood on, hood off, eleven times. The hair is gone.',
-    applies: (s) => done(s, 'hair'),
-  },
-  hungry: {
-    name: 'Snack',
-    warning: 'She is opening and closing the fridge.',
-    risk: 'Breakfast',
-    intercept: 'Pocket a snack for her',
-    minutes: 1,
-    landed: 'She is hungry again. Very hungry. Now.',
-    applies: (s) => done(s, 'breakfastEaten') && !has(s, 'hungry'),
-  },
-  bagRaid: {
-    name: 'Bag',
-    warning: 'She has opened her school bag to show you something.',
-    risk: 'Bag checked',
-    intercept: 'Zip the bag shut',
-    minutes: 1,
-    landed: 'Half the bag is on the hall floor.',
-    applies: (s) => done(s, 'bagChecked'),
-  },
-  wobble: {
-    name: 'Wobble',
-    warning: 'Her lip is going. Something is coming.',
-    risk: 'Mood',
-    intercept: 'A proper hug',
-    minutes: 2,
-    landed: 'Tears, about nothing in particular.',
-    applies: (s) => s.householdMood >= 1,
-  },
-};
-
-export const THREAT_POOL: ThreatId[] = ['juice', 'shoesOff', 'coatOff', 'hairMess', 'hungry', 'bagRaid', 'wobble'];
-/** Minutes before leaving time when the house starts sending contacts. */
+export const ENDGAME_POOL: IncidentId[] = ['shoesOff', 'coatOff', 'hairMess', 'juice', 'hungryAgain', 'bagRaid', 'wobble', 'bathroom'];
+/** Minutes before leaving time when the first wave is announced. */
 export const COLLAPSE_LEAD = 10;
-export const THREAT_WARNING = 4; // minutes between a contact appearing and landing
+export const WAVE_WARNING = 5; // minutes between a wave being announced and landing
 export const GATE_CLOSES_AFTER = 10; // arriving this many minutes late: the gate is shut, sign in at the office
-export const PE_LAUNDRY_CHANCE = 0.4;
 
 export const LIBRARY_CHANCE = 0.6;
-export const BATHROOM_CHANCE = 0.5;
 
 // ---------------------------------------------------------------------------
 // Run variation
@@ -1053,6 +1155,7 @@ export type EventDef = {
   ask: string; // what she says when asked
   email: string; // what the school email says
   task?: TaskId; // what has to be done for it
+  earlier?: number; // school starts this many minutes early
   missing: string; // "Left behind" wording
   reveal: string; // after-action line
 };
@@ -1067,14 +1170,41 @@ export const EVENTS: Record<EventId, EventDef> = {
     missing: 'A stuffy, on stuffy day',
     reveal: 'It was stuffy day.',
   },
-  pe: {
-    name: 'PE day',
-    calendar: 'PE',
-    ask: 'We have PE today. Or was that yesterday?',
-    email: 'PE today: please send kit.',
-    task: 'peKit',
-    missing: 'PE kit, on PE day',
-    reveal: 'It was PE day.',
+  festival: {
+    name: 'Festival day',
+    calendar: 'FESTIVAL ☆',
+    ask: "It's the festival! I need my festival clothes.",
+    email: 'Autumn festival today. Children come in festival clothes.',
+    task: 'festivalClothes',
+    missing: 'Festival clothes (everyone else had them)',
+    reveal: 'It was festival day.',
+  },
+  project: {
+    name: 'Project due',
+    calendar: 'LEAF PROJECT DUE',
+    ask: 'My leaf picture has to go in! Is it today?',
+    email: 'Leaf collage projects are due today.',
+    task: 'project',
+    missing: 'Her leaf project',
+    reveal: 'The leaf project was due.',
+  },
+  paperwork: {
+    name: 'Paperwork due',
+    calendar: 'FORMS!!',
+    ask: 'There was a paper. In my bag. For you.',
+    email: 'Health forms are due back today, signed.',
+    task: 'paperwork',
+    missing: 'The signed form',
+    reveal: 'The health form was due.',
+  },
+  assembly: {
+    name: 'Assembly',
+    calendar: 'ASSEMBLY 7:55',
+    ask: "We're singing at assembly!",
+    email: 'Assembly at 07:55: school shirts, please, and arrive a little early.',
+    missing: 'A clean school shirt for assembly',
+    earlier: 5,
+    reveal: 'It was assembly. They started at 07:55.',
   },
   picture: {
     name: 'Picture day',
@@ -1092,34 +1222,16 @@ export const EVENTS: Record<EventId, EventDef> = {
     missing: 'Library book',
     reveal: 'It was library day.',
   },
-  dressUp: {
-    name: 'Dress-up day',
-    calendar: 'DRESS UP!!',
-    ask: "It's dress-up day! I'm a dragon.",
-    email: 'Dress-up day: come as your favourite character.',
-    task: 'costume',
-    missing: 'Costume (everyone else had one)',
-    reveal: 'It was dress-up day.',
-  },
-  trip: {
-    name: 'Trip day',
-    calendar: 'TRIP · coach 7:50',
-    ask: "We're going on the coach!",
-    email: 'Trip today. The coach leaves at 07:50 sharp. Signed slips, please.',
-    task: 'slip',
-    missing: 'Signed permission slip',
-    reveal: 'It was trip day. The coach left at 07:50.',
-  },
 };
 
-export const EVENT_POOL: EventId[] = ['stuffy', 'pe', 'picture', 'library', 'dressUp', 'trip'];
+export const EVENT_POOL: EventId[] = ['stuffy', 'festival', 'project', 'paperwork', 'assembly', 'picture', 'library'];
 export const EVENT_CHANCE = 0.4;
 export const RAIN_CHANCES = [0.1, 0.3, 0.6, 0.85];
 export const COLD_CHANCE = 0.25;
 export const CALENDAR_RIGHT = 0.5;
 export const ASK_RIGHT = 0.7;
 export const RAIN_WALK_MINUTES = 3;
-export const EARLY_START_MINUTES = 10; // a trip or a meeting with the head teacher
+export const EARLY_START_MINUTES = 10; // a meeting with the head teacher
 
 // ---------------------------------------------------------------------------
 // Run: weekly perks

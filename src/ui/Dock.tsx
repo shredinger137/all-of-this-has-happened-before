@@ -29,7 +29,7 @@ function Lamps({ s }: { s: GameState }) {
     { label: 'Coffee', on: s.coffeeBuffer, tone: 'amber' },
     { label: 'Problem', on: !!currentIncident(s), tone: 'alarm' },
     { label: 'Late', on: s.minute >= s.departureDeadline, tone: 'alarm' },
-    { label: `Inbound${s.threats.length ? ` ${s.threats.length}` : ''}`, on: s.threats.length > 0, tone: 'alarm' },
+    { label: s.wave ? `Inbound ×${s.wave.size}` : 'Inbound', on: !!s.wave, tone: 'alarm' },
   ];
   return (
     <div className="lamps" aria-hidden>
@@ -56,6 +56,17 @@ function Projection({ s }: { s: GameState }) {
   );
 }
 
+/** DRADIS: the next wave, how big, and when it lands. */
+function WaveWarning({ s }: { s: GameState }) {
+  if (!s.wave) return null;
+  const left = s.wave.at - s.minute;
+  return (
+    <div className="wave-warning">
+      Contacts inbound: {s.wave.size} · landing {formatClock(s.wave.at)} · {left <= 0 ? 'now' : `${left} min`}
+    </div>
+  );
+}
+
 type Props = {
   s: GameState;
   r?: Results;
@@ -64,10 +75,26 @@ type Props = {
   onNext: () => void;
   onRetry: () => void;
   onReplay: () => void;
+  departing?: boolean; // the departure sequence is showing; the report is one press away
+  onReport?: () => void;
 };
 
 /** Status bar along the bottom of the console: lamps, latest message, and the leave (or wake) key. */
-export function Dock({ s, r, act, run, onNext, onRetry, onReplay }: Props) {
+export function Dock({ s, r, act, run, onNext, onRetry, onReplay, departing, onReport }: Props) {
+  if (r && departing) {
+    return (
+      <div className="dock frame screen ended">
+        <div className="dock-text">
+          <div className="dock-log">
+            <strong>{formatClock(r.departed)}</strong> &nbsp; Out the door.
+          </div>
+        </div>
+        <button className="dock-key tone-amber" onClick={onReport}>
+          Report →
+        </button>
+      </div>
+    );
+  }
   if (r) {
     return (
       <div className="dock frame screen ended">
@@ -109,6 +136,7 @@ export function Dock({ s, r, act, run, onNext, onRetry, onReplay }: Props) {
           <strong>{formatClock(last.minute)}</strong> &nbsp; {last.text}
           {s.minute >= SAFETY_CUTOFF - 15 && ' It is getting very late.'}
         </div>
+        <WaveWarning s={s} />
         {leaving && <Projection s={s} />}
         <div className="warning">{leaving ? leaveWarning(s) : wakeWarning(s)}</div>
       </div>

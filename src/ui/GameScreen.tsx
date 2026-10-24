@@ -4,6 +4,7 @@ import { currentIncident, results } from '../sim/engine';
 import type { Action, GameState } from '../sim/types';
 import { ActionPanel } from './ActionPanel';
 import { Debrief } from './Debrief';
+import { Departure } from './Departure';
 import { Dock } from './Dock';
 import { MorningPlot } from './MorningPlot';
 import { IntelPanel } from './IntelPanel';
@@ -16,7 +17,7 @@ const SEGMENT_MINUTES = 5;
 const NARROW = '(max-width: 730px)';
 
 function headline(s: GameState): { title: string; sub: string } {
-  if (s.ended) return { title: 'Out the door', sub: 'After-action report filed.' };
+  if (s.ended) return { title: 'Out the door', sub: 'On the way to school.' };
   if (!s.childAwake) return { title: 'Before she wakes up', sub: 'The house is quiet. She usually wakes around 7.' };
   const left = s.departureDeadline - s.minute;
   if (currentIncident(s)) return { title: 'Getting ready', sub: left > 0 ? "There's still time, but not much." : 'You should already be gone.' };
@@ -84,14 +85,21 @@ export function GameScreen({ game, seed, act, run, onNext, onRetry, onReplay }: 
   }, [narrow]);
 
   const r = game.ended ? results(game) : undefined;
+  // Leaving plays the departure first; the report is one press away.
+  const [reportOpen, setReportOpen] = useState(false);
+  useEffect(() => setReportOpen(false), [game.seed, game.ended]);
+  const departing = !!r && !reportOpen;
   const { title, sub } = headline(game);
   const left = game.departureDeadline - game.minute;
-  const shownTime = r ? r.arrived : game.minute;
-  const late = r ? r.lateness > 0 : left < 0;
+  // While walking, the clock shows when you left; the arrival is the departure's reveal.
+  const shownTime = r ? (departing ? r.departed : r.arrived) : game.minute;
+  const late = r ? !departing && r.lateness > 0 : left < 0;
   const timeSub = r
-    ? r.lateness > 0
-      ? `${r.lateness} min late`
-      : 'On time'
+    ? departing
+      ? 'Walking'
+      : r.lateness > 0
+        ? `${r.lateness} min late`
+        : 'On time'
     : !game.childAwake
       ? `Leave by ${formatClock(game.departureDeadline)}`
       : left >= 0
@@ -105,7 +113,7 @@ export function GameScreen({ game, seed, act, run, onNext, onRetry, onReplay }: 
   if (r) {
     work = (
       <div className="workarea report">
-        <Debrief r={r} seed={seed} label={game.day.label} />
+        {departing ? <Departure s={game} r={r} /> : <Debrief r={r} seed={seed} label={game.day.label} />}
       </div>
     );
   } else if (narrow) {
@@ -175,7 +183,17 @@ export function GameScreen({ game, seed, act, run, onNext, onRetry, onReplay }: 
 
       {work}
 
-      <Dock s={game} r={r} act={act} run={run} onNext={onNext} onRetry={onRetry} onReplay={onReplay} />
+      <Dock
+        s={game}
+        r={r}
+        act={act}
+        run={run}
+        onNext={onNext}
+        onRetry={onRetry}
+        onReplay={onReplay}
+        departing={departing}
+        onReport={() => setReportOpen(true)}
+      />
     </div>
   );
 }

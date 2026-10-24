@@ -25,12 +25,14 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
   free-ish and confidently unreliable (E5). Messaging another parent costs a **fate point**.
 - **She's up.** You do one thing, she does one thing. Problems interrupt; the phone and doorbell
   interrupt *you*. Put a problem off for too long and it comes back worse.
-- **The endgame.** From about ten minutes before leaving time the house sends contacts: each appears
-  on the morning plot four minutes before it lands, saying what finished work it will undo (shoes off,
-  juice on the clean top, the bag emptied on the floor). Intercept it (a minute or two), let it land, or
-  leave before it arrives. They come faster the longer you stay; put-off problems and a low mood bring
-  them sooner. Arrive more than ten minutes late and the gate has shut.
-- **Leave.** The status bar always shows what leaving now means. What you leave behind is weighted:
+- **The endgame.** From about ten minutes before leaving time, waves of contacts. Each wave is
+  announced on the plot and in the status bar ("Contacts inbound: 2 · landing 07:43") five minutes
+  before it lands. When it lands, each contact is a problem that can undo finished work: shoes off,
+  juice down the clean top, the bag on the hall floor, the toilet. Waves grow (1, 2, 3) and come closer
+  together. You can't stop them, only finish up or get out first. Arrive 10+ minutes late and the
+  gate has shut.
+- **Leave.** The status bar always shows what leaving now means. Leaving is final: the door shuts,
+  the walk plays out, then the after-action report. A wave still inbound lands on an empty house. What you leave behind is weighted:
   missing a stuffy on stuffy day is serious; a packed lunch is not.
 - **Evening.** Pick two preparations for tomorrow. Keep your promises.
 - **Friday.** The week report. Three late marks means a word with the head teacher on Monday.
@@ -55,8 +57,9 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 - Time advances minute by minute **only** when the player acts; each action runs the clock to the
   next meaningful event (task done, incident, she wakes, deadline).
 - One parent activity and one child activity run in parallel. Assigning her a task is free.
-- Each morning rolls weather (forecast %, then the real thing) and, 40% of the time, a school event
-  (stuffy, PE, picture, library, dress-up, trip). Event tasks are only offered when intel points at
+- Each morning rolls weather (forecast %, then the real thing) and, 40% of the time, a kindergarten
+  event: stuffy day, festival day, project due, paperwork due, assembly (school shirt, starts at 07:55),
+  picture day, library day. Event tasks are only offered when intel points at
   them; an unconfirmed event can still cost you a serious miss.
 - Incidents are rolled once when a task starts (seeded RNG); the roll fixes *where* in the task it
   fires, so progress before it is kept. Deferred incidents return worse after 8 minutes.
@@ -68,8 +71,8 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 - **Supervised tasks**: teeth and hair only progress while you help. **Help her**: 1.5× speed.
 - **Coffee** cancels one escalation from a risky response. **Fate** makes one risky choice certain.
 - Risky responses show their odds ("Upset 45%"); escalation costs mood, time, and 2 minutes for both.
-- **Leaving mid-incident** is allowed; the problem goes unresolved. A bathroom trip at the door stops
-  both activities.
+- **Leaving mid-incident** is allowed; the problem goes unresolved. The toilet is no longer an ambush at
+  the door: it arrives with a wave, announced.
 - **Score** = 100 − 4/late min − misses (minor 5, moderate 10, serious 20) ± mood. Shown, but the report
   leads with times, what the day really was, and what got left behind.
 - **Fate**: +1 for an on-time morning with no serious misses, max 3. **Mood** carries over, pulled
@@ -77,7 +80,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 
 ## Balance snapshot (`npm run balance`)
 
-Careful bots (who intercept every contact) are on time 56–79% of mornings with few serious misses;
-hasty bots ignore contacts, leave earlier, and lose more of what they'd finished. Trusting the calendar misses the day's event about
+Careful bots are on time 61–85% of mornings; hasty bots leave earlier and lose more. Trusting the
+calendar misses the day's event about 1 time in 6; reading the email first nearly never does. Trusting the calendar misses the day's event about
 1 time in 6; reading the email first nearly never does, but costs ~10 points of on-time rate.
 Hasty bots are on time more often and leave more behind. Needs human playtesting.

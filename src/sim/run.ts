@@ -6,20 +6,21 @@ import { createGame, results, WEEKDAYS, type MorningSetup } from './engine';
 import { nextRandom } from './rng';
 import type { EventId, GameState, Mood, PerkId, TaskId } from './types';
 
-export type CardId = 'clothes' | 'bag' | 'lunch' | 'shoes' | 'bedtime' | 'newsletter' | 'coffee' | 'promise';
+export type CardId = 'clothes' | 'bag' | 'lunch' | 'shoes' | 'bedtime' | 'newsletter' | 'coffee' | 'project' | 'promise';
 
 /** Evening preparations: pick two of four each night. */
 export const CARDS: Record<CardId, { name: string; note: string; prepares?: TaskId }> = {
   clothes: { name: 'Lay out her clothes', note: 'Dressing goes faster, with fewer arguments.', prepares: 'clothesOut' },
-  bag: { name: 'Pack the school bag', note: 'Any notes or books in it are found tonight.', prepares: 'bagChecked' },
+  bag: { name: 'Pack the school bag', note: 'Any forms or books in it are found tonight.', prepares: 'bagChecked' },
   lunch: { name: 'Make lunch tonight', note: 'One less job in the morning.', prepares: 'lunch' },
   shoes: { name: 'Find her shoes', note: 'By the door, where they belong.', prepares: 'shoesFound' },
   bedtime: { name: 'Early bedtime', note: 'She wakes rested and in a better mood.' },
   newsletter: { name: 'Read the newsletter', note: "You'll know what's on at school tomorrow." },
   coffee: { name: 'Set the coffee timer', note: 'Coffee is ready when you are. Keeps you calm once.' },
+  project: { name: 'Finish the leaf project', note: 'Ten minutes tonight, if it turns out to be due.', prepares: 'project' },
   promise: { name: 'Keep your promise', note: 'You said you would. She remembers.' },
 };
-const CARD_POOL: CardId[] = ['clothes', 'bag', 'lunch', 'shoes', 'bedtime', 'newsletter', 'coffee'];
+const CARD_POOL: CardId[] = ['clothes', 'bag', 'lunch', 'shoes', 'bedtime', 'newsletter', 'coffee', 'project'];
 export const CARDS_PER_EVENING = 2;
 export const MAX_FATE = 3;
 export const LATE_MARKS_FOR_MEETING = 3;

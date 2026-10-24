@@ -5,8 +5,8 @@ import { formatClock } from '../src/sim/constants';
 import { childTaskBlocker, createGame, currentIncident, offered, parentTaskBlocker, reduce, results } from '../src/sim/engine';
 import type { GameState, TaskId } from '../src/sim/types';
 
-const PARENT_PRIORITY: TaskId[] = ['breakfastMade', 'clothesOut', 'shoesFound', 'lunch', 'slip', 'peKit', 'parentReady', 'bagChecked', 'coffee'];
-const READY: TaskId[] = [...CHILD_TASKS, 'lunch', 'parentReady', 'slip', 'peKit'];
+const PARENT_PRIORITY: TaskId[] = ['breakfastMade', 'clothesOut', 'shoesFound', 'lunch', 'paperwork', 'project', 'parentReady', 'bagChecked', 'coffee'];
+const READY: TaskId[] = [...CHILD_TASKS, 'lunch', 'parentReady', 'paperwork', 'project'];
 
 // intel: 'trust' acts on whatever the calendar says; 'email' reads the school email first.
 type Strategy = { name: string; wakeAt: number | null; careful: boolean; intel: 'trust' | 'email' };
@@ -18,10 +18,6 @@ function step(s: GameState, strat: Strategy): GameState {
     // careful: first (stable) option; hasty: quickest option
     const pick = strat.careful ? options[0] : [...options].sort((a, b) => a.minutes - b.minutes)[0];
     return reduce(s, { type: 'respond', response: pick.id });
-  }
-  if (strat.careful && s.threats.length) {
-    const soonest = [...s.threats].sort((a, b) => a.at - b.at)[0];
-    return reduce(s, { type: 'intercept', uid: soonest.uid });
   }
   if (!s.childAwake && strat.wakeAt !== null && s.minute >= strat.wakeAt) return reduce(s, { type: 'wakeNow' });
   if (s.childAwake) {

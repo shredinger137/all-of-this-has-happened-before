@@ -16,7 +16,7 @@ function loadRun(): Saved | undefined {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     const v = raw ? (JSON.parse(raw) as Saved) : undefined;
-    if (v?.game) v.game.threats ??= []; // saved before the endgame existed
+    if (v?.game) v.game.waves ??= 0; // saved before the endgame existed
     return v?.run?.version === 1 ? v : undefined;
   } catch {
     return undefined;
@@ -104,7 +104,7 @@ export default function App() {
     if (!game || !before || before === game) return;
     if (game.ended && !before.ended) sound.done();
     else if (currentIncident(game) && currentIncident(game)?.uid !== currentIncident(before)?.uid) sound.alert();
-    else if (game.threats.some((t) => !before.threats?.some((b) => b.uid === t.uid))) sound.ping();
+    else if (game.wave && game.wave.announced !== before.wave?.announced) sound.ping();
     else sound.click();
   }, [game]);
 

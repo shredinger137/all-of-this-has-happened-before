@@ -110,21 +110,35 @@ what the day actually was ("It was stuffy day. She was the only one without one.
 - Track → tier mapping is a single constant, chosen by measuring each track's loudness/energy (Claude can't
   listen). Separate **Music** toggle next to Sound; starts on the first click (browser autoplay rules).
 
-### 7. The endgame: waiting makes things fall apart (added 2026-10-24)
+### 7. The endgame: waiting makes things fall apart (added 2026-10-24, revised same day)
 
 The user's reference: in BSG and Scattered Hopes, as a mission ends everything goes wrong at once, and
 waiting longer means nobody gets out. The morning had no equivalent: waiting only cost minutes.
 
+First version: individual contacts with intercept buttons. The user's verdict: unclear what to do, the
+same contact kept coming, and the button seemed to do nothing. "I don't think I should have an interface
+for incoming; that's just a warning of the next wave we need to consider." Revised:
+
 - From the **collapse point** (leaving time − 10, minus 2 per put-off problem, minus 3 if mood is low)
-  the house sends **contacts**. Each is **telegraphed**: it appears on the plot (and in an Inbound list
-  at the top of the actions) **4 minutes before it lands**, names what it threatens, and stops the clock
-  so you can react (the Into the Breach rule: you see the attack before it happens).
-- A landed contact **undoes finished work**: shoes off, coat off, hair undone, juice on the clean top,
-  the bag emptied, hungry again, a wobble (mood −1).
-- **Intercept** costs 1–2 minutes. **Leaving** takes you out of reach: inbound contacts never land.
-- Contacts arrive every 6 minutes at first, down to every 2. The door gets stickier the later you are
-  (bathroom chance +3% per minute late), and arriving 10+ minutes late means **the gate had shut**:
-  a serious miss.
+  **waves** are announced on the plot and in the status bar **5 minutes before they land**, with their
+  size. No buttons: the warning is information for the leave-or-stay decision. The clock stops when a
+  wave is announced.
+- A landing wave opens one problem window per contact (queued), each with real choices: shoes off,
+  coat off, hair undone, juice down the top, hungry again, bag emptied, a wobble, the toilet. Choices
+  trade minutes against undoing finished work. Each contact comes at most once per morning.
+- Waves grow (1, 2, 3 contacts) and come closer together (6, 4, 2 minutes apart).
+- **Leaving is final** (the user: the button "should be more definitive"): no bathroom ambush at the
+  door. A wave still inbound "lands on an empty house", and the report says how close it was.
+- **Departure sequence** before the report: door shut, what came with you, what stayed behind, the walk,
+  arrival. The header clock shows the departure time until the arrival is revealed.
+- Arriving 10+ minutes late means **the gate had shut**: a serious miss.
+
+### 8. Kindergarten events (2026-10-24)
+
+She's in kindergarten: no trips or PE. Events are stuffy day, festival day (festival clothes count as
+dressed), project due (10-minute leaf collage, or an evening card), paperwork due (a form, found in the
+bag), assembly (school shirt preferred, moderate miss; school starts 5 minutes early), picture day and
+library day.
 
 ## Build order
 

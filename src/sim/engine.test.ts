@@ -165,9 +165,8 @@ describe('determinism and ending', () => {
 
   it('can leave late and underprepared, and the debrief reports it', () => {
     let s = run(ordinary(), { type: 'wakeNow' });
-    for (let i = 0; i < 20 && s.minute < 8 * 60; i++) s = reduce(s, { type: 'wait' });
+    for (let i = 0; i < 80 && s.minute < 8 * 60; i++) s = stepOn(s);
     s = reduce(s, { type: 'leave' });
-    if (!s.ended) s = reduce(s, { type: 'respond', response: 'wait' });
     expect(s.ended).toBe(true);
     const r = results(s);
     expect(r.lateness).toBeGreaterThan(0);
@@ -179,15 +178,11 @@ describe('determinism and ending', () => {
     expect(reduce(s, { type: 'leave' })).toBe(s);
   });
 
-  it('a bathroom trip at the door stops whatever you were both doing', () => {
-    const s = seedWhere((g) => {
-      const at = run(g, { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' }, { type: 'startParent', task: 'lunch' });
-      return currentIncident(at) === undefined && currentIncident(reduce(at, { type: 'leave' }))?.id === 'bathroom';
-    });
-    const door = run(s, { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' }, { type: 'startParent', task: 'lunch' }, { type: 'leave' });
-    expect(currentIncident(door)?.id).toBe('bathroom');
-    expect(door.parentActivity).toBeUndefined();
-    expect(door.childActivity).toBeUndefined();
+  it('leaving is final: no ambush at the door, whatever was going on stays behind', () => {
+    const s = run(ordinary(), { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' }, { type: 'startParent', task: 'lunch' });
+    const gone = reduce(s, { type: 'leave' });
+    expect(gone.ended).toBe(true);
+    expect(gone.departedAt).toBe(s.minute);
   });
 });
 
@@ -202,92 +197,92 @@ const INCIDENT_FALLBACK: Record<string, string> = {
   library: 'leave',
   bathroom: 'wait',
   stuffyWash: 'skip',
-  peLaundry: 'skip',
   phone: 'ignore',
   doorbell: 'sign',
+  shoesOff: 'together',
+  coatOff: 'leave',
+  hairMess: 'leave',
+  juice: 'wipe',
+  hungryAgain: 'snack',
+  bagRaid: 'repack',
+  wobble: 'hug',
 };
 
+/** Play on without leaving: respond to whatever comes up, otherwise wait. */
+const stepOn = (s: GameState) =>
+  currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
+
 describe('the endgame', () => {
-  /** Get her fully ready with nothing interrupting, then stand around. */
-  function readyAndWaiting(seed: number): GameState {
-    let s = run(createGame(seed), { type: 'wakeNow' });
-    for (let i = 0; i < 300 && !s.ended && s.minute < s.departureDeadline - 12; i++) {
-      const inc = currentIncident(s);
-      if (inc) {
-        s = reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[inc.id] });
-        continue;
-      }
-      if (!s.childActivity) {
-        const t = (['breakfastEaten', 'dressed', 'shoesOn'] as const).find((c) => s.objectives[c].status === 'todo');
-        if (t) {
-          s = reduce(s, { type: 'assignChild', task: t });
+  it('a wave is announced in advance, stops the clock, then lands as problems', () => {
+    let s = run(createGame(11), { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' });
+    for (let i = 0; i < 300 && !s.wave && !s.ended; i++) s = stepOn(s);
+    const wave = s.wave!;
+    expect(wave).toBeDefined();
+    expect(wave.announced).toBeGreaterThanOrEqual(collapseStart(s));
+    expect(wave.at - wave.announced).toBe(5);
+    expect(s.minute).toBe(wave.announced); // the clock stopped for the warning
+    expect(wave.size).toBe(1);
+
+    for (let i = 0; i < 50 && s.wave && !s.ended; i++) s = stepOn(s);
+    expect(s.waves).toBe(1);
+    expect(s.minute).toBeGreaterThanOrEqual(wave.at);
+  });
+
+  it('waves grow and come closer together the longer you stay', () => {
+    let s = run(createGame(21), { type: 'wakeNow' });
+    const announced: { at: number; size: number }[] = [];
+    for (let i = 0; i < 400 && s.minute < 8 * 60 + 20 && !s.ended; i++) {
+      const before = s.wave?.announced;
+      s = stepOn(s);
+      if (s.wave && s.wave.announced !== before) announced.push({ at: s.wave.announced, size: s.wave.size });
+    }
+    expect(announced.length).toBeGreaterThanOrEqual(3);
+    expect(announced.map((w) => w.size).slice(0, 3)).toEqual([1, 2, 3]);
+    const gaps = announced.slice(1).map((w, i) => w.at - announced[i].at);
+    expect(gaps.at(-1)!).toBeLessThanOrEqual(gaps[0]);
+  });
+
+  it('a contact can undo finished work, depending on how you respond', () => {
+    let found = false;
+    for (let seed = 1; seed < 600 && !found; seed++) {
+      let s = run(createGame(seed), { type: 'wakeNow' });
+      for (let i = 0; i < 400 && !s.ended && currentIncident(s)?.id !== 'shoesOff' && s.minute < 8 * 60 + 30; i++) {
+        if (!s.childActivity && s.objectives.shoesOn.status === 'todo' && s.objectives.shoesFound.status === 'done' && !currentIncident(s)) {
+          s = reduce(s, { type: 'assignChild', task: 'shoesOn' });
           continue;
         }
+        if (!s.parentActivity && s.objectives.shoesFound.status === 'todo' && !currentIncident(s)) {
+          s = reduce(s, { type: 'startParent', task: 'shoesFound' });
+          continue;
+        }
+        s = stepOn(s);
       }
-      s = reduce(s, { type: 'wait' });
+      if (currentIncident(s)?.id !== 'shoesOff') continue;
+      found = true;
+      expect(reduce(s, { type: 'respond', response: 'together' }).objectives.shoesOn.status).toBe('done');
+      expect(reduce(s, { type: 'respond', response: 'leave' }).objectives.shoesOn.status).toBe('todo');
     }
-    return s;
-  }
-
-  it('no contacts before the collapse point; then they appear with warning, and stop the clock', () => {
-    // Step through a morning until the first contact appears.
-    let s = run(createGame(11), { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' });
-    for (let i = 0; i < 200 && s.threats.length === 0 && !s.ended; i++) {
-      s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
-    }
-    expect(s.threats.length).toBe(1);
-    const th = s.threats[0];
-    expect(th.spawned).toBeGreaterThanOrEqual(collapseStart(s));
-    expect(th.at - th.spawned).toBe(4);
-    expect(s.minute).toBe(th.spawned); // the clock stopped when it appeared
+    expect(found).toBe(true);
   });
 
-  it('a contact left alone lands and undoes finished work; an intercepted one does not', () => {
-    let found = 0;
-    for (let seed = 1; seed < 400 && found < 2; seed++) {
-      let s = readyAndWaiting(seed);
-      for (let i = 0; i < 20 && !s.threats.some((t) => t.id === 'shoesOff') && !s.ended; i++) {
-        s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
-      }
-      const th = s.threats.find((t) => t.id === 'shoesOff');
-      if (!th || s.objectives.shoesOn.status !== 'done') continue;
-      found++;
-      const stopped = reduce(s, { type: 'intercept', uid: th.uid });
-      expect(stopped.threats.find((t) => t.uid === th.uid)).toBeUndefined();
-      expect(stopped.minute).toBe(s.minute + 1);
-
-      let landed = s;
-      while (!landed.ended && landed.minute < th.at) {
-        landed = currentIncident(landed) ? reduce(landed, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(landed)!.id] }) : reduce(landed, { type: 'wait' });
-      }
-      if (!landed.ended) expect(landed.objectives.shoesOn.status).toBe('todo');
-    }
-    expect(found).toBeGreaterThan(0);
-  });
-
-  it('contacts come closer together as it gets later', () => {
-    let s = readyAndWaiting(21);
-    const spawns: number[] = [];
-    for (let i = 0; i < 200 && s.minute < s.departureDeadline + 15 && !s.ended; i++) {
-      const before = s.threats.map((t) => t.uid);
-      s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
-      for (const t of s.threats) if (!before.includes(t.uid)) spawns.push(t.spawned);
-    }
-    const gaps = spawns.slice(1).map((m, i) => m - spawns[i]);
-    expect(gaps.length).toBeGreaterThan(2);
-    expect(gaps.at(-1)!).toBeLessThan(gaps[0]);
+  it('leaving before a wave lands means it never does; the report says so', () => {
+    let s = run(createGame(11), { type: 'wakeNow' });
+    for (let i = 0; i < 300 && !s.wave && !s.ended; i++) s = stepOn(s);
+    while (currentIncident(s)) s = stepOn(s);
+    const gone = reduce(s, { type: 'leave' });
+    expect(gone.ended).toBe(true);
+    expect(gone.waves).toBe(s.waves);
+    expect(results(gone).revealed.join(' ')).toContain('before');
   });
 
   it('arriving more than ten minutes late means the gate had shut: a serious miss', () => {
     let s = run(ordinary(), { type: 'wakeNow' });
-    while (!s.ended && s.minute < 8 * 60) {
-      s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
-    }
-    while (!s.ended) s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'leave' });
+    while (!s.ended && s.minute < 8 * 60) s = stepOn(s);
+    while (currentIncident(s)) s = stepOn(s);
+    s = reduce(s, { type: 'leave' });
     const r = results(s);
     expect(r.lateness).toBeGreaterThan(10);
     expect(r.misses.find((m) => m.id === 'gate')?.severity).toBe('severe');
-    expect(s.threats).toHaveLength(0); // leaving leaves them behind
   });
 });
 
@@ -352,17 +347,25 @@ describe('the day: weather, school events, intel', () => {
     }
     expect(events / 400).toBeGreaterThan(0.3);
     expect(events / 400).toBeLessThan(0.5);
-    expect(seen.size).toBe(6);
+    expect(seen.size).toBe(7);
   });
 
-  it('the school email confirms the event, and a trip moves the leaving time', () => {
-    let s = withEvent('trip');
+  it('the school email confirms the event, and assembly moves the leaving time', () => {
+    let s = withEvent('assembly');
     expect(s.departureDeadline).toBe(DEPARTURE_DEADLINE);
     s = run(s, { type: 'startParent', task: 'email' });
     expect(s.day.eventKnown).toBe(true);
-    expect(s.departureDeadline).toBe(DEPARTURE_DEADLINE - 10);
-    expect(offered(s, 'slip')).toBe(true);
+    expect(s.departureDeadline).toBe(DEPARTURE_DEADLINE - 5);
     expect(offered(s, 'email')).toBe(false);
+  });
+
+  it('paperwork day: the form is offered once confirmed, and is quicker once found in the bag', () => {
+    let s = withEvent('paperwork');
+    s = run(s, { type: 'startParent', task: 'email' });
+    expect(offered(s, 'paperwork')).toBe(true);
+    const before = s.minute;
+    const filled = run(s, { type: 'startParent', task: 'paperwork' });
+    expect(filled.minute - before).toBeGreaterThanOrEqual(6); // not found yet: hunting for it first
   });
 
   it('event tasks are only offered when the intel points at them', () => {
@@ -373,12 +376,11 @@ describe('the day: weather, school events, intel', () => {
   });
 
   it('missing an unconfirmed event item is a severe miss, revealed in the report', () => {
-    let s = withEvent('pe', (g) => g.intel.every((i) => i.claims !== 'pe'));
+    let s = withEvent('project', (g) => g.intel.every((i) => i.claims !== 'project'));
     s = run(s, { type: 'wakeNow' }, { type: 'leave' });
-    while (currentIncident(s) && !s.ended) s = reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] });
     const r = results(s);
-    expect(r.misses.find((m) => m.id === 'event:pe')?.severity).toBe('severe');
-    expect(r.revealed[0]).toContain('It was PE day. You never confirmed it.');
+    expect(r.misses.find((m) => m.id === 'event:project')?.severity).toBe('severe');
+    expect(r.revealed[0]).toContain('The leaf project was due. You never confirmed it.');
   });
 
   it('asking her adds low-grade intel and costs a minute', () => {
@@ -398,10 +400,10 @@ describe('the day: weather, school events, intel', () => {
     expect(reduce(f, { type: 'favour' })).toBe(f);
   });
 
-  it('a costume counts as getting dressed', () => {
-    let s = withEvent('dressUp');
-    s = run(s, { type: 'startParent', task: 'email' }, { type: 'wakeNow' }, { type: 'assignChild', task: 'costume' });
-    for (let i = 0; i < 40 && s.objectives.costume.status !== 'done'; i++) {
+  it('festival clothes count as getting dressed', () => {
+    let s = withEvent('festival');
+    s = run(s, { type: 'startParent', task: 'email' }, { type: 'wakeNow' }, { type: 'assignChild', task: 'festivalClothes' });
+    for (let i = 0; i < 40 && s.objectives.festivalClothes.status !== 'done'; i++) {
       s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
     }
     expect(s.objectives.dressed.status).toBe('done');
@@ -410,16 +412,15 @@ describe('the day: weather, school events, intel', () => {
   it('rain makes the coat a requirement and the walk longer', () => {
     const s = seedWhere((g) => g.day.weather === 'rain' && !g.day.event);
     const ended = run(s, { type: 'wakeNow' }, { type: 'leave' });
-    if (!ended.ended) return; // bathroom at the door; covered elsewhere
     const r = results(ended);
     expect(r.misses.some((m) => m.id === 'coat')).toBe(true);
     expect(r.arrived).toBe(ended.departedAt! + 15 + 3);
   });
 
-  it('a packed bag the night before confirms a trip', () => {
-    const seed = withEvent('trip').seed;
+  it('a packed bag the night before finds the form', () => {
+    const seed = withEvent('paperwork').seed;
     const s = createGame(seed, { prepared: ['bagChecked'] });
     expect(s.day.eventKnown).toBe(true);
-    expect(s.flags).toContain('slipFound');
+    expect(s.flags).toContain('formFound');
   });
 });

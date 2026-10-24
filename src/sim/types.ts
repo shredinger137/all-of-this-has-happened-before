@@ -16,9 +16,9 @@ export type TaskId =
   // weather and school-event tasks; offered only when the day calls (or might call) for them
   | 'coat'
   | 'stuffy'
-  | 'peKit'
-  | 'costume'
-  | 'slip'
+  | 'festivalClothes'
+  | 'project'
+  | 'paperwork'
   // intel: spend minutes to confirm what today needs
   | 'email'
   | 'window';
@@ -43,9 +43,16 @@ export type IncidentId =
   | 'library'
   | 'bathroom'
   | 'stuffyWash'
-  | 'peLaundry'
   | 'phone'
-  | 'doorbell';
+  | 'doorbell'
+  // the endgame: what a wave of contacts brings
+  | 'shoesOff'
+  | 'coatOff'
+  | 'hairMess'
+  | 'juice'
+  | 'hungryAgain'
+  | 'bagRaid'
+  | 'wobble';
 
 export type OpenIncident = {
   uid: number;
@@ -71,15 +78,12 @@ export type Flag =
   | 'askedBook'
   | 'searchedBook'
   | 'hungry'
-  | 'bathroomDone'
   | 'deadlinePassed'
   | 'askedHer'
   | 'stuffyDamp'
-  | 'smellyKit'
   | 'promisedDress'
   | 'promisedBug'
-  | 'slipFound'
-  | 'searchedKit';
+  | 'formFound';
 
 /** What a lane (you / her) was doing over a stretch of minutes, for the morning plot. */
 export type Span = {
@@ -94,13 +98,11 @@ export type LogEntry = { minute: number; text: string; notable?: boolean };
 
 export type Mood = 0 | 1 | 2 | 3 | 4 | 5;
 
-export type ThreatId = 'juice' | 'shoesOff' | 'coatOff' | 'hairMess' | 'hungry' | 'bagRaid' | 'wobble';
-
-/** A contact on the plot: something that will undo finished work at `at`, unless you stop it or leave. */
-export type Threat = { uid: number; id: ThreatId; spawned: number; at: number };
+/** The endgame: a wave of contacts, announced in advance. When it lands, each one becomes a problem. */
+export type Wave = { at: number; size: number; announced: number };
 
 export type Weather = 'clear' | 'rain' | 'cold';
-export type EventId = 'stuffy' | 'pe' | 'picture' | 'library' | 'dressUp' | 'trip';
+export type EventId = 'stuffy' | 'festival' | 'project' | 'paperwork' | 'assembly' | 'picture' | 'library';
 export type PerkId = 'shoeRack' | 'chart' | 'spoons' | 'hooks' | 'calendar';
 
 /** One piece of intel on the morning briefing. `claims` is what it says today's event is. */
@@ -149,8 +151,9 @@ export type GameState = {
   childTendency: ChildTendency;
   day: Day;
   intel: Intel[];
-  threats: Threat[]; // the endgame: contacts inbound, landing at a known minute
-  nextThreatAt?: number;
+  wave?: Wave; // inbound, if any
+  waves: number; // how many have landed this morning
+  nextWaveAt?: number;
   fate: number; // fate points carried by the run; spent here
   perks: PerkId[];
   history: LogEntry[];
@@ -168,7 +171,6 @@ export type Action =
   | { type: 'respond'; response: string; fate?: boolean }
   | { type: 'ask' }
   | { type: 'favour' }
-  | { type: 'intercept'; uid: number }
   | { type: 'defer' }
   | { type: 'reopen'; uid: number }
   | { type: 'leave' };
