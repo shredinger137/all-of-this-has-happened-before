@@ -16,6 +16,8 @@ export type TaskId =
   // weather and school-event tasks; offered only when the day calls (or might call) for them
   | 'coat'
   | 'stuffy'
+  | 'face'
+  | 'carStuffy'
   | 'festivalClothes'
   | 'project'
   | 'paperwork'
@@ -58,7 +60,8 @@ export type IncidentId =
   | 'wrongBreakfast'
   | 'braids'
   | 'joke'
-  | 'closedDoor';
+  | 'closedDoor'
+  | 'cats';
 
 export type OpenIncident = {
   uid: number;
@@ -170,6 +173,7 @@ export type GameState = {
   breakfastWant: Breakfast; // what she'll want today; hidden
   breakfastChoice?: Breakfast; // what you're making (or made)
   hairWant: 'braids' | 'simple';
+  carStuffyWant: boolean; // some days a stuffy has to come in the car
   caffeinatedUntil?: number; // coffee: you work faster until then
   outcome?: Outcome; // the result of the last choice, until you carry on
   wave?: Wave; // inbound, if any

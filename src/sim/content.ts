@@ -108,13 +108,13 @@ export const TASKS: Record<TaskId, TaskDef> = {
   bagChecked: {
     id: 'bagChecked',
     owner: 'parent',
-    label: 'Bag checked',
-    action: 'Check her backpack',
-    doing: 'Checking the bag',
-    hint: () => 'Make sure everything is in it',
+    label: 'Things packed',
+    action: 'Pack her things',
+    doing: 'Packing her things',
+    hint: () => 'Folder, water bottle, snack. Any notes turn up here',
     scored: true,
-    missing: 'Bag check',
-    duration: () => 4,
+    missing: 'Her things (folder, water bottle)',
+    duration: () => 6,
   },
   breakfastEaten: {
     id: 'breakfastEaten',
@@ -153,14 +153,37 @@ export const TASKS: Record<TaskId, TaskDef> = {
   hair: {
     id: 'hair',
     owner: 'child',
-    label: 'Hair done',
-    action: 'Do her hair',
-    doing: 'Doing her hair',
-    hint: () => 'Needs you there',
+    label: 'Hair brushed',
+    action: 'Brush her hair',
+    doing: 'Brushing her hair',
+    hint: () => 'Down is fine. It still needs brushing',
     scored: true,
     missing: 'Brushed hair',
-    duration: () => 5,
+    duration: () => 4,
     supervised: true,
+  },
+  face: {
+    id: 'face',
+    owner: 'child',
+    label: 'Face clean',
+    action: 'Wash her face',
+    doing: 'Washing her face',
+    hint: (s) => (done(s, 'breakfastEaten') ? 'Breakfast is still on it' : 'Needs you there'),
+    scored: true,
+    missing: 'A clean face',
+    duration: () => 2,
+    supervised: true,
+  },
+  carStuffy: {
+    id: 'carStuffy',
+    owner: 'child',
+    label: 'Car stuffy chosen',
+    action: 'Pick a stuffy for the car',
+    doing: 'Choosing a car stuffy',
+    hint: () => 'She insists. It has to be the right one',
+    scored: false,
+    missing: 'A stuffy for the car',
+    duration: () => 3,
   },
   shoesOn: {
     id: 'shoesOn',
@@ -271,9 +294,9 @@ export const PARENT_TASKS: TaskId[] = [
   'paperwork',
 ];
 export const INTEL_TASKS: TaskId[] = ['email', 'window'];
-export const CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'hair', 'shoesOn', 'coat', 'stuffy', 'festivalClothes'];
+export const CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'face', 'hair', 'shoesOn', 'coat', 'carStuffy', 'stuffy', 'festivalClothes'];
 /** Child tasks every morning needs; the rest depend on the day. */
-export const CORE_CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'hair', 'shoesOn'];
+export const CORE_CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'face', 'hair', 'shoesOn'];
 // Exactly the scored tasks, so the checklist count matches the debrief.
 export const CHECKLIST: TaskId[] = [
   'parentReady',
@@ -282,6 +305,7 @@ export const CHECKLIST: TaskId[] = [
   'breakfastEaten',
   'dressed',
   'teeth',
+  'face',
   'hair',
   'shoesOn',
 ];
@@ -574,6 +598,55 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         risky: true,
         apply: (c) => {
           if (!c.escalate({ extra: 4 })) c.log('Outfit stayed as it was.', true);
+        },
+      },
+    ],
+  },
+
+  cats: {
+    id: 'cats',
+    title: 'The cats',
+    context: 'Distracted',
+    headline: () => 'She is playing with the cats.',
+    detail: () => 'Both of them. On the floor. Very involved.',
+    deferrable: false,
+    tasks: ['breakfastEaten', 'dressed', 'teeth', 'face', 'hair', 'shoesOn', 'coat'],
+    chance: (s) => (s.childTendency === 'dawdler' ? 0.3 : 0.15),
+    endgame: () => true,
+    responses: [
+      {
+        id: 'together',
+        label: 'Two minutes of cats, together',
+        hint: 'Then back to it. Usually',
+        minutes: 2,
+        both: true,
+        tags: [{ text: 'Mood ↑', tone: 'good' }],
+        apply: (c) => {
+          c.mood(1);
+          c.log('Two minutes of cats. Everyone feels better, including the cats.', true);
+        },
+      },
+      {
+        id: 'shoo',
+        label: 'Cats out, door shut',
+        hint: 'Quick. She may not forgive you',
+        minutes: 1,
+        risky: true,
+        riskBase: 0.4,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
+        apply: (c) => {
+          if (!c.escalate({ extra: 1 })) c.log('Cats evicted. She waved them goodbye through the glass.', true);
+        },
+      },
+      {
+        id: 'let',
+        label: 'Let her play',
+        hint: 'Free for you. Her job waits',
+        minutes: 0,
+        tags: [{ text: 'Her task slows', tone: 'bad' }],
+        apply: (c) => {
+          c.addExtra(4);
+          c.log('She played with the cats for a while.', true);
         },
       },
     ],
@@ -1366,7 +1439,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
 };
 
 /** Order matters: the first incident that hits for a task wins. */
-export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'bug', 'joke', 'stuffyWash', 'phone', 'doorbell'];
+export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'cats', 'bug', 'joke', 'stuffyWash', 'phone', 'doorbell'];
 export const COMPOUND_MINUTES = 8;
 
 // ---------------------------------------------------------------------------
@@ -1383,6 +1456,7 @@ export const BREAKFAST_ORDER: Breakfast[] = ['cereal', 'toast', 'oatmeal', 'panc
 export const BREAKFAST_CLUE_CHANCE = 0.6; // she said something about it last night
 export const BREAKFAST_CLUE_RIGHT = 0.75; // and still wants it this morning
 export const BRAIDS_CHANCE = 0.35;
+export const CAR_STUFFY_CHANCE = 0.4;
 export const COFFEE_MINUTES = 20;
 export const COFFEE_SPEED = 1.15;
 
@@ -1390,7 +1464,7 @@ export const COFFEE_SPEED = 1.15;
 // The endgame: as leaving time nears, waves of contacts. Each wave is announced, then lands.
 // ---------------------------------------------------------------------------
 
-export const ENDGAME_POOL: IncidentId[] = ['shoesOff', 'coatOff', 'hairMess', 'juice', 'hungryAgain', 'bagRaid', 'wobble', 'bathroom', 'joke'];
+export const ENDGAME_POOL: IncidentId[] = ['shoesOff', 'coatOff', 'hairMess', 'juice', 'hungryAgain', 'bagRaid', 'wobble', 'bathroom', 'joke', 'cats'];
 
 // ---------------------------------------------------------------------------
 // Her jokes. You go through all of it; there is no other way.

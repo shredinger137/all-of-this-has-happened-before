@@ -212,6 +212,7 @@ const INCIDENT_FALLBACK: Record<string, string> = {
   braids: 'clip',
   joke: 'interrupt',
   closedDoor: 'sorry',
+  cats: 'let',
 };
 
 /** Play on without leaving: respond to whatever comes up, otherwise wait. */
@@ -411,13 +412,14 @@ describe('tension', () => {
     }
     expect(s).toBeDefined();
     const deferred = reduce(s!, { type: 'defer' });
-    const mood = deferred.householdMood;
+    const uid = currentIncident(s!)!.uid;
     let g = deferred;
-    for (let i = 0; i < 20 && !currentIncident(g); i++) g = reduce(g, { type: 'wait' });
-    const back = currentIncident(g)!;
+    // Other things may come up meanwhile; deal with them and keep waiting.
+    for (let i = 0; i < 40 && !g.incidents.find((x) => x.uid === uid)?.worse; i++) g = stepOn(g);
+    const back = g.incidents.find((x) => x.uid === uid)!;
     expect(back.worse).toBe(true);
-    expect(g.minute - back.deferredAt!).toBeGreaterThanOrEqual(8);
-    expect(g.householdMood).toBeLessThanOrEqual(mood - 1);
+    expect(back.status).toBe('open');
+    expect(g.history.some((h) => h.text.includes("it's back, and worse"))).toBe(true);
   });
 
   it('the phone can interrupt your own task once she is up, and the task carries on after', () => {

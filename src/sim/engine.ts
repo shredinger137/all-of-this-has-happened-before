@@ -1,6 +1,7 @@
 import {
   ASK_RIGHT,
   BRAIDS_CHANCE,
+  CAR_STUFFY_CHANCE,
   BREAKFAST_CLUE_CHANCE,
   BREAKFAST_CLUE_RIGHT,
   BREAKFAST_ORDER,
@@ -120,6 +121,7 @@ export function createGame(seed: number, setup: MorningSetup = {}): GameState {
     waves: 0,
     breakfastWant: 'toast',
     hairWant: 'simple',
+    carStuffyWant: false,
     fate: setup.fate ?? 0,
     perks: setup.perks ?? [],
     history: [],
@@ -203,6 +205,7 @@ function rollPreferences(s: GameState) {
     addIntel(s, 'Last night', `She asked for ${BREAKFASTS[said].name.toLowerCase()} for breakfast.`, 'C3');
   }
   s.hairWant = rand(s) < BRAIDS_CHANCE ? 'braids' : 'simple';
+  s.carStuffyWant = rand(s) < CAR_STUFFY_CHANCE;
 }
 
 function otherEvent(s: GameState, not?: EventId): EventId {
@@ -259,6 +262,8 @@ export function offered(s: GameState, t: TaskId): boolean {
       return sus.includes('stuffy');
     case 'festivalClothes':
       return sus.includes('festival');
+    case 'carStuffy':
+      return s.carStuffyWant && s.childAwake;
     case 'project':
       return sus.includes('project');
     case 'paperwork':
@@ -364,6 +369,7 @@ export function earliness(s: GameState): number {
 function wake(s: GameState, natural: boolean) {
   s.childAwake = true;
   s.wokenAt = s.minute;
+  if (s.carStuffyWant) log(s, 'First thing she says: a stuffy has to come in the car today.', true);
   if (natural) {
     if (s.morningCondition === 'lateBedtime') {
       s.groggyLevel = 0.4;
@@ -1021,6 +1027,7 @@ const BASE_SEVERITY: Partial<Record<TaskId, Severity>> = {
   breakfastEaten: 'moderate',
   dressed: 'severe',
   teeth: 'minor',
+  face: 'minor',
   hair: 'minor',
   shoesOn: 'severe',
 };
@@ -1037,6 +1044,17 @@ export function requirements(s: GameState): Requirement[] {
     met: isDone(t),
     known: t !== 'hair' || !picture || d.eventKnown,
   }));
+
+  if (s.carStuffyWant) {
+    reqs.push({
+      id: 'carStuffy',
+      label: 'Car stuffy',
+      missing: 'A stuffy for the car',
+      severity: 'minor',
+      met: isDone('carStuffy') || isDone('stuffy'),
+      known: s.childAwake,
+    });
+  }
 
   if (d.weather !== 'clear') {
     reqs.push({
@@ -1110,7 +1128,7 @@ export function results(s: GameState): Results {
   const cost = misses.reduce((n, r) => n + SEVERITY_COST[r.severity], 0);
   const raw = 100 - 4 * late - cost + 4 * (s.householdMood - 3);
   const score = Math.max(0, Math.min(100, Math.round(raw)));
-  const grade = score >= 85 ? 'Textbook' : score >= 65 ? 'Acceptable' : score >= 40 ? 'Messy' : 'Rough';
+  const grade = score >= 90 ? 'Made it' : score >= 70 ? 'Got there' : score >= 45 ? 'Messy' : 'Rough';
 
   const notes = s.history.filter((h) => h.notable).slice(-5);
 
@@ -1122,7 +1140,7 @@ export function results(s: GameState): Results {
   if (s.wave) revealed.push(`You got out ${s.wave.at - departed} min before ${s.wave.size} more contacts landed.`);
 
   let summary: string;
-  if (lateness <= 0 && misses.length === 0) summary = 'On time, with everything done. Suspiciously smooth.';
+  if (lateness <= 0 && misses.length === 0) summary = 'On time, with everything done. Something must have been forgotten.';
   else if (lateness <= 0 && severeMisses === 0) summary = `On time. Left behind: ${leftBehind.join(', ').toLowerCase()}.`;
   else if (lateness <= 0) summary = `On time, but without ${leftBehind.find((_, i) => misses[i].severity === 'severe')!.toLowerCase()}.`;
   else if (lateness <= 5 && misses.length <= 1) summary = `${lateness} minutes late, with most things finished.`;
