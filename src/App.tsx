@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GameScreen } from './ui/GameScreen';
 import { RunScreen } from './ui/RunScreen';
+import * as music from './ui/music';
 import * as sound from './ui/sound';
 import { createGame, currentIncident, reduce } from './sim/engine';
 import { randomSeed } from './sim/rng';
@@ -41,6 +42,12 @@ function setSeedInUrl(seed: number) {
   window.history.replaceState(null, '', url);
 }
 
+/** Calm before she's up and between mornings; tense in the last ten minutes. */
+function musicTier(game?: GameState): music.Tier {
+  if (!game || game.ended || !game.childAwake) return 'calm';
+  return game.departureDeadline - game.minute <= 10 ? 'crisis' : 'active';
+}
+
 function freshRun(): Saved {
   const run = newRun(randomSeed());
   return { run, game: startMorning(run) };
@@ -60,6 +67,7 @@ export default function App() {
   const [run, setRun] = useState(init.run);
   const [game, setGame] = useState(init.game);
   const [muted, setMuted] = useState(sound.isMuted());
+  const [musicOn, setMusicOn] = useState(music.isEnabled());
   const [confirmReset, setConfirmReset] = useState(false);
   const prev = useRef(game);
 
@@ -74,6 +82,19 @@ export default function App() {
     const t = setTimeout(() => setConfirmReset(false), 3000);
     return () => clearTimeout(t);
   }, [confirmReset]);
+
+  const tier = musicTier(game);
+  useEffect(() => music.setTier(tier), [tier]);
+  // Browsers only allow audio after a gesture: the first click or key starts the music.
+  useEffect(() => {
+    const go = () => music.unlock();
+    window.addEventListener('pointerdown', go, { once: true });
+    window.addEventListener('keydown', go, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', go);
+      window.removeEventListener('keydown', go);
+    };
+  }, []);
 
   // Sounds follow state changes rather than button presses.
   useEffect(() => {
@@ -136,6 +157,16 @@ export default function App() {
             {confirmReset ? 'Really start over?' : 'New run'}
           </button>
         )}
+        <button
+          className="tool frame"
+          onClick={() => {
+            music.setEnabled(!musicOn);
+            setMusicOn(!musicOn);
+          }}
+          aria-pressed={!musicOn}
+        >
+          {musicOn ? 'Music on' : 'Music off'}
+        </button>
         <button
           className="tool frame"
           onClick={() => {
