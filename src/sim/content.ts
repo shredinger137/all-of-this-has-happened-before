@@ -1,11 +1,13 @@
 import type {
   ChildTendency,
+  EventId,
   Flag,
   GameState,
   IncidentId,
   MorningCondition,
   OpenIncident,
   Owner,
+  PerkId,
   TaskId,
 } from './types';
 
@@ -28,6 +30,7 @@ export type TaskDef = {
   duration: (s: GameState) => number; // base minutes, before incident extras
   supervised?: boolean; // child task that only progresses while you help
   unavailable?: (s: GameState) => string | undefined;
+  intel?: boolean; // confirms something rather than getting anyone ready
 };
 
 export const TASKS: Record<TaskId, TaskDef> = {
@@ -169,6 +172,90 @@ export const TASKS: Record<TaskId, TaskDef> = {
     missing: 'Shoes',
     duration: (s) => (has(s, 'noSocks') ? 8 : 6),
   },
+  coat: {
+    id: 'coat',
+    owner: 'child',
+    label: 'Coat on',
+    action: 'Put on her coat',
+    doing: 'Putting on her coat',
+    hint: (s) =>
+      s.day.weather === 'cold'
+        ? "It's cold out"
+        : s.day.weatherKnown
+          ? "It's raining"
+          : `Forecast says ${Math.round(s.day.rainChance * 100)}% rain`,
+    scored: false,
+    missing: 'Her coat',
+    duration: (s) => (s.perks.includes('hooks') ? 1 : 3),
+  },
+  stuffy: {
+    id: 'stuffy',
+    owner: 'child',
+    label: 'Stuffy chosen',
+    action: 'Choose a stuffy',
+    doing: 'Choosing a stuffy',
+    hint: (s) => (s.day.eventKnown ? 'It is stuffy day' : 'In case it is stuffy day'),
+    scored: false,
+    missing: 'A stuffy',
+    duration: () => 4,
+  },
+  peKit: {
+    id: 'peKit',
+    owner: 'parent',
+    label: 'PE kit packed',
+    action: 'Pack her PE kit',
+    doing: 'Packing the PE kit',
+    hint: (s) => (s.day.eventKnown ? 'It is PE today' : 'In case it is PE today'),
+    scored: false,
+    missing: 'PE kit',
+    duration: () => 3,
+  },
+  costume: {
+    id: 'costume',
+    owner: 'child',
+    label: 'Costume on',
+    action: 'Put on her costume',
+    doing: 'Getting into costume',
+    hint: (s) => (s.day.eventKnown ? 'Dress-up day. Counts as dressed' : 'In case it is dress-up day. Counts as dressed'),
+    scored: false,
+    missing: 'Her costume',
+    duration: () => 9,
+  },
+  slip: {
+    id: 'slip',
+    owner: 'parent',
+    label: 'Slip signed',
+    action: 'Sign the permission slip',
+    doing: 'Signing the slip',
+    hint: (s) => (has(s, 'slipFound') ? 'It is in her bag' : 'Have to find it first'),
+    scored: false,
+    missing: 'Permission slip',
+    duration: (s) => (has(s, 'slipFound') ? 2 : 5),
+  },
+  email: {
+    id: 'email',
+    owner: 'parent',
+    label: 'School email read',
+    action: 'Read the school email',
+    doing: 'Reading the school email',
+    hint: () => "Confirms what's on today",
+    scored: false,
+    missing: 'School email',
+    duration: () => 3,
+    intel: true,
+  },
+  window: {
+    id: 'window',
+    owner: 'parent',
+    label: 'Looked outside',
+    action: 'Look outside',
+    doing: 'Looking outside',
+    hint: () => 'Confirms the weather',
+    scored: false,
+    missing: 'A look outside',
+    duration: () => 1,
+    intel: true,
+  },
 };
 
 export const PARENT_TASKS: TaskId[] = [
@@ -179,8 +266,13 @@ export const PARENT_TASKS: TaskId[] = [
   'clothesOut',
   'coffee',
   'bagChecked',
+  'peKit',
+  'slip',
 ];
-export const CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'hair', 'shoesOn'];
+export const INTEL_TASKS: TaskId[] = ['email', 'window'];
+export const CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'hair', 'shoesOn', 'coat', 'stuffy', 'costume'];
+/** Child tasks every morning needs; the rest depend on the day. */
+export const CORE_CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'hair', 'shoesOn'];
 // Exactly the scored tasks, so the checklist count matches the debrief.
 export const CHECKLIST: TaskId[] = [
   'parentReady',
@@ -252,7 +344,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     detail: () => 'Breakfast has stopped.',
     deferrable: false,
     tasks: ['breakfastEaten'],
-    chance: (s) => 0.3 + picky(s),
+    chance: (s) => (s.perks.includes('spoons') ? 0 : 0.3 + picky(s)),
     responses: [
       {
         id: 'blue',
@@ -451,7 +543,10 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         riskBase: 0.2,
         risky: true,
         apply: (c) => {
-          if (!c.escalate({ extra: 3 })) c.log('Yellow dress promised for tomorrow.', true);
+          if (!c.escalate({ extra: 3 })) {
+            c.flag('promisedDress');
+            c.log('Yellow dress promised for tomorrow.', true);
+          }
         },
       },
       {
@@ -498,7 +593,10 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         tags: [{ text: 'May upset her', tone: 'bad' }],
         risky: true,
         apply: (c) => {
-          if (!c.escalate({ extra: 2 })) c.log('Bug viewing postponed until after school.', true);
+          if (!c.escalate({ extra: 2 })) {
+            c.flag('promisedBug');
+            c.log('Bug viewing postponed until after school.', true);
+          }
         },
       },
       {
@@ -557,7 +655,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Library book',
     context: 'Checking the school bag',
     headline: () => "The library book isn't in her bag.",
-    detail: () => "It's due back today.",
+    detail: (s) => (s.day.event === 'library' && !s.day.eventKnown ? "If it's library day, it's due back." : "It's due back today."),
     deferrable: true,
     responses: [
       {
@@ -635,10 +733,111 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       },
     ],
   },
+
+  stuffyWash: {
+    id: 'stuffyWash',
+    title: 'Stuffy in the wash',
+    context: 'Choosing a stuffy',
+    headline: () => 'Bun-Bun is in the washing machine.',
+    detail: () => 'Mid-cycle. She will accept no substitute. Probably.',
+    deferrable: false,
+    tasks: ['stuffy'],
+    chance: (s) => 0.35 + picky(s),
+    responses: [
+      {
+        id: 'damp',
+        label: 'Fish Bun-Bun out',
+        hint: 'Damp, but the right one',
+        minutes: 3,
+        tags: [{ text: 'Damp stuffy', tone: 'bad' }, { text: 'Mood ↑', tone: 'good' }],
+        apply: (c) => {
+          c.flag('stuffyDamp');
+          c.mood(1);
+          c.completeTask('stuffy');
+          c.log('Bun-Bun rescued from the drum. Slightly damp.', true);
+        },
+      },
+      {
+        id: 'other',
+        label: 'Suggest the giraffe',
+        hint: 'Quick, if she goes for it',
+        minutes: 1,
+        both: true,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
+        risky: true,
+        riskBase: 0.5,
+        apply: (c) => {
+          if (!c.escalate({ extra: 2 })) c.log('She took the giraffe. Bun-Bun was not mentioned again.', true);
+        },
+      },
+      {
+        id: 'skip',
+        label: 'No stuffy today',
+        hint: 'Saves time. She will mind',
+        minutes: 0,
+        tags: [{ text: 'No stuffy', tone: 'bad' }, { text: 'Mood ↓', tone: 'bad' }],
+        apply: (c) => {
+          c.mood(-1);
+          c.skipTask('stuffy');
+          c.log('No stuffy. She went quiet about it.', true);
+        },
+      },
+    ],
+  },
+
+  peLaundry: {
+    id: 'peLaundry',
+    title: 'PE kit',
+    context: 'Packing the PE kit',
+    headline: () => 'Her PE kit is in the laundry basket.',
+    detail: () => 'Worn once. Possibly twice.',
+    deferrable: true,
+    responses: [
+      {
+        id: 'spare',
+        label: 'Look for the spare',
+        hint: 'There might be one',
+        minutes: 4,
+        tags: [{ text: '60%', tone: 'neutral' }],
+        available: (s) => !has(s, 'searchedKit'),
+        apply: (c) => {
+          c.flag('searchedKit');
+          if (c.roll() < 0.6) {
+            c.completeTask('peKit');
+            c.log('Found the spare PE kit at the back of a drawer.', true);
+          } else c.keepOpen('No spare. Just the one in the basket.');
+        },
+      },
+      {
+        id: 'dirty',
+        label: 'Pack it as it is',
+        hint: 'Nobody will notice. Probably',
+        minutes: 1,
+        tags: [{ text: 'Smelly kit', tone: 'bad' }],
+        apply: (c) => {
+          c.flag('smellyKit');
+          c.completeTask('peKit');
+          c.log('Packed the PE kit from the laundry basket.', true);
+        },
+      },
+      {
+        id: 'skip',
+        label: 'No PE kit',
+        hint: 'She can sit it out',
+        minutes: 0,
+        tags: [{ text: 'No PE kit', tone: 'bad' }],
+        apply: (c) => {
+          c.skipTask('peKit');
+          c.log('No PE kit today.', true);
+        },
+      },
+    ],
+  },
 };
 
 /** Order matters: the first incident that hits for a task wins. */
-export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'bug'];
+export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'bug', 'stuffyWash'];
+export const PE_LAUNDRY_CHANCE = 0.4;
 
 export const LIBRARY_CHANCE = 0.6;
 export const BATHROOM_CHANCE = 0.5;
@@ -660,6 +859,96 @@ export const TENDENCIES: Record<ChildTendency, { label: string; note: string }> 
   dawdler: { label: 'Easily distracted', note: 'Notices everything.' },
   picky: { label: 'Particular', note: 'Has opinions about spoons and socks.' },
   cheerful: { label: 'Cheerful', note: 'In a good mood today.' },
+};
+
+// ---------------------------------------------------------------------------
+// School days, weather, intel
+// ---------------------------------------------------------------------------
+
+export type EventDef = {
+  name: string;
+  calendar: string; // what the fridge calendar says
+  ask: string; // what she says when asked
+  email: string; // what the school email says
+  task?: TaskId; // what has to be done for it
+  missing: string; // "Left behind" wording
+  reveal: string; // after-action line
+};
+
+export const EVENTS: Record<EventId, EventDef> = {
+  stuffy: {
+    name: 'Stuffy day',
+    calendar: 'STUFFY DAY ✿',
+    ask: "It's stuffy day! I think.",
+    email: 'Bring a favourite soft toy for stuffy day.',
+    task: 'stuffy',
+    missing: 'A stuffy, on stuffy day',
+    reveal: 'It was stuffy day.',
+  },
+  pe: {
+    name: 'PE day',
+    calendar: 'PE',
+    ask: 'We have PE today. Or was that yesterday?',
+    email: 'PE today: please send kit.',
+    task: 'peKit',
+    missing: 'PE kit, on PE day',
+    reveal: 'It was PE day.',
+  },
+  picture: {
+    name: 'Picture day',
+    calendar: 'PHOTOS',
+    ask: "Is it photos today? I want my hair like Ava's.",
+    email: 'School photographs today. Neat hair and a clean top, please.',
+    missing: 'A clean top for the photo',
+    reveal: 'It was picture day.',
+  },
+  library: {
+    name: 'Library day',
+    calendar: 'LIBRARY',
+    ask: 'Library day. My book is somewhere.',
+    email: 'Library books are due back today.',
+    missing: 'Library book',
+    reveal: 'It was library day.',
+  },
+  dressUp: {
+    name: 'Dress-up day',
+    calendar: 'DRESS UP!!',
+    ask: "It's dress-up day! I'm a dragon.",
+    email: 'Dress-up day: come as your favourite character.',
+    task: 'costume',
+    missing: 'Costume (everyone else had one)',
+    reveal: 'It was dress-up day.',
+  },
+  trip: {
+    name: 'Trip day',
+    calendar: 'TRIP · coach 7:50',
+    ask: "We're going on the coach!",
+    email: 'Trip today. The coach leaves at 07:50 sharp. Signed slips, please.',
+    task: 'slip',
+    missing: 'Signed permission slip',
+    reveal: 'It was trip day. The coach left at 07:50.',
+  },
+};
+
+export const EVENT_POOL: EventId[] = ['stuffy', 'pe', 'picture', 'library', 'dressUp', 'trip'];
+export const EVENT_CHANCE = 0.4;
+export const RAIN_CHANCES = [0.1, 0.3, 0.6, 0.85];
+export const COLD_CHANCE = 0.25;
+export const CALENDAR_RIGHT = 0.65;
+export const ASK_RIGHT = 0.7;
+export const RAIN_WALK_MINUTES = 3;
+export const EARLY_START_MINUTES = 10; // a trip or a meeting with the head teacher
+
+// ---------------------------------------------------------------------------
+// Run: weekly perks
+// ---------------------------------------------------------------------------
+
+export const PERKS: Record<PerkId, { name: string; note: string }> = {
+  shoeRack: { name: 'Shoe rack', note: 'Her shoes start by the door half the time.' },
+  chart: { name: 'Morning chart', note: 'She gets on with things a little faster.' },
+  spoons: { name: 'Spare blue spoons', note: 'The spoon question never comes up.' },
+  hooks: { name: 'Coat hooks by the door', note: 'Coats take a minute, not three.' },
+  calendar: { name: 'Family calendar', note: 'The fridge calendar is always right.' },
 };
 
 export const MOOD_LABELS = ['Meltdown', 'Upset', 'Tense', 'Calm', 'Good', 'Bright'] as const;

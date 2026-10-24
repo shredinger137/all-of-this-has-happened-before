@@ -12,7 +12,16 @@ export type TaskId =
   | 'dressed'
   | 'teeth'
   | 'hair'
-  | 'shoesOn';
+  | 'shoesOn'
+  // weather and school-event tasks; offered only when the day calls (or might call) for them
+  | 'coat'
+  | 'stuffy'
+  | 'peKit'
+  | 'costume'
+  | 'slip'
+  // intel: spend minutes to confirm what today needs
+  | 'email'
+  | 'window';
 
 export type ObjectiveStatus = 'todo' | 'active' | 'blocked' | 'done' | 'skipped';
 
@@ -32,7 +41,9 @@ export type IncidentId =
   | 'bug'
   | 'shoesMissing'
   | 'library'
-  | 'bathroom';
+  | 'bathroom'
+  | 'stuffyWash'
+  | 'peLaundry';
 
 export type OpenIncident = {
   uid: number;
@@ -57,7 +68,14 @@ export type Flag =
   | 'searchedBook'
   | 'hungry'
   | 'bathroomDone'
-  | 'deadlinePassed';
+  | 'deadlinePassed'
+  | 'askedHer'
+  | 'stuffyDamp'
+  | 'smellyKit'
+  | 'promisedDress'
+  | 'promisedBug'
+  | 'slipFound'
+  | 'searchedKit';
 
 /** What a lane (you / her) was doing over a stretch of minutes, for the morning plot. */
 export type Span = {
@@ -71,6 +89,33 @@ export type Span = {
 export type LogEntry = { minute: number; text: string; notable?: boolean };
 
 export type Mood = 0 | 1 | 2 | 3 | 4 | 5;
+
+export type Weather = 'clear' | 'rain' | 'cold';
+export type EventId = 'stuffy' | 'pe' | 'picture' | 'library' | 'dressUp' | 'trip';
+export type PerkId = 'shoeRack' | 'chart' | 'spoons' | 'hooks' | 'calendar';
+
+/** One piece of intel on the morning briefing. `claims` is what it says today's event is. */
+export type Intel = {
+  id: number;
+  source: string;
+  text: string;
+  grade: string; // admiralty-style reliability, e.g. "C3"
+  claims?: EventId | 'none';
+  minute: number;
+};
+
+/** What today actually is. The player only sees what intel has revealed. */
+export type Day = {
+  label: string; // "Tuesday", "Week 2 · Monday"
+  weekday: number; // 0 = Monday … 4 = Friday
+  weather: Weather;
+  rainChance: number; // the forecast's figure, 0..1
+  event?: EventId;
+  eventKnown: boolean; // event (or its absence) confirmed
+  weatherKnown: boolean;
+  schoolStart: number; // real start (a trip or a meeting moves it)
+  meeting: boolean; // the head teacher wants a word: be there by 07:50
+};
 
 export type GameState = {
   seed: number;
@@ -93,6 +138,10 @@ export type GameState = {
   flags: Flag[];
   morningCondition: MorningCondition;
   childTendency: ChildTendency;
+  day: Day;
+  intel: Intel[];
+  fate: number; // fate points carried by the run; spent here
+  perks: PerkId[];
   history: LogEntry[];
   spans: Span[];
   ended: boolean;
@@ -105,7 +154,9 @@ export type Action =
   | { type: 'assignChild'; task: TaskId }
   | { type: 'wakeNow' }
   | { type: 'wait' }
-  | { type: 'respond'; response: string }
+  | { type: 'respond'; response: string; fate?: boolean }
+  | { type: 'ask' }
+  | { type: 'favour' }
   | { type: 'defer' }
   | { type: 'reopen'; uid: number }
   | { type: 'leave' };

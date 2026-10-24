@@ -2,7 +2,7 @@
 // Each strategy plays the same seeds with a simple sensible policy.
 import { CHILD_TASKS, INCIDENTS } from '../src/sim/content';
 import { formatClock } from '../src/sim/constants';
-import { childTaskBlocker, createGame, currentIncident, parentTaskBlocker, reduce, results } from '../src/sim/engine';
+import { childTaskBlocker, createGame, currentIncident, offered, parentTaskBlocker, reduce, results } from '../src/sim/engine';
 import type { GameState, TaskId } from '../src/sim/types';
 
 const PARENT_PRIORITY: TaskId[] = ['breakfastMade', 'clothesOut', 'shoesFound', 'lunch', 'parentReady', 'bagChecked', 'coffee'];
@@ -20,15 +20,15 @@ function step(s: GameState, strat: Strategy): GameState {
   }
   if (!s.childAwake && strat.wakeAt !== null && s.minute >= strat.wakeAt) return reduce(s, { type: 'wakeNow' });
   if (s.childAwake) {
-    const ready = READY.every((t) => ['done', 'skipped'].includes(s.objectives[t].status));
+    const ready = READY.filter((t) => offered(s, t)).every((t) => ['done', 'skipped'].includes(s.objectives[t].status));
     if (ready || s.minute >= s.departureDeadline + 30) return reduce(s, { type: 'leave' });
     if (!s.childActivity) {
-      const t = CHILD_TASKS.find((c) => !childTaskBlocker(s, c));
+      const t = CHILD_TASKS.find((c) => offered(s, c) && !childTaskBlocker(s, c));
       if (t) return reduce(s, { type: 'assignChild', task: t });
     }
   }
   if (!s.parentActivity) {
-    const t = PARENT_PRIORITY.find((p) => !parentTaskBlocker(s, p));
+    const t = PARENT_PRIORITY.find((p) => offered(s, p) && !parentTaskBlocker(s, p));
     if (t) return reduce(s, { type: 'startParent', task: t });
     if (s.childActivity && s.objectives[s.childActivity].status === 'active') return reduce(s, { type: 'help' });
   }

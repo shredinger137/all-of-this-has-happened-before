@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { NATURAL_WAKE, START_MINUTE } from './constants';
-import { createGame, currentIncident, reduce, results } from './engine';
-import type { Action, GameState } from './types';
+import { DEPARTURE_DEADLINE, NATURAL_WAKE, START_MINUTE } from './constants';
+import { createGame, currentIncident, offered, reduce, results } from './engine';
+import type { Action, EventId, GameState } from './types';
 
 const run = (s: GameState, ...actions: Action[]) => actions.reduce(reduce, s);
 
@@ -201,4 +201,100 @@ const INCIDENT_FALLBACK: Record<string, string> = {
   shoesMissing: 'together',
   library: 'leave',
   bathroom: 'wait',
+  stuffyWash: 'skip',
+  peLaundry: 'skip',
 };
+
+describe('the day: weather, school events, intel', () => {
+  const withEvent = (e: EventId, extra: (g: GameState) => boolean = () => true) =>
+    seedWhere((g) => g.day.event === e && !g.day.eventKnown && extra(g));
+
+  it('every morning has a forecast and a calendar entry', () => {
+    const s = createGame(3);
+    expect(s.intel.map((i) => i.source)).toEqual(['Forecast', 'Fridge calendar']);
+    expect(s.day.eventKnown).toBe(false);
+  });
+
+  it('some mornings have a school event, and over many seeds every kind appears', () => {
+    const seen = new Set<string>();
+    let events = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const e = createGame(seed).day.event;
+      if (e) {
+        events++;
+        seen.add(e);
+      }
+    }
+    expect(events / 400).toBeGreaterThan(0.3);
+    expect(events / 400).toBeLessThan(0.5);
+    expect(seen.size).toBe(6);
+  });
+
+  it('the school email confirms the event, and a trip moves the leaving time', () => {
+    let s = withEvent('trip');
+    expect(s.departureDeadline).toBe(DEPARTURE_DEADLINE);
+    s = run(s, { type: 'startParent', task: 'email' });
+    expect(s.day.eventKnown).toBe(true);
+    expect(s.departureDeadline).toBe(DEPARTURE_DEADLINE - 10);
+    expect(offered(s, 'slip')).toBe(true);
+    expect(offered(s, 'email')).toBe(false);
+  });
+
+  it('event tasks are only offered when the intel points at them', () => {
+    const s = withEvent('stuffy', (g) => g.intel.every((i) => i.claims !== 'stuffy'));
+    expect(offered(s, 'stuffy')).toBe(false);
+    const confirmed = run(s, { type: 'startParent', task: 'email' });
+    expect(offered(confirmed, 'stuffy')).toBe(true);
+  });
+
+  it('missing an unconfirmed event item is a severe miss, revealed in the report', () => {
+    let s = withEvent('pe', (g) => g.intel.every((i) => i.claims !== 'pe'));
+    s = run(s, { type: 'wakeNow' }, { type: 'leave' });
+    while (currentIncident(s) && !s.ended) s = reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] });
+    const r = results(s);
+    expect(r.misses.find((m) => m.id === 'event:pe')?.severity).toBe('severe');
+    expect(r.revealed[0]).toContain('It was PE day. You never confirmed it.');
+  });
+
+  it('asking her adds low-grade intel and costs a minute', () => {
+    const s = run(ordinary(), { type: 'wakeNow' });
+    const asked = reduce(s, { type: 'ask' });
+    expect(asked.minute).toBe(s.minute + 1);
+    expect(asked.intel.at(-1)?.grade).toBe('E5');
+    expect(reduce(asked, { type: 'ask' })).toBe(asked); // once only
+  });
+
+  it('a fate point confirms the event without spending minutes', () => {
+    const s = createGame(5, { fate: 1 });
+    const f = reduce(s, { type: 'favour' });
+    expect(f.day.eventKnown).toBe(true);
+    expect(f.fate).toBe(0);
+    expect(f.minute).toBe(s.minute);
+    expect(reduce(f, { type: 'favour' })).toBe(f);
+  });
+
+  it('a costume counts as getting dressed', () => {
+    let s = withEvent('dressUp');
+    s = run(s, { type: 'startParent', task: 'email' }, { type: 'wakeNow' }, { type: 'assignChild', task: 'costume' });
+    for (let i = 0; i < 40 && s.objectives.costume.status !== 'done'; i++) {
+      s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
+    }
+    expect(s.objectives.dressed.status).toBe('done');
+  });
+
+  it('rain makes the coat a requirement and the walk longer', () => {
+    const s = seedWhere((g) => g.day.weather === 'rain' && !g.day.event);
+    const ended = run(s, { type: 'wakeNow' }, { type: 'leave' });
+    if (!ended.ended) return; // bathroom at the door; covered elsewhere
+    const r = results(ended);
+    expect(r.misses.some((m) => m.id === 'coat')).toBe(true);
+    expect(r.arrived).toBe(ended.departedAt! + 15 + 3);
+  });
+
+  it('a packed bag the night before confirms a trip', () => {
+    const seed = withEvent('trip').seed;
+    const s = createGame(seed, { prepared: ['bagChecked'] });
+    expect(s.day.eventKnown).toBe(true);
+    expect(s.flags).toContain('slipFound');
+  });
+});
