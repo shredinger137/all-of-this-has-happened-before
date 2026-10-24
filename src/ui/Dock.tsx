@@ -1,5 +1,5 @@
 import { formatClock, SAFETY_CUTOFF } from '../sim/constants';
-import { currentIncident, earliness, isGroggy, requirements, type Results } from '../sim/engine';
+import { currentIncident, earliness, isGroggy, leaveNowProjection, requirements, type Results } from '../sim/engine';
 import type { RunState } from '../sim/run';
 import type { Action, GameState, TaskId } from '../sim/types';
 
@@ -38,6 +38,18 @@ function Lamps({ s }: { s: GameState }) {
           {l.label}
         </span>
       ))}
+    </div>
+  );
+}
+
+/** What leaving this minute means: the one number that matters, always in view. */
+function Projection({ s }: { s: GameState }) {
+  const { arrive, spare } = leaveNowProjection(s);
+  const tone = spare < 0 ? 'red' : spare <= 5 ? 'amber' : 'green';
+  return (
+    <div className={`projection ${tone}`}>
+      Leave now: in by {formatClock(arrive)} ·{' '}
+      {spare >= 0 ? `${spare} min to spare` : `${-spare} min late`}
     </div>
   );
 }
@@ -95,6 +107,7 @@ export function Dock({ s, r, act, run, onNext, onRetry, onReplay }: Props) {
           <strong>{formatClock(last.minute)}</strong> &nbsp; {last.text}
           {s.minute >= SAFETY_CUTOFF - 15 && ' It is getting very late.'}
         </div>
+        {leaving && <Projection s={s} />}
         <div className="warning">{leaving ? leaveWarning(s) : wakeWarning(s)}</div>
       </div>
       <button

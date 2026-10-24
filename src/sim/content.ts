@@ -304,6 +304,8 @@ export type ResolveCtx = {
   skipTask: (task: TaskId) => void;
   /** Leave the incident open with a new detail line. */
   keepOpen: (note: string) => void;
+  /** More minutes than planned, for you (and her, if the response takes you both). */
+  spend: (minutes: number) => void;
 };
 
 export type ResponseTag = { text: string; tone: 'good' | 'bad' | 'neutral' };
@@ -328,8 +330,10 @@ export type IncidentDef = {
   headline: (s: GameState) => string;
   detail: (s: GameState) => string;
   deferrable: boolean;
-  tasks?: TaskId[]; // child tasks this can interrupt (rolled when the task starts)
+  tasks?: TaskId[]; // tasks this can interrupt (rolled when the task starts)
   chance?: (s: GameState) => number; // base chance before global modifiers
+  external?: boolean; // the outside world, not her: tiredness and mood don't change the odds
+  worse?: string; // what it turns into if put off too long
   responses: ResponseDef[];
 };
 
@@ -454,6 +458,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'socks',
     title: 'Socks',
     context: 'While getting dressed',
+    worse: 'The socks have become a principle. She is sitting on the stairs.',
     headline: () => "She doesn't want those socks.",
     detail: () => 'She says they feel wrong. Getting dressed has stopped.',
     deferrable: true,
@@ -515,6 +520,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'outfit',
     title: 'Outfit',
     context: 'While getting dressed',
+    worse: 'She has found the yellow dress herself. It is still wet.',
     headline: () => "She's changed her mind about the outfit.",
     detail: () => 'She wants the yellow dress. It is in the laundry basket.',
     deferrable: true,
@@ -617,6 +623,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'shoesMissing',
     title: 'Missing shoes',
     context: 'Putting on shoes',
+    worse: 'Still no shoes. She has started looking in the fridge.',
     headline: () => "Her shoes aren't by the door.",
     detail: () => 'Nobody knows where they are.',
     deferrable: true,
@@ -654,6 +661,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'library',
     title: 'Library book',
     context: 'Checking the school bag',
+    worse: 'She has remembered the book. She is upset that you forgot.',
     headline: () => "The library book isn't in her bag.",
     detail: (s) => (s.day.event === 'library' && !s.day.eventKnown ? "If it's library day, it's due back." : "It's due back today."),
     deferrable: true,
@@ -785,10 +793,95 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     ],
   },
 
+  phone: {
+    id: 'phone',
+    title: 'Phone call',
+    context: 'While you were busy',
+    headline: () => "Your phone is ringing. It's Grandma.",
+    detail: () => 'She never calls this early unless it matters. Or she has found a recipe.',
+    deferrable: false,
+    external: true,
+    tasks: ['lunch', 'breakfastMade', 'parentReady', 'shoesFound', 'clothesOut', 'bagChecked', 'peKit', 'email'],
+    chance: (s) => (s.childAwake ? 0.1 : 0.04),
+    responses: [
+      {
+        id: 'quick',
+        label: 'Answer, keep it short',
+        hint: 'She has a lot to say',
+        minutes: 1,
+        tags: [{ text: '40% runs long', tone: 'bad' }],
+        apply: (c) => {
+          if (c.roll() < 0.4) {
+            c.spend(3);
+            c.log('Short, it was not. A recipe, in full.', true);
+          } else c.log('Kept it to a minute. A recipe; she will text it.', true);
+        },
+      },
+      {
+        id: 'answer',
+        label: 'Hear her out',
+        hint: 'Could be important',
+        minutes: 4,
+        tags: [{ text: 'Might be useful', tone: 'neutral' }],
+        apply: (c) => {
+          if (c.roll() < 0.3) {
+            c.mood(1);
+            c.log('Grandma will do pick-up on Friday. You put her on speaker. Delight.', true);
+          } else c.log('It was a recipe.', true);
+        },
+      },
+      {
+        id: 'ignore',
+        label: 'Let it ring',
+        hint: 'Free. She will try again later',
+        minutes: 0,
+        tags: [{ text: 'Guilt', tone: 'bad' }],
+        apply: (c) => c.log('You let it ring. Grandma left a voicemail.', true),
+      },
+    ],
+  },
+
+  doorbell: {
+    id: 'doorbell',
+    title: 'Doorbell',
+    context: 'While you were busy',
+    headline: () => 'Someone is at the door.',
+    detail: () => 'A parcel that needs a signature.',
+    deferrable: false,
+    external: true,
+    tasks: ['lunch', 'breakfastMade', 'parentReady', 'shoesFound', 'clothesOut', 'bagChecked', 'coffee'],
+    chance: (s) => (s.childAwake ? 0.08 : 0.03),
+    responses: [
+      {
+        id: 'sign',
+        label: 'Sign for it',
+        hint: 'Quick, if the courier is',
+        minutes: 2,
+        tags: [{ text: 'Reliable', tone: 'neutral' }],
+        apply: (c) => c.log('Signed for a parcel. It was for next door.', true),
+      },
+      {
+        id: 'ignore',
+        label: 'Pretend nobody is home',
+        hint: 'If she hears it, she will answer it',
+        minutes: 0,
+        tags: [{ text: '50% she gets there first', tone: 'bad' }],
+        available: (s) => s.childAwake,
+        apply: (c) => {
+          if (c.roll() < 0.5) {
+            c.spend(2);
+            c.log('She answered the door. In her pyjamas. The courier was charmed.', true);
+          } else c.log('The courier left a card.', true);
+        },
+      },
+    ],
+  },
+
   peLaundry: {
     id: 'peLaundry',
     title: 'PE kit',
     context: 'Packing the PE kit',
+    worse: 'The PE kit question has come back. With a smell.',
     headline: () => 'Her PE kit is in the laundry basket.',
     detail: () => 'Worn once. Possibly twice.',
     deferrable: true,
@@ -836,7 +929,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
 };
 
 /** Order matters: the first incident that hits for a task wins. */
-export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'bug', 'stuffyWash'];
+export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'bug', 'stuffyWash', 'phone', 'doorbell'];
+export const COMPOUND_MINUTES = 8;
 export const PE_LAUNDRY_CHANCE = 0.4;
 
 export const LIBRARY_CHANCE = 0.6;

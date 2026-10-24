@@ -120,7 +120,7 @@ button { font: inherit; color: inherit; }
 @keyframes blink { to { background: #3a1410; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .node.blocked, .lamp.on.alarm i, .contact, .crisis, .tab.alert { animation: none; }
+  .node.blocked, .lamp.on.alarm i, .contact, .crisis, .tab.alert, .projection.red, .crisis-head .queue { animation: none; }
 }
 
 /* Micro labels: the tiny caps legends printed on every Colonial screen strip. */
@@ -363,6 +363,7 @@ button { font: inherit; color: inherit; }
 .crisis-head .tri { font-size: 11px; line-height: 1; }
 .crisis-head .title { font: 400 11px/1.2 var(--font-wide); letter-spacing: 0.18em; text-transform: uppercase; flex: 1; }
 .crisis-head .code { font: 400 9px/1 var(--font-wide); letter-spacing: 0.12em; }
+.crisis-head .queue { padding: 2px 7px; background: var(--red); color: #1a0503; font: 400 8px/1.2 var(--font-wide); letter-spacing: 0.12em; text-transform: uppercase; animation: lampblink 1s steps(2, start) infinite; }
 .crisis-body { padding: 16px 16px 6px; }
 .message { text-align: center; padding: 10px 6px 18px; margin-bottom: 6px; border-bottom: 1px solid var(--rule); }
 .message .context { font: 400 9px/1.3 var(--font-wide); letter-spacing: 0.16em; text-transform: uppercase; color: var(--khaki); }
@@ -391,6 +392,10 @@ button { font: inherit; color: inherit; }
 .dock-text { min-width: 0; color: var(--cyan); font: 12.5px/1.4 var(--mono); text-shadow: var(--glow); }
 .dock-text strong { color: var(--amber); font-weight: 600; }
 .dock-text .warning { color: var(--amber-dim); font-size: 11.5px; margin-top: 2px; text-shadow: none; }
+.dock-text .projection { font-size: 11.5px; margin-top: 2px; }
+.dock-text .projection.green { color: var(--green); }
+.dock-text .projection.amber { color: var(--amber); }
+.dock-text .projection.red { color: var(--red); animation: lampblink 1.4s steps(2, start) infinite; }
 
 /* The lit commit key: amber to wake her, red to leave. */
 .dock-key {

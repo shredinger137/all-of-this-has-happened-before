@@ -249,18 +249,23 @@ function IncidentView({ s, act, inc }: Props & { inc: OpenIncident }) {
   const [fated, setFated] = useState(false);
   const options = def.responses.filter((r) => !r.available || r.available(s, inc));
   const anyRisky = options.some((r) => r.risky);
+  const waiting = s.incidents.filter((i) => i.status === 'open').length - 1;
   return (
-    <div className={`crisis frame actions ${urgent ? 'urgent' : ''}`}>
+    <div className={`crisis frame actions ${urgent || inc.worse ? 'urgent' : ''}`}>
       <div className="crisis-head">
         <span className="tri" aria-hidden>
           ▲
         </span>
-        <span className="title">{def.title}</span>
+        <span className="title">
+          {def.title}
+          {inc.worse && ' · worse'}
+        </span>
+        {waiting > 0 && <span className="queue">+{waiting} waiting</span>}
         <span className="code">INC-{String(inc.uid).padStart(2, '0')}</span>
       </div>
       <div className="crisis-body">
         <div className="message">
-          <div className="context">{def.context}</div>
+          <div className="context">{inc.worse ? 'Put off. Now back' : def.context}</div>
           <h2>{def.headline(s)}</h2>
           <p>{inc.note ?? def.detail(s)}</p>
         </div>

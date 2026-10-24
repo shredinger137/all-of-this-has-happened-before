@@ -4,6 +4,7 @@ import {
   CALENDAR_RIGHT,
   CHECKLIST,
   COLD_CHANCE,
+  COMPOUND_MINUTES,
   EARLY_START_MINUTES,
   EVENT_CHANCE,
   EVENT_POOL,
@@ -364,7 +365,7 @@ function removeIncident(s: GameState, uid: number) {
 function unblock(s: GameState, task?: TaskId) {
   if (!task) return;
   const o = s.objectives[task];
-  if (o.status === 'blocked') o.status = s.childActivity === task ? 'active' : 'todo';
+  if (o.status === 'blocked') o.status = s.childActivity === task || s.parentActivity === task ? 'active' : 'todo';
 }
 
 function completeTask(s: GameState, task: TaskId) {
@@ -413,7 +414,7 @@ function rollIncident(s: GameState, task: TaskId) {
   for (const id of ROLL_ORDER) {
     const def = INCIDENTS[id];
     if (!def.tasks?.includes(task) || s.firedIncidents.includes(id)) continue;
-    const p = Math.max(0, Math.min(0.9, (def.chance?.(s) ?? 0) + incidentModifier(s)));
+    const p = Math.max(0, Math.min(0.9, (def.chance?.(s) ?? 0) + (def.external ? 0 : incidentModifier(s))));
     if (rand(s) < p) {
       const lo = Math.max(o.progress + 0.5, 1);
       const hi = Math.max(lo, dur - 1);
@@ -518,10 +519,18 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean }): boole
   }
 
   const pa = s.parentActivity;
-  if (!engaged.parent && pa && pa !== 'help') {
+  if (!engaged.parent && pa && pa !== 'help' && s.objectives[pa].status === 'active') {
     const o = s.objectives[pa];
     o.progress += parentRate(s);
-    if (o.progress >= taskDuration(s, pa) - EPS) {
+    if (o.pending && o.progress >= o.pending.at - EPS) {
+      // The phone, the door: the outside world interrupts you, not her.
+      o.progress = o.pending.at;
+      const id = o.pending.incidentId;
+      o.pending = undefined;
+      o.status = 'blocked';
+      openIncident(s, id, pa);
+      event = true;
+    } else if (o.progress >= taskDuration(s, pa) - EPS) {
       completeTask(s, pa);
       onParentComplete(s, pa);
       event = true;
@@ -546,12 +555,33 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean }): boole
     }
   }
 
+  // Problems put off too long come back, worse.
+  for (const inc of s.incidents) {
+    if (inc.status !== 'deferred' || inc.worse || inc.deferredAt === undefined) continue;
+    if (s.minute - inc.deferredAt < COMPOUND_MINUTES) continue;
+    inc.worse = true;
+    inc.status = 'open';
+    inc.note = INCIDENTS[inc.id].worse ?? "It hasn't gone away.";
+    changeMood(s, -1);
+    log(s, `${INCIDENTS[inc.id].title}: it's back, and worse.`, true);
+    event = true;
+  }
+
   if (!hasFlag(s, 'deadlinePassed') && s.minute >= s.departureDeadline) {
     setFlag(s, 'deadlinePassed');
     log(s, `It's ${formatClock(s.departureDeadline)}. Time to leave.`, true);
     event = true;
   }
   return event;
+}
+
+/** If you left this minute: when you'd arrive and how early (+) or late (−), using only what you know. */
+export function leaveNowProjection(s: GameState): { arrive: number; spare: number } {
+  const d = s.day;
+  const walk = COMMUTE_MINUTES + (d.weatherKnown && d.weather === 'rain' ? RAIN_WALK_MINUTES : 0);
+  const start = d.meeting || (d.eventKnown && d.event === 'trip') ? d.schoolStart : SCHOOL_START;
+  const arrive = s.minute + walk;
+  return { arrive, spare: start - arrive };
 }
 
 export function nothingRunning(s: GameState): boolean {
@@ -642,6 +672,7 @@ export function reduce(prev: GameState, action: Action): GameState {
       if (was && was !== 'help' && was !== task) s.objectives[was].status = 'todo';
       s.parentActivity = task;
       s.objectives[task].status = 'active';
+      if (s.childAwake) rollIncident(s, task);
       advance(s);
       return s;
     }
@@ -736,6 +767,7 @@ export function reduce(prev: GameState, action: Action): GameState {
         keepOpen: (note) => {
           kept = note;
         },
+        spend: (m) => spend(s, m, !!resp.both),
       };
       resp.apply(ctx);
 
@@ -758,6 +790,7 @@ export function reduce(prev: GameState, action: Action): GameState {
       if (!open || !INCIDENTS[open.id].deferrable) return prev;
       const inc = s.incidents.find((i) => i.uid === open.uid)!;
       inc.status = 'deferred';
+      inc.deferredAt = s.minute;
       if (inc.task && s.childActivity === inc.task) s.childActivity = undefined;
       log(s, `${INCIDENTS[inc.id].title}: put off for now.`);
       return s;

@@ -203,7 +203,48 @@ const INCIDENT_FALLBACK: Record<string, string> = {
   bathroom: 'wait',
   stuffyWash: 'skip',
   peLaundry: 'skip',
+  phone: 'ignore',
+  doorbell: 'sign',
 };
+
+describe('tension', () => {
+  it('a problem put off too long comes back, worse, and costs mood', () => {
+    // Find a morning where getting dressed is interrupted by socks or the outfit (both deferrable).
+    let s: GameState | undefined;
+    for (let seed = 1; seed < 3000 && !s; seed++) {
+      const g = run(createGame(seed), { type: 'wakeNow' }, { type: 'assignChild', task: 'dressed' }, { type: 'startParent', task: 'lunch' });
+      const inc = currentIncident(g);
+      if (inc && (inc.id === 'socks' || inc.id === 'outfit')) s = g;
+    }
+    expect(s).toBeDefined();
+    const deferred = reduce(s!, { type: 'defer' });
+    const mood = deferred.householdMood;
+    let g = deferred;
+    for (let i = 0; i < 20 && !currentIncident(g); i++) g = reduce(g, { type: 'wait' });
+    const back = currentIncident(g)!;
+    expect(back.worse).toBe(true);
+    expect(g.minute - back.deferredAt!).toBeGreaterThanOrEqual(8);
+    expect(g.householdMood).toBeLessThanOrEqual(mood - 1);
+  });
+
+  it('the phone can interrupt your own task once she is up, and the task carries on after', () => {
+    let found = false;
+    for (let seed = 1; seed < 3000 && !found; seed++) {
+      let g = run(createGame(seed), { type: 'wakeNow' }, { type: 'startParent', task: 'lunch' });
+      const inc = currentIncident(g);
+      if (inc?.id !== 'phone' || inc.task !== 'lunch') continue;
+      found = true;
+      expect(g.objectives.lunch.status).toBe('blocked');
+      g = reduce(g, { type: 'respond', response: 'ignore' });
+      expect(g.objectives.lunch.status).not.toBe('blocked');
+      for (let i = 0; i < 10 && g.objectives.lunch.status !== 'done'; i++) {
+        g = currentIncident(g) ? reduce(g, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(g)!.id] }) : reduce(g, { type: 'wait' });
+      }
+      expect(g.objectives.lunch.status).toBe('done');
+    }
+    expect(found).toBe(true);
+  });
+});
 
 describe('the day: weather, school events, intel', () => {
   const withEvent = (e: EventId, extra: (g: GameState) => boolean = () => true) =>

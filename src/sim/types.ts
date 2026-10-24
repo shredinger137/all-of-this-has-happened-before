@@ -43,7 +43,9 @@ export type IncidentId =
   | 'library'
   | 'bathroom'
   | 'stuffyWash'
-  | 'peLaundry';
+  | 'peLaundry'
+  | 'phone'
+  | 'doorbell';
 
 export type OpenIncident = {
   uid: number;
@@ -52,6 +54,8 @@ export type OpenIncident = {
   minute: number;
   status: 'open' | 'deferred';
   note?: string; // replaces the default detail line after a partial resolution
+  deferredAt?: number; // put off at this minute; it comes back worse if left too long
+  worse?: boolean;
 };
 
 export type MorningCondition = 'ordinary' | 'lateBedtime' | 'shoesByDoor' | 'noBread' | 'earlyBird';
