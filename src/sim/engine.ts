@@ -17,6 +17,8 @@ import {
   GATE_CLOSES_AFTER,
   EARLY_START_MINUTES,
   EVENT_CHANCE,
+  WEEKLY_EVENT_CHANCE,
+  WEEKLY_INCIDENT_CHANCE,
   EVENT_POOL,
   EVENTS,
   INCIDENTS,
@@ -71,6 +73,7 @@ export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 /** What the run hands a morning: yesterday's consequences and last night's preparations. */
 export type MorningSetup = {
   weekday?: number; // 0 = Monday; a standalone drill picks Tuesday
+  week?: number; // later weeks are busier
   label?: string;
   mood?: Mood; // carried over from yesterday
   fate?: number;
@@ -124,6 +127,7 @@ export function createGame(seed: number, setup: MorningSetup = {}): GameState {
     carStuffyWant: false,
     fate: setup.fate ?? 0,
     perks: setup.perks ?? [],
+    week: setup.week ?? 1,
     history: [],
     spans: [],
     ended: false,
@@ -134,7 +138,7 @@ export function createGame(seed: number, setup: MorningSetup = {}): GameState {
   rollDay(s, setup);
   rollPreferences(s);
 
-  if (s.morningCondition === 'earlyBird') s.wakeMinute = NATURAL_WAKE - 10;
+  if (s.morningCondition === 'earlyBird') s.wakeMinute = NATURAL_WAKE - 5;
   const rackHelps = s.perks.includes('shoeRack') && rand(s) < 0.5;
   if (s.morningCondition === 'shoesByDoor' || rackHelps) {
     s.objectives.shoesFound.status = 'done';
@@ -162,7 +166,7 @@ function rollDay(s: GameState, setup: MorningSetup) {
   d.weather = rain ? 'rain' : cold ? 'cold' : 'clear';
 
   if (setup.forceEvent !== undefined) d.event = setup.forceEvent ?? undefined;
-  else if (rand(s) < EVENT_CHANCE) {
+  else if (rand(s) < Math.min(0.6, EVENT_CHANCE + WEEKLY_EVENT_CHANCE * (s.week - 1))) {
     const pool = EVENT_POOL.filter((e) => e !== setup.notEvent);
     d.event = pool[Math.floor(rand(s) * pool.length)];
   }
@@ -333,14 +337,14 @@ export function childRate(s: GameState): number {
   let rate = 1;
   if (isGroggy(s)) rate *= 1 - 0.35 * s.groggyLevel;
   if (s.householdMood <= 1) rate *= 0.8;
-  if (s.childTendency === 'independent') rate *= 1.15;
+  if (s.childTendency === 'independent') rate *= 1.07;
   if (s.perks.includes('chart')) rate *= 1.1;
   if (s.parentActivity === 'help') rate *= 1.5;
   return rate;
 }
 
 function incidentModifier(s: GameState): number {
-  let m = 0;
+  let m = Math.min(0.12, WEEKLY_INCIDENT_CHANCE * (s.week - 1));
   if (isGroggy(s)) m += 0.35 * s.groggyLevel;
   if (s.householdMood <= 1) m += 0.15;
   if (s.householdMood >= 4) m -= 0.1;
@@ -383,7 +387,9 @@ function wake(s: GameState, natural: boolean) {
   const e = earliness(s);
   s.groggyLevel = 0.4 + 0.6 * e;
   s.groggyUntil = s.minute + 15 + Math.round(20 * e);
-  log(s, e > 0.5 ? 'You woke her early. She is very tired.' : 'You woke her a little early.', true);
+  // Waking her well before she's ready costs more than speed: she starts the day cross.
+  if (e > 0.4) changeMood(s, -1);
+  log(s, e > 0.5 ? 'You woke her early. She is very tired, and not happy about it.' : 'You woke her a little early.', true);
 }
 
 function openIncident(s: GameState, id: IncidentId, task?: TaskId, front = false) {
@@ -542,7 +548,7 @@ function laneState(s: GameState, engaged: { parent: boolean; child: boolean }) {
  * Advance one simulated minute. Returns true if something happened that the
  * player should look at. `engaged` marks who is tied up resolving an incident.
  */
-function tick(s: GameState, engaged: { parent: boolean; child: boolean }): boolean {
+function tick(s: GameState, engaged: { parent: boolean; child: boolean; door?: boolean }): boolean {
   const lanes = laneState(s, engaged);
   record(s, 'parent', lanes.parent[0], lanes.parent[1], s.minute);
   record(s, 'child', lanes.child[0], lanes.child[1], s.minute);
@@ -592,7 +598,9 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean }): boole
   }
 
   // The endgame. A wave is announced, then lands: each contact becomes a problem to deal with.
-  if (s.wave && s.minute >= s.wave.at) {
+  if (engaged.door) {
+    // Coats on, at the door: the house can't reach you now.
+  } else if (s.wave && s.minute >= s.wave.at) {
     landWave(s);
     event = true;
   } else if (!s.wave && s.childAwake && !s.ended && s.minute >= collapseStart(s) && s.minute >= (s.nextWaveAt ?? 0)) {
@@ -622,13 +630,21 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean }): boole
   return event;
 }
 
+/** Minutes the shoes would take at the door, if you left now. */
+export function shoesAtDoorMinutes(s: GameState): number {
+  if (!s.childAwake || s.objectives.shoesOn.status === 'done') return 0;
+  const find = s.objectives.shoesFound.status === 'done' ? 0 : TASKS.shoesFound.duration(s);
+  const on = Math.ceil((taskDuration(s, 'shoesOn') - s.objectives.shoesOn.progress) / childRate({ ...s, parentActivity: 'help' }));
+  return find + Math.max(1, on);
+}
+
 /** If you left this minute: when you'd arrive and how early (+) or late (−), using only what you know. */
 export function leaveNowProjection(s: GameState): { arrive: number; spare: number; gateShut: boolean } {
   const d = s.day;
   const walk = COMMUTE_MINUTES + (d.weatherKnown && d.weather === 'rain' ? RAIN_WALK_MINUTES : 0);
   const early = d.eventKnown && d.event && EVENTS[d.event].earlier;
   const start = d.meeting || early ? d.schoolStart : SCHOOL_START;
-  const arrive = s.minute + walk;
+  const arrive = s.minute + walk + shoesAtDoorMinutes(s);
   return { arrive, spare: start - arrive, gateShut: start - arrive < -GATE_CLOSES_AFTER };
 }
 
@@ -653,9 +669,9 @@ function advance(s: GameState) {
 }
 
 /** Spend minutes on an incident response; other work continues around it. */
-function spend(s: GameState, minutes: number, both: boolean) {
+function spend(s: GameState, minutes: number, both: boolean, door = false) {
   for (let i = 0; i < minutes && s.minute < SAFETY_CUTOFF; i++) {
-    tick(s, { parent: true, child: both });
+    tick(s, { parent: true, child: both, door });
   }
 }
 
@@ -700,6 +716,23 @@ function landWave(s: GameState) {
     const id = pool.splice(Math.floor(rand(s) * pool.length), 1)[0];
     openIncident(s, id);
   }
+}
+
+/** Nobody walks to school barefoot: shoes not on yet go on at the door, on your time. */
+function shoesAtTheDoor(s: GameState) {
+  if (s.objectives.shoesOn.status === 'done') return;
+  s.parentActivity = undefined;
+  s.childActivity = undefined;
+  if (s.objectives.shoesFound.status !== 'done') {
+    log(s, 'Hunting for her shoes at the door.', true);
+    spend(s, TASKS.shoesFound.duration(s), true, true);
+    completeTask(s, 'shoesFound');
+  }
+  const o = s.objectives.shoesOn;
+  const minutes = Math.max(1, Math.ceil((taskDuration(s, 'shoesOn') - o.progress) / childRate({ ...s, parentActivity: 'help' })));
+  log(s, 'Shoes on at the door. Every second of it.', true);
+  spend(s, minutes, true, true);
+  completeTask(s, 'shoesOn');
 }
 
 function endMorning(s: GameState) {
@@ -907,6 +940,7 @@ export function reduce(prev: GameState, action: Action): GameState {
       }
       spend(s, resp.minutesFor?.(s) ?? resp.minutes, !!resp.both);
       let kept: string | undefined;
+      let later = false;
       const ctx: ResolveCtx = {
         s,
         incident: open,
@@ -939,6 +973,9 @@ export function reduce(prev: GameState, action: Action): GameState {
         spend: (m) => spend(s, m, !!resp.both),
         reopen: (task) => reopenTask(s, task),
         followUp: (id) => openIncident(s, id, undefined, true),
+        later: () => {
+          later = true;
+        },
         unflag: (f) => {
           s.flags = s.flags.filter((x) => x !== f);
         },
@@ -948,6 +985,11 @@ export function reduce(prev: GameState, action: Action): GameState {
       if (kept !== undefined) {
         const inc = s.incidents.find((i) => i.uid === open.uid);
         if (inc) inc.note = kept;
+      } else if (later) {
+        const inc = s.incidents.find((i) => i.uid === open.uid)!;
+        inc.status = 'deferred';
+        inc.deferredAt = s.minute;
+        unblock(s, open.task);
       } else {
         removeIncident(s, open.uid);
         unblock(s, open.task);
@@ -1004,6 +1046,7 @@ export function reduce(prev: GameState, action: Action): GameState {
       // Leaving is final. Whatever is still open stays behind, unresolved.
       if (!s.childAwake) return prev;
       if (open) open.status = 'deferred';
+      shoesAtTheDoor(s);
       endMorning(s);
       return s;
     }

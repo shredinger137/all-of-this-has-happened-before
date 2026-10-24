@@ -81,9 +81,18 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 - **Fate**: +1 for an on-time morning with no serious misses, max 3. **Mood** carries over, pulled
   toward calm. Broken promises cost mood the next morning.
 
-## Balance snapshot (`npm run balance`)
+## Balance (`npx vite-node scripts/tune.ts`)
 
-Careful bots are on time 61–85% of mornings; hasty bots leave earlier and lose more. Trusting the
-calendar misses the day's event about 1 time in 6; reading the email first nearly never does. Trusting the calendar misses the day's event about
-1 time in 6; reading the email first nearly never does, but costs ~10 points of on-time rate.
-Hasty bots are on time more often and leave more behind. Needs human playtesting.
+The target: a good player should *barely* make it, and never feel they've won. `scripts/tune.ts` plays
+1,500 single mornings and 100 four-week runs per policy (`--only strong`, `--severe`, `--slices`,
+`--trace <seed>`); `npm run balance` is the older, simpler bot set.
+
+| Policy | median spare | on time | close call (0–3) | >5 spare | nothing left behind | serious misses |
+| --- | --- | --- | --- | --- | --- | --- |
+| strong, single mornings | 1 min | 66% | 50% | 4% | 0% | 0.04 / morning |
+| strong, full weeks | 0 min | 60% | 45% | 4% | 8% | 0.05 / morning |
+| mediocre, full weeks | −8 min | 2% | 1% | 0% | 6% | 0.41 / morning |
+
+Most good mornings end with 1–3 small things let go. The mediocre bot takes the first option every time
+and leaves only when nearly done; real first-time players will watch the clock and do better, but how
+much better needs human playtesting. Rain days are hardest (on time ~45%).

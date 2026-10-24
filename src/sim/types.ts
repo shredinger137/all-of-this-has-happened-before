@@ -181,6 +181,7 @@ export type GameState = {
   nextWaveAt?: number;
   fate: number; // fate points carried by the run; spent here
   perks: PerkId[];
+  week: number;
   history: LogEntry[];
   spans: Span[];
   ended: boolean;

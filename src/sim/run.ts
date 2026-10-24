@@ -117,6 +117,7 @@ export function morningSetup(run: RunState): MorningSetup {
   const moodShift = kept ? 1 : -run.promises.length;
   return {
     weekday: run.weekday,
+    week: run.week,
     label: dayLabel(run),
     mood: Math.max(0, Math.min(5, run.mood + moodShift)) as Mood,
     fate: run.fate,

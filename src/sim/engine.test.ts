@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEPARTURE_DEADLINE, NATURAL_WAKE, START_MINUTE } from './constants';
-import { collapseStart, createGame, currentIncident, offered, parentRate, reduce, results } from './engine';
+import { collapseStart, createGame, currentIncident, offered, parentRate, reduce, results, shoesAtDoorMinutes } from './engine';
 import { INCIDENTS } from './content';
 import type { Action, EventId, GameState } from './types';
 
@@ -33,10 +33,7 @@ describe('morning start', () => {
   it('wakes her naturally at 07:00 and pauses there', () => {
     let s = ordinary();
     s = run(s, { type: 'startParent', task: 'lunch' }, { type: 'startParent', task: 'breakfastMade', variant: 'oatmeal' }, { type: 'startParent', task: 'parentReady' });
-    expect(s.minute).toBe(START_MINUTE + 23);
-    s = run(s, { type: 'startParent', task: 'bagChecked' });
-    // bag check may raise the library incident; either way 07:00 is not crossed silently
-    expect(s.minute).toBeLessThanOrEqual(NATURAL_WAKE);
+    expect(s.minute).toBe(START_MINUTE + 30); // lunch 8 + oatmeal 7 + getting ready 15: right at 07:00
     while (!s.childAwake) s = reduce(s, currentIncident(s) ? { type: 'respond', response: 'leave' } : { type: 'wait' });
     expect(s.minute).toBe(NATURAL_WAKE);
     expect(s.groggyUntil).toBeUndefined();
@@ -183,7 +180,9 @@ describe('determinism and ending', () => {
     const s = run(ordinary(), { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' }, { type: 'startParent', task: 'lunch' });
     const gone = reduce(s, { type: 'leave' });
     expect(gone.ended).toBe(true);
-    expect(gone.departedAt).toBe(s.minute);
+    // Shoes not on yet go on at the door, on your time; nothing else holds you up.
+    expect(gone.departedAt).toBe(s.minute + shoesAtDoorMinutes(s));
+    expect(gone.objectives.shoesOn.status).toBe('done');
   });
 });
 

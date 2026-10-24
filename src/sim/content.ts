@@ -44,7 +44,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     hint: () => "You'll be ready to leave",
     scored: true,
     missing: 'Your own hair',
-    duration: () => 8,
+    duration: () => 15,
   },
   lunch: {
     id: 'lunch',
@@ -125,7 +125,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     hint: (s) => (done(s, 'breakfastMade') ? 'Breakfast is ready' : 'Nothing made yet. Cereal will be slower'),
     scored: true,
     missing: 'Breakfast',
-    duration: (s) => (done(s, 'breakfastMade') ? 14 : 18),
+    duration: (s) => (done(s, 'breakfastMade') ? 20 : 24),
   },
   dressed: {
     id: 'dressed',
@@ -136,7 +136,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     hint: (s) => (done(s, 'clothesOut') ? 'Clothes are laid out' : "She'll pick her own clothes"),
     scored: true,
     missing: 'Getting dressed',
-    duration: (s) => (done(s, 'clothesOut') ? 10 : 13),
+    duration: (s) => (done(s, 'clothesOut') ? 12 : 16),
   },
   teeth: {
     id: 'teeth',
@@ -194,7 +194,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     hint: (s) => (done(s, 'shoesFound') ? 'Shoes are by the door' : "You haven't seen her shoes yet"),
     scored: true,
     missing: 'Shoes',
-    duration: (s) => (has(s, 'noSocks') ? 8 : 6),
+    duration: (s) => (has(s, 'noSocks') ? 9 : 7),
   },
   coat: {
     id: 'coat',
@@ -333,6 +333,8 @@ export type ResolveCtx = {
   spend: (minutes: number) => void;
   /** Something finished comes undone and goes back on the list. */
   reopen: (task: TaskId) => void;
+  /** Not now: it goes on the pile and comes back, worse, if left too long. */
+  later: () => void;
   /** The conversation isn't over: another problem follows straight on from this one. */
   followUp: (id: IncidentId) => void;
   unflag: (f: Flag) => void;
@@ -881,6 +883,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Phone call',
     context: 'While you were busy',
     headline: () => "Your phone is ringing. It's Grandma.",
+    worse: "Grandma again. You didn't answer, so now she's worried.",
     detail: () => 'She never calls this early unless it matters. Or she has found a recipe.',
     deferrable: false,
     external: true,
@@ -916,10 +919,16 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       {
         id: 'ignore',
         label: 'Let it ring',
-        hint: 'Free. She will try again later',
+        hint: 'Free now. She will call back, and it will be worse',
         minutes: 0,
-        tags: [{ text: 'Guilt', tone: 'bad' }],
-        apply: (c) => c.log('You let it ring. Grandma left a voicemail.', true),
+        tags: [{ text: 'She calls back', tone: 'bad' }],
+        apply: (c) => {
+          if (c.incident.worse) c.log('You let it ring again. You will hear about this at Thanksgiving.', true);
+          else {
+            c.later();
+            c.log('You let it ring. Grandma left a voicemail.', true);
+          }
+        },
       },
     ],
   },
@@ -1501,7 +1510,7 @@ export const JOKES: Joke[] = [
   },
 ];
 /** Minutes before leaving time when the first wave is announced. */
-export const COLLAPSE_LEAD = 10;
+export const COLLAPSE_LEAD = 15;
 export const WAVE_WARNING = 5; // minutes between a wave being announced and landing
 export const GATE_CLOSES_AFTER = 10; // arriving this many minutes late: the gate is shut, sign in at the office
 
@@ -1607,6 +1616,9 @@ export const EVENTS: Record<EventId, EventDef> = {
 
 export const EVENT_POOL: EventId[] = ['stuffy', 'festival', 'project', 'paperwork', 'assembly', 'picture', 'library'];
 export const EVENT_CHANCE = 0.4;
+/** Each week the school calendar fills up and the mornings get busier. */
+export const WEEKLY_EVENT_CHANCE = 0.05;
+export const WEEKLY_INCIDENT_CHANCE = 0.03;
 export const RAIN_CHANCES = [0.1, 0.3, 0.6, 0.85];
 export const COLD_CHANCE = 0.25;
 export const CALENDAR_RIGHT = 0.5;
