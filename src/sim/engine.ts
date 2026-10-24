@@ -170,7 +170,7 @@ function rollDay(s: GameState, setup: MorningSetup) {
     let claim: EventId | 'none';
     const r = rand(s);
     if (s.perks.includes('calendar')) claim = d.event ?? 'none';
-    else if (d.event) claim = r < CALENDAR_RIGHT ? d.event : r < 0.8 ? otherEvent(s, d.event) : 'none';
+    else if (d.event) claim = r < CALENDAR_RIGHT ? d.event : r < 0.75 ? otherEvent(s, d.event) : 'none';
     else claim = r < 0.75 ? 'none' : otherEvent(s);
     const grade = s.perks.includes('calendar') ? 'A2' : 'C3';
     addIntel(s, 'Fridge calendar', claim === 'none' ? 'Nothing written for today.' : `"${EVENTS[claim].calendar}" scrawled on today.`, grade, claim);
@@ -849,7 +849,7 @@ export function reduce(prev: GameState, action: Action): GameState {
 // ---------------------------------------------------------------------------
 
 export type Severity = 'minor' | 'moderate' | 'severe';
-export const SEVERITY_COST: Record<Severity, number> = { minor: 4, moderate: 8, severe: 16 };
+export const SEVERITY_COST: Record<Severity, number> = { minor: 5, moderate: 10, severe: 20 };
 
 /** Something today needs. `known` is false while the intel hasn't confirmed it. */
 export type Requirement = { id: string; label: string; missing: string; severity: Severity; met: boolean; known: boolean };
@@ -940,7 +940,7 @@ export function results(s: GameState): Results {
 
   const late = Math.max(0, lateness);
   const cost = misses.reduce((n, r) => n + SEVERITY_COST[r.severity], 0);
-  const raw = 100 - 3 * late - cost + 4 * (s.householdMood - 3);
+  const raw = 100 - 4 * late - cost + 4 * (s.householdMood - 3);
   const score = Math.max(0, Math.min(100, Math.round(raw)));
   const grade = score >= 85 ? 'Textbook' : score >= 65 ? 'Acceptable' : score >= 40 ? 'Messy' : 'Rough';
 

@@ -1,60 +1,77 @@
-# Tuesday
+# C·I·C: Child Information Center
 
-(Working title in the spec: *School Run*.)
+(Working titles: *School Run*, *Tuesday*.)
 
-A turn-based browser game about getting a child out the door by 07:45, presented like a
-military crisis console. Built from `docs/operation_school_run_spec_v0_2.md` (design spec v0.2).
+A turn-based browser game about getting a child out the door by 07:45, presented as a Colonial
+crisis console. You never quite know what today needs: the intel is graded, sometimes wrong, and
+confirming it costs minutes. Mornings roll on, Monday to Friday, week after week.
+
+Built from `docs/operation_school_run_spec_v0_2.md` (spec v0.2), then extended per
+`docs/superpowers/specs/2026-10-23-child-information-center-design.md`.
 
 ```sh
 npm install
-npm run dev        # http://localhost:5173  (?seed=1234 replays a specific morning)
-npm test           # sim unit tests + UI render smoke test
+npm run dev        # http://localhost:5173  (the run is saved in the browser; ?seed=1234 plays a one-off drill)
+npm test           # sim + run unit tests, UI render smoke tests (random mornings and whole weeks)
 npm run balance    # bot playtests across 500 seeds, for tuning
 npm run build      # static site in dist/ (relative paths; host anywhere)
 ```
+
+## How to play
+
+- **06:30, before she wakes.** Read the briefing on the Intel screen: the forecast, the fridge calendar
+  (graded C3: usually right), anything you prepared last night. Prep quietly, or wake her early.
+- **Confirm or bet.** The school email (3 min) and looking outside (1 min) are certain. Asking her is
+  free-ish and confidently unreliable (E5). Messaging another parent costs a **fate point**.
+- **She's up.** You do one thing, she does one thing. Problems interrupt; the phone and doorbell
+  interrupt *you*. Put a problem off for too long and it comes back worse.
+- **Leave.** The status bar always shows what leaving now means. What you leave behind is weighted:
+  missing a stuffy on stuffy day is serious; a packed lunch is not.
+- **Evening.** Pick two preparations for tomorrow. Keep your promises.
+- **Friday.** The week report. Three late marks means a word with the head teacher on Monday.
+  Pick one permanent household improvement. No game over: the weeks just keep coming.
 
 ## Layout
 
 | Path | What |
 | --- | --- |
-| `src/sim/types.ts` | `GameState`, `Action` |
+| `src/sim/types.ts` | `GameState`, `Day`, `Intel`, `Action` |
 | `src/sim/constants.ts` | Clock values (start, wake, deadline, commute, cutoff) |
-| `src/sim/content.ts` | Tasks, incidents + responses, run conditions. **Most tuning happens here.** |
-| `src/sim/engine.ts` | Pure, deterministic reducer: `createGame(seed)`, `reduce(state, action)`, `results(state)` |
-| `src/ui/` | `GameScreen` (pure view of a game state) plus its panels: status, actions/incident, debrief, morning plot, and the `Dock` status bar with the leave/wake key; the console fills one screen and screens scroll inside; synthesized sounds |
-| `scripts/balance.ts` | Bot strategies for comparing openings |
-| `docs/` | Original spec, design mockups, reference screenshots, `ui-reference-notes.md` (why it reads as Galactica) |
+| `src/sim/content.ts` | Tasks, incidents + responses, school events, intel odds, perks. **Most tuning happens here.** |
+| `src/sim/engine.ts` | Pure, deterministic morning: `createGame(seed, setup)`, `reduce`, `requirements`, `results` |
+| `src/sim/run.ts` | The continuous run: weeks, evening cards, fate, carry-over, weekly perks |
+| `src/ui/` | `GameScreen` (one morning), `RunScreen` (evening, week report), Intel/Status/Log/Action panels, `Dock` status bar, `music.ts` (tiered background music), `sound.ts` |
+| `public/music/` | The background tracks |
+| `scripts/balance.ts` | Bot strategies, including calendar-trusting vs email-reading |
+| `docs/` | Spec, design doc, reference notes (`ui-reference-notes.md`: why it reads as Galactica) |
 
 ## How the sim works
 
 - Time advances minute by minute **only** when the player acts; each action runs the clock to the
   next meaningful event (task done, incident, she wakes, deadline).
 - One parent activity and one child activity run in parallel. Assigning her a task is free.
-- Incidents are rolled once when a child task starts (seeded RNG); the roll fixes *where* in the
-  task it fires, so progress before it is kept. Library book fires on bag check, missing shoes
-  on "Put on shoes" without found shoes, bathroom on leaving.
-- Same seed + same decisions = identical morning.
+- Each morning rolls weather (forecast %, then the real thing) and, 40% of the time, a school event
+  (stuffy, PE, picture, library, dress-up, trip). Event tasks are only offered when intel points at
+  them; an unconfirmed event can still cost you a serious miss.
+- Incidents are rolled once when a task starts (seeded RNG); the roll fixes *where* in the task it
+  fires, so progress before it is kept. Deferred incidents return worse after 8 minutes.
+- Same seed + same decisions = identical morning; a run derives each morning's seed from its own.
 
-## Decisions I made beyond the spec
+## Decisions beyond the spec
 
-- **Prep is 25% slower once she's awake** ("she keeps needing you"). Without this, waking her at
-  06:30 had no cost, since parent prep ran in parallel anyway.
-- **Supervised tasks**: teeth and a new *Do her hair* task only progress while you help.
-  This adds parent load after 07:00.
-- **Help her**: parent joins her task for 1.5× speed.
-- **Coffee** is a one-use buffer that cancels one escalation from a risky response.
-- Risky responses escalate with ~40% chance (+ groggy, + low mood): mood −1, the task
-  takes longer, and 2 extra minutes for both of you.
-- **Leaving mid-incident** is allowed; the problem is left unresolved and shows in the debrief.
-- **Leave and wake live in the status bar** with what you'd leave undone shown beside the key.
-- **A bathroom trip at the door stops both activities**: nobody keeps eating breakfast with their coat on.
-- Score = 100 − 3/late min − 8/missing objective − 3/extra loose end ± mood. It's shown, but
-  the debrief leads with times and the checklist.
-- Variation: one morning condition (late bedtime, shoes by the door, no bread, early bird,
-  or ordinary) and one tendency (independent, distracted, particular, cheerful), both shown.
+- **Prep is 25% slower once she's awake** ("she keeps needing you").
+- **Supervised tasks**: teeth and hair only progress while you help. **Help her**: 1.5× speed.
+- **Coffee** cancels one escalation from a risky response. **Fate** makes one risky choice certain.
+- Risky responses show their odds ("Upset 45%"); escalation costs mood, time, and 2 minutes for both.
+- **Leaving mid-incident** is allowed; the problem goes unresolved. A bathroom trip at the door stops
+  both activities.
+- **Score** = 100 − 4/late min − misses (minor 5, moderate 10, serious 20) ± mood. Shown, but the report
+  leads with times, what the day really was, and what got left behind.
+- **Fate**: +1 for an on-time morning with no serious misses, max 3. **Mood** carries over, pulled
+  toward calm. Broken promises cost mood the next morning.
 
-## Balance snapshot (`npm run balance`, bots that finish everything)
+## Balance snapshot (`npm run balance`)
 
-A careful bot finishes everything around 07:38–07:40 against a 07:45 deadline. Waking at
-06:30 saves about 9 minutes but costs mood and leaves more loose ends. Human players should
-be under real pressure, but this needs actual playtesting.
+Careful bots are on time 63–82% of mornings. Trusting the calendar misses the day's event about
+1 time in 6; reading the email first nearly never does, but costs ~10 points of on-time rate.
+Hasty bots are on time more often and leave more behind. Needs human playtesting.

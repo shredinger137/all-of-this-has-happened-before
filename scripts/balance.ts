@@ -5,10 +5,11 @@ import { formatClock } from '../src/sim/constants';
 import { childTaskBlocker, createGame, currentIncident, offered, parentTaskBlocker, reduce, results } from '../src/sim/engine';
 import type { GameState, TaskId } from '../src/sim/types';
 
-const PARENT_PRIORITY: TaskId[] = ['breakfastMade', 'clothesOut', 'shoesFound', 'lunch', 'parentReady', 'bagChecked', 'coffee'];
-const READY: TaskId[] = [...CHILD_TASKS, 'lunch', 'parentReady'];
+const PARENT_PRIORITY: TaskId[] = ['breakfastMade', 'clothesOut', 'shoesFound', 'lunch', 'slip', 'peKit', 'parentReady', 'bagChecked', 'coffee'];
+const READY: TaskId[] = [...CHILD_TASKS, 'lunch', 'parentReady', 'slip', 'peKit'];
 
-type Strategy = { name: string; wakeAt: number | null; careful: boolean };
+// intel: 'trust' acts on whatever the calendar says; 'email' reads the school email first.
+type Strategy = { name: string; wakeAt: number | null; careful: boolean; intel: 'trust' | 'email' };
 
 function step(s: GameState, strat: Strategy): GameState {
   const inc = currentIncident(s);
@@ -28,6 +29,7 @@ function step(s: GameState, strat: Strategy): GameState {
     }
   }
   if (!s.parentActivity) {
+    if (strat.intel === 'email' && offered(s, 'email')) return reduce(s, { type: 'startParent', task: 'email' });
     const t = PARENT_PRIORITY.find((p) => offered(s, p) && !parentTaskBlocker(s, p));
     if (t) return reduce(s, { type: 'startParent', task: t });
     if (s.childActivity && s.objectives[s.childActivity].status === 'active') return reduce(s, { type: 'help' });
@@ -36,16 +38,17 @@ function step(s: GameState, strat: Strategy): GameState {
 }
 
 const strategies: Strategy[] = [
-  { name: 'wake 06:30, careful', wakeAt: 390, careful: true },
-  { name: 'wake 06:45, careful', wakeAt: 405, careful: true },
-  { name: 'natural,    careful', wakeAt: null, careful: true },
-  { name: 'wake 06:30, hasty  ', wakeAt: 390, careful: false },
-  { name: 'natural,    hasty  ', wakeAt: null, careful: false },
+  { name: 'wake 06:45, careful, trust', wakeAt: 405, careful: true, intel: 'trust' },
+  { name: 'wake 06:45, careful, email', wakeAt: 405, careful: true, intel: 'email' },
+  { name: 'natural,    careful, trust', wakeAt: null, careful: true, intel: 'trust' },
+  { name: 'natural,    careful, email', wakeAt: null, careful: true, intel: 'email' },
+  { name: 'wake 06:30, hasty,   trust', wakeAt: 390, careful: false, intel: 'trust' },
+  { name: 'natural,    hasty,   email', wakeAt: null, careful: false, intel: 'email' },
 ];
 
 const N = 500;
 for (const strat of strategies) {
-  let dep = 0, late = 0, onTime = 0, score = 0, missing = 0, mood = 0;
+  let dep = 0, late = 0, onTime = 0, score = 0, severe = 0, eventDays = 0, eventMissed = 0, mood = 0;
   for (let seed = 1; seed <= N; seed++) {
     let s = createGame(seed);
     for (let i = 0; i < 400 && !s.ended; i++) s = step(s, strat);
@@ -54,11 +57,16 @@ for (const strat of strategies) {
     late += Math.max(0, r.lateness);
     if (r.lateness <= 0) onTime++;
     score += r.score;
-    missing += r.leftBehind.length;
+    severe += r.severeMisses;
+    if (s.day.event) {
+      eventDays++;
+      if (r.misses.some((m) => m.id.startsWith('event:'))) eventMissed++;
+    }
     mood += r.mood;
   }
   console.log(
     `${strat.name}  depart ${formatClock(Math.round(dep / N))}  on-time ${((100 * onTime) / N).toFixed(0).padStart(3)}%` +
-      `  avg late ${(late / N).toFixed(1).padStart(4)}m  left-behind ${(missing / N).toFixed(1)}  mood ${(mood / N).toFixed(1)}  score ${(score / N).toFixed(0)}`,
+      `  avg late ${(late / N).toFixed(1).padStart(4)}m  severe ${(severe / N).toFixed(2)}` +
+      `  event missed ${((100 * eventMissed) / Math.max(1, eventDays)).toFixed(0).padStart(3)}%  mood ${(mood / N).toFixed(1)}  score ${(score / N).toFixed(0)}`,
   );
 }
