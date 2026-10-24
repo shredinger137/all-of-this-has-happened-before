@@ -44,9 +44,24 @@ assets, logos, insignia or the show's own typefaces.
 | Wide caps | Michroma (OFL, Eurostile-Extended-like) for titles, strips, button labels, micro legends. Body copy stays in Barlow for readability |
 | Message window | Incidents (`IncidentView`): khaki bezel, title strip (`▲ SOCKS · INC-02`), centred cyan headline, footer strip (`LOGGED 07:12 · WAITING 2 MIN`) |
 | Salmon controls | `.btnline` / `.callout` / `.primary` / `.tool` |
-| DRADIS | `MorningPlot`: red-magenta frame with angled tabs; your and her activity as green "friendly" bars, incidents as red "hostile" bars, blue grid, LEAVE/BELL lines |
+| DRADIS | `MorningPlot`: red-magenta frame with angled tabs; your and her activity as green "friendly" bars, incidents as red "hostile" bars, blue grid, LEAVE/BELL lines, a faint afterglow behind the sweep line, and a blinking diamond "contact" for the open problem |
 | Hardware | Gunmetal housing (`.terminal`) with indicator lamps: Awake, Groggy, Coffee, Problem (blinking), Late (blinking) |
-| Colonial printout | Debrief: octagonal paper after-action report with rubber stamp |
+| Guarded switches | `Dock`: the irreversible commits (wake her, leave) sit under a hinged, striped cover, like the FTL jump key. Lifting the cover is free and shows what you are committing to (what's not done, how tired she'll be); the lit key acts. Amber for wake, red for leave |
+| Button banks | Action keys tile into a grid (`.bank`) on wide screens, like the CIC's banks of keys |
+| Message window flash | A new incident's khaki bezel flashes amber twice |
+| Colonial printout | Debrief: octagonal paper after-action report with rubber stamp and an "end of report / filed" foot line |
+
+### Layout decisions (2026-10-23)
+
+- **Leaving is always in reach.** The bottom strip (`Dock`) is sticky at every width and carries the clock,
+  the latest log line and the guarded switch. Leave and wake used to be the last cards in a long list,
+  below the fold. The two-step cover also stops accidental departures, since leaving can't be undone.
+- **Large monitors scale the console** (`zoom` 1.2 at ≥1700px, 1.4 at ≥2200px) instead of leaving a small
+  column with 11px labels in the middle of the screen.
+- **Phones:** lamps take their own single row under the title; the dock drops the log timestamp because
+  its clock already shows the time.
+- **Checklist counts only what the debrief scores** (8 items). Making breakfast and finding shoes are listed
+  under "Prep", so "1 of 9" during play can't become "Completed · 0" in the report.
 
 ## Deliberately not taken
 

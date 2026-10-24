@@ -178,6 +178,17 @@ describe('determinism and ending', () => {
     const s = createGame(7);
     expect(reduce(s, { type: 'leave' })).toBe(s);
   });
+
+  it('a bathroom trip at the door stops whatever you were both doing', () => {
+    const s = seedWhere((g) => {
+      const at = run(g, { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' }, { type: 'startParent', task: 'lunch' });
+      return currentIncident(at) === undefined && currentIncident(reduce(at, { type: 'leave' }))?.id === 'bathroom';
+    });
+    const door = run(s, { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' }, { type: 'startParent', task: 'lunch' }, { type: 'leave' });
+    expect(currentIncident(door)?.id).toBe('bathroom');
+    expect(door.parentActivity).toBeUndefined();
+    expect(door.childActivity).toBeUndefined();
+  });
 });
 
 // A response that every incident type supports and that always resolves it.

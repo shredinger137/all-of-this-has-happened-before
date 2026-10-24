@@ -148,6 +148,16 @@ export function StatusPanel({ s }: { s: GameState }) {
           </div>
         );
       })}
+      <div className="eyebrow group-label">Prep</div>
+      <div className="row">
+        <span className="k">
+          <span className={`node ${objectiveRow(s, 'breakfastMade').node}`} />
+          Breakfast
+        </span>
+        <span className="v muted">
+          {{ done: 'Made', active: 'Making it' }[s.objectives.breakfastMade.status as string] ?? 'Not made'}
+        </span>
+      </div>
       <div className="row">
         <span className="k">
           <span className={`node ${s.objectives.shoesFound.status === 'done' ? 'done' : ''}`} />

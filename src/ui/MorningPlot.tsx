@@ -1,6 +1,6 @@
 import { TASKS } from '../sim/content';
 import { formatClock, SCHOOL_START, START_MINUTE } from '../sim/constants';
-import { childRate, childStalled, parentRate, taskDuration } from '../sim/engine';
+import { childRate, childStalled, currentIncident, parentRate, taskDuration } from '../sim/engine';
 import type { GameState, Span } from '../sim/types';
 
 // The plot runs from 06:30 to 08:15 in 15-minute columns.
@@ -35,6 +35,9 @@ function projections(s: GameState) {
 
 function Lane({ s, lane }: { s: GameState; lane: Span['lane'] }) {
   const wake = s.wokenAt ?? s.wakeMinute;
+  // An open problem shows as a hostile contact on her lane (or yours, before she's up).
+  const inc = currentIncident(s);
+  const contactLane = s.childAwake ? 'child' : 'parent';
   return (
     <div className="track">
       {lane === 'child' && <div className="span asleep" style={{ left: 0, width: width(START_MINUTE, Math.min(wake, s.minute)) }} title="Asleep" />}
@@ -52,7 +55,9 @@ function Lane({ s, lane }: { s: GameState; lane: Span['lane'] }) {
       {lane === 'child' && !s.childAwake && <div className="mark" style={{ left: pct(s.wakeMinute) }} title={`Usually wakes ${formatClock(s.wakeMinute)}`} />}
       <div className="mark leave" style={{ left: pct(s.departureDeadline) }} />
       <div className="mark school" style={{ left: pct(SCHOOL_START) }} />
+      {!s.ended && <div className="sweep" style={{ width: pct(s.minute) }} />}
       {!s.ended && <div className="mark now" style={{ left: pct(s.minute) }} />}
+      {inc && lane === contactLane && <div className="contact" style={{ left: pct(s.minute) }} title="Problem" />}
     </div>
   );
 }

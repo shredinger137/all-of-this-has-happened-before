@@ -181,10 +181,10 @@ export const PARENT_TASKS: TaskId[] = [
   'bagChecked',
 ];
 export const CHILD_TASKS: TaskId[] = ['breakfastEaten', 'dressed', 'teeth', 'hair', 'shoesOn'];
+// Exactly the scored tasks, so the checklist count matches the debrief.
 export const CHECKLIST: TaskId[] = [
   'parentReady',
   'lunch',
-  'breakfastMade',
   'bagChecked',
   'breakfastEaten',
   'dressed',

@@ -87,6 +87,10 @@ export function Debrief({ r, seed, onRetry, onReplay }: Props) {
           </div>
         </div>
         <p className="report-summary">{r.summary}</p>
+        <div className="doc-foot">
+          <span>End of report</span>
+          <span className="code">FILED {formatClock(r.arrived)} · 1/1</span>
+        </div>
       </div>
 
       <div className="report-actions">

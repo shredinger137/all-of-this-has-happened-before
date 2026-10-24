@@ -381,6 +381,15 @@ function checkCutoff(s: GameState) {
   }
 }
 
+/** Coats on at the door: whatever either of you was doing stops here. */
+function downTools(s: GameState) {
+  for (const t of [s.parentActivity, s.childActivity]) {
+    if (t && t !== 'help' && s.objectives[t].status === 'active') s.objectives[t].status = 'todo';
+  }
+  s.parentActivity = undefined;
+  s.childActivity = undefined;
+}
+
 function endMorning(s: GameState) {
   s.ended = true;
   s.departedAt = s.minute;
@@ -553,6 +562,7 @@ export function reduce(prev: GameState, action: Action): GameState {
       if (open?.id === 'bathroom' || !s.childAwake) return prev;
       if (open) open.status = 'deferred';
       if (!s.firedIncidents.includes('bathroom') && rand(s) < BATHROOM_CHANCE) {
+        downTools(s);
         openIncident(s, 'bathroom');
         return s;
       }

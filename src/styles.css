@@ -7,6 +7,7 @@
  *  - salmon-outlined screen buttons; khaki-bezelled message windows with micro-label strips
  *  - a DRADIS-style plot: red-magenta chrome, blue grid, green friendlies, red hostiles
  *  - gunmetal hardware housing with indicator lamps; the debrief is a Colonial printout
+ *  - commits (wake, leave) sit under a guarded switch cover in a sticky dock, like the FTL jump key
  */
 :root {
   color-scheme: dark;
@@ -116,7 +117,8 @@ button { font: inherit; color: inherit; }
 @keyframes blink { to { background: #3a1410; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .node.blocked, .lamp.on.alarm i { animation: none; }
+  .node.blocked, .lamp.on.alarm i, .contact, .crisis { animation: none; }
+  .guard-cover { transition: none; }
 }
 
 /* Micro labels: the tiny caps legends printed on every Colonial screen strip. */
@@ -124,7 +126,10 @@ button { font: inherit; color: inherit; }
 
 /* ---------------------------------------------------------------- page + housing */
 
-.site { max-width: 1160px; margin: 0 auto; padding: 16px 22px 40px; }
+.site { max-width: 1240px; margin: 0 auto; padding: 16px 22px 40px; }
+/* On big monitors scale the whole console up rather than leaving a small column in the middle. */
+@media (min-width: 1700px) { .site { zoom: 1.2; } }
+@media (min-width: 2200px) { .site { zoom: 1.4; } }
 .site-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 4px 12px; }
 .brand { font: 400 20px/1 var(--font-wide); letter-spacing: 0.38em; color: #dfe4e7; text-shadow: 0 1px 0 #000; }
 .tool { --c: 6px; --bw: 1.5px; --frame-edge: var(--salmon); --frame-fill: var(--glass); border: none; padding: 9px 14px; font: 400 9.5px/1 var(--font-wide); letter-spacing: 0.16em; color: var(--salmon-ink); cursor: pointer; text-transform: uppercase; }
@@ -140,7 +145,10 @@ button { font: inherit; color: inherit; }
   padding: 8px;
 }
 
-.head { padding: 16px 22px 14px; display: flex; justify-content: space-between; gap: 18px; align-items: center; }
+.head { padding: 16px 22px 14px; display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'title time' 'lamps time'; gap: 0 18px; align-items: center; }
+.head-title { grid-area: title; min-width: 0; }
+.head .timebox { grid-area: time; }
+.head .lamps { grid-area: lamps; }
 .head h1 { font: 400 23px/1.2 var(--font-wide); letter-spacing: 0.1em; text-transform: uppercase; margin: 6px 0 5px; color: #eef2f4; }
 .small { font-size: 13px; color: #a8b6bb; }
 
@@ -173,7 +181,7 @@ button { font: inherit; color: inherit; }
 .plot-tab.spacer { flex: 1; background: none; }
 .plot-grid { display: grid; grid-template-columns: 40px 1fr; row-gap: 6px; align-items: center; padding: 8px 10px 10px 8px; background: radial-gradient(ellipse at 50% 120%, #08182a, #020406 70%); border: 1px solid #3a0f1a; }
 .plot-label { font: 400 8.5px/1 var(--font-wide); letter-spacing: 0.14em; color: var(--green); text-transform: uppercase; text-shadow: var(--glow); }
-.track { position: relative; height: 13px; background: repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px calc(100% / 7)); border: 1px solid #12304d; }
+.track { position: relative; height: 20px; background: repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px calc(100% / 7)); border: 1px solid #12304d; }
 .track.axis { height: 14px; border: none; background: none; }
 .span { position: absolute; top: 2px; bottom: 2px; background: var(--green); box-shadow: 0 0 6px rgba(126, 224, 143, 0.55), inset -1px 0 0 #020406; }
 .span.help { background: repeating-linear-gradient(45deg, var(--green) 0 3px, var(--green-dim) 3px 6px); }
@@ -189,10 +197,14 @@ button { font: inherit; color: inherit; }
 .tick { position: absolute; top: 0; transform: translateX(-50%); font: 500 10px/1 var(--mono); color: #5f8db3; white-space: nowrap; }
 .tick.leave { color: var(--amber); }
 .tick.school { color: var(--red); }
+/* Afterglow behind the sweep line, and a hostile contact for the open problem. */
+.sweep { position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; background: linear-gradient(90deg, transparent 75%, rgba(143, 227, 239, 0.13)); }
+.contact { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px solid var(--dradis); transform: rotate(45deg); box-shadow: 0 0 8px var(--dradis); animation: contactblink 0.9s steps(2, start) infinite; z-index: 1; }
+@keyframes contactblink { to { border-color: transparent; box-shadow: none; } }
 
 /* ---------------------------------------------------------------- screens */
 
-.workarea { padding: 0 6px 8px; display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(350px, 1.25fr); gap: 10px; align-items: start; }
+.workarea { padding: 0 6px 8px; display: grid; grid-template-columns: minmax(280px, 0.72fr) minmax(350px, 1.5fr); gap: 10px; align-items: start; }
 .panel { --c: 14px; --bw: 2px; padding: 0 16px 18px; min-width: 0; }
 
 /* Title strip across the top of each screen. */
@@ -280,6 +292,10 @@ button { font: inherit; color: inherit; }
 .cost { white-space: nowrap; color: var(--amber); font: 600 13px/1 var(--mono); text-align: right; text-shadow: var(--glow); }
 .tag { display: inline-block; margin-left: 8px; padding: 2px 6px; border: 1px solid var(--khaki-dim); font: 400 7.5px/1.3 var(--font-wide); letter-spacing: 0.12em; color: var(--khaki); vertical-align: 2px; text-shadow: none; }
 
+/* Button bank: action keys tile into columns when the screen is wide enough. */
+.bank { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; margin: 8px 0; }
+.bank .btnline { margin: 0; height: 100%; }
+
 /* Response: what you do, with TIME / RISK read-outs. */
 .choice { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: stretch; padding: 11px 11px 11px 15px; }
 .choice .what { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
@@ -300,19 +316,15 @@ button { font: inherit; color: inherit; }
 .readout.risk-high { border-left-color: var(--red); }
 .readout.risk-high b { color: var(--red); }
 
-.callout { --c: 10px; --bw: 1.5px; --frame-edge: var(--salmon); --frame-fill: #160907; margin-top: 16px; padding: 13px 15px; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
-.callout .label { font: 400 12px/1.3 var(--font-wide); letter-spacing: 0.12em; text-transform: uppercase; color: var(--salmon-ink); }
-.callout .sub { font-size: 12.5px; color: #c9a395; margin-top: 4px; }
-.primary { --c: 7px; --bw: 0px; --frame-fill: var(--salmon); --frame-edge: var(--salmon); border: none; color: #120604; padding: 13px 18px; font: 400 10.5px/1 var(--font-wide); letter-spacing: 0.16em; cursor: pointer; white-space: nowrap; }
-.primary:hover { --frame-fill: #f08a66; --frame-edge: #f08a66; }
-.primary:focus-visible { outline: none; --bw: 2px; --frame-edge: #fff; }
 .naked { border: none; background: transparent; color: var(--salmon-ink); font: 400 9px/1 var(--font-wide); letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; text-decoration: underline; text-underline-offset: 5px; padding: 8px 0; }
 .naked:hover { text-shadow: var(--glow); }
 .right { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
 
 /* ---------------------------------------------------------------- incident: message window */
 
-.crisis { --c: 18px; --bw: 4px; --frame-edge: var(--khaki); --frame-fill: var(--glass); padding: 4px; }
+.crisis { --c: 18px; --bw: 4px; --frame-edge: var(--khaki); --frame-fill: var(--glass); padding: 4px; animation: crisisflash 1.2s; }
+/* The bezel flashes amber twice when a problem comes in. */
+@keyframes crisisflash { 0%, 50% { --frame-edge: var(--amber); } 25%, 75%, 100% { --frame-edge: var(--khaki); } }
 .crisis.urgent { --frame-edge: #c9705a; }
 .crisis-head { display: flex; align-items: center; gap: 12px; padding: 9px 18px 8px 22px; background: var(--khaki-strip); color: var(--khaki); clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%, 0 14px); }
 .crisis.urgent .crisis-head { color: var(--red); }
@@ -343,6 +355,61 @@ details[open] summary .sectitle::after { content: ' −'; }
 
 .foot { --c: 10px; --bw: 1px; margin: 0 6px; padding: 10px 18px 11px; color: var(--cyan); font: 12.5px/1.4 var(--mono); text-shadow: var(--glow); }
 .foot strong { color: var(--amber); font-weight: 600; }
+
+/* ---------------------------------------------------------------- dock + guarded switch */
+
+.dock { --c: 12px; --bw: 1.5px; position: sticky; bottom: 8px; z-index: 5; margin: 0 6px; padding: 8px 8px 8px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
+.dock.armed { --frame-edge: var(--red); }
+.dock.armed.tone-amber { --frame-edge: var(--amber); }
+.dock-time { display: flex; flex-direction: column; gap: 3px; padding-right: 16px; border-right: 1px solid var(--rule); }
+.dock-time > span:first-child { font: 600 19px/1 var(--mono); font-variant-numeric: tabular-nums; text-shadow: var(--glow); }
+.dock-text { min-width: 0; color: var(--cyan); font: 12.5px/1.4 var(--mono); text-shadow: var(--glow); }
+.dock-text strong { color: var(--amber); font-weight: 600; }
+.dock-text .warning { color: var(--amber); }
+.dock-text .naked { padding: 0 0 0 8px; text-shadow: none; }
+
+.guard { --lit: var(--red); --dark: #3a0d08; position: relative; width: 176px; height: 50px; flex: none; perspective: 360px; }
+.guard.amber { --lit: var(--amber); --dark: #3a2c0a; }
+.guard-key {
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--dark);
+  background: radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--lit) 30%, #000), #120403);
+  color: color-mix(in srgb, var(--lit) 45%, #000);
+  font: 400 11px/1 var(--font-wide);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+}
+.guard.armed .guard-key { background: radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--lit) 85%, #fff), var(--lit) 70%); color: #160403; }
+.guard.armed .guard-key:hover { filter: brightness(1.12); }
+.guard-key:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+/* Translucent hinged cover with hazard stripes; it lifts up and away from the key. */
+.guard-cover {
+  position: absolute;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--lit) 80%, #fff);
+  background:
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--lit) 30%, transparent) 0 6px, transparent 6px 12px),
+    linear-gradient(180deg, color-mix(in srgb, var(--lit) 55%, transparent), color-mix(in srgb, var(--lit) 30%, #000 30%));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transform-origin: 50% 0;
+  transition: transform 0.22s ease-out;
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+}
+.guard-cover:hover:not(:disabled) { filter: brightness(1.15); }
+.guard-cover:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+.guard-label { font: 400 12px/1 var(--font-wide); letter-spacing: 0.2em; text-transform: uppercase; color: #fff4ef; text-shadow: 0 0 6px var(--lit); }
+.guard-hint { font: 400 7px/1 var(--font-wide); letter-spacing: 0.16em; text-transform: uppercase; color: color-mix(in srgb, var(--lit) 40%, #fff); }
+.guard.armed .guard-cover { transform: rotateX(78deg); }
+.guard.armed .guard-cover > * { visibility: hidden; }
+.guard.off .guard-cover { filter: grayscale(0.85) brightness(0.55); cursor: not-allowed; }
 
 /* ---------------------------------------------------------------- debrief: Colonial printout */
 
@@ -392,6 +459,8 @@ details[open] summary .sectitle::after { content: ' −'; }
 .report-cols .node { background: #c9c1ab; margin-right: 4px; }
 .report-cols .node.done { background: var(--stamp-ok); }
 .report-summary { margin: 20px 0 0; padding-top: 12px; border-top: 1px solid #b6ae98; font-size: 16px; font-style: italic; }
+.paper .doc-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 8px; border-top: 1px dashed #b6ae98; font: 400 8.5px/1.3 var(--font-wide); letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-dim); }
+.paper .doc-foot .code { font: 500 10.5px/1.3 var(--mono); letter-spacing: 0.04em; }
 .report-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
 .report-actions .btnline { flex: 1; min-width: 240px; margin: 0; }
 
@@ -404,10 +473,11 @@ details[open] summary .sectitle::after { content: ' −'; }
   .site-top { margin: 4px 6px 10px; }
   .brand { font-size: 16px; letter-spacing: 0.3em; }
   .terminal { --c: 14px; padding: 5px; }
-  .head { padding: 14px 12px 12px; gap: 10px; align-items: flex-start; }
+  .head { padding: 14px 12px 12px; gap: 0 10px; align-items: start; grid-template-areas: 'title time' 'lamps lamps'; }
   .head h1 { font-size: 16px; overflow-wrap: anywhere; }
   .head .small { font-size: 12px; }
-  .lamps { gap: 6px 10px; }
+  .lamps { gap: 6px 10px; flex-wrap: nowrap; margin-top: 12px; justify-content: space-between; }
+  .lamp { font-size: 7.5px; letter-spacing: 0.1em; gap: 5px; }
   .timebox { flex: none; min-width: 0; padding: 8px 10px; }
   .time { font-size: 21px; }
   .time-sub { font-size: 7px; letter-spacing: 0.1em; }
@@ -417,6 +487,8 @@ details[open] summary .sectitle::after { content: ' −'; }
   .plot-tab.optional { display: none; }
   .plot-grid { grid-template-columns: 32px 1fr; padding: 8px 8px 9px 6px; }
   .tick.minor, .tick-time { display: none; }
+  .track { height: 16px; }
+  .track.axis { height: 14px; }
   .workarea { padding: 0 2px 6px; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
   .workarea > .actions { order: -1; }
   .panel { padding: 0 12px 14px; }
@@ -427,7 +499,16 @@ details[open] summary .sectitle::after { content: ' −'; }
   .message h2 { font-size: 15px; }
   .crisis-body { padding: 12px 10px 4px; }
   .foot { margin: 0 2px; padding: 10px 12px; }
-  .callout { flex-direction: column; align-items: stretch; }
+  .dock { margin: 0 2px; bottom: 4px; padding: 6px 6px 6px 10px; gap: 10px; }
+  .dock-time { padding-right: 10px; }
+  .dock-time > span:first-child { font-size: 16px; }
+  .dock-time .micro { font-size: 7px; letter-spacing: 0.08em; }
+  .dock-text { font-size: 11.5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .dock-text > strong { display: none; } /* the dock clock already says when */
+  .dock.armed .dock-text { display: block; }
+  .guard { width: 112px; height: 48px; }
+  .guard-label { font-size: 10.5px; letter-spacing: 0.14em; }
+  .guard-key { font-size: 9.5px; letter-spacing: 0.1em; }
   .report-doc { --c: 16px; padding: 20px 16px 22px; }
   .report-title { flex-direction: column-reverse; gap: 8px; }
   .report-title h2 { font-size: 18px; }

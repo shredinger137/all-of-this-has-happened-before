@@ -1,15 +1,16 @@
-import { formatClock, SAFETY_CUTOFF, START_MINUTE } from '../sim/constants';
+import { formatClock, START_MINUTE } from '../sim/constants';
 import { currentIncident, isGroggy, results } from '../sim/engine';
 import type { Action, GameState } from '../sim/types';
 import { ActionPanel } from './ActionPanel';
 import { Debrief } from './Debrief';
+import { Dock } from './Dock';
 import { MorningPlot } from './MorningPlot';
 import { StatusPanel } from './StatusPanel';
 
 const SEGMENT_MINUTES = 5;
 
 function headline(s: GameState): { title: string; sub: string } {
-  if (s.ended) return { title: 'Morning complete', sub: 'You got everyone out of the house.' };
+  if (s.ended) return { title: 'Out the door', sub: 'Report below.' };
   if (!s.childAwake) return { title: 'Before she wakes up', sub: 'The house is quiet. She usually wakes around 7.' };
   const left = s.departureDeadline - s.minute;
   if (currentIncident(s)) return { title: 'Getting ready', sub: left > 0 ? "There's still time, but not much." : 'You should already be gone.' };
@@ -63,7 +64,6 @@ export function GameScreen({ game, seed, act, onRetry, onReplay }: Props) {
       : left >= 0
         ? `${left} min to leave`
         : `${-left} min overdue`;
-  const last = game.history[game.history.length - 1];
   // Departure countdown in 5-minute segments, like a jump timer.
   const totalSegments = Math.ceil((game.departureDeadline - START_MINUTE) / SEGMENT_MINUTES);
   const litSegments = Math.max(0, Math.ceil(left / SEGMENT_MINUTES));
@@ -71,12 +71,12 @@ export function GameScreen({ game, seed, act, onRetry, onReplay }: Props) {
   return (
     <div className="terminal frame">
       <header className="head">
-        <div>
+        <div className="head-title">
           <div className="eyebrow">Morning {String(seed).padStart(6, '0')}</div>
           <h1>{title}</h1>
           <div className="small">{sub}</div>
-          {!r && <Lamps s={game} />}
         </div>
+        {!r && <Lamps s={game} />}
         <div className={`timebox frame screen ${late ? 'late' : ''}`}>
           <div className="time">{formatClock(shownTime)}</div>
           <div className="time-sub">{timeSub}</div>
@@ -101,19 +101,14 @@ export function GameScreen({ game, seed, act, onRetry, onReplay }: Props) {
         </div>
       )}
 
-      <footer className="foot frame screen">
-        {r ? (
-          <>
-            <strong>{formatClock(r.arrived)}</strong> &nbsp;{' '}
-            {r.lateness > 0 ? 'Morning over. School has begun.' : 'Morning over. The bell has not gone yet.'}
-          </>
-        ) : (
-          <>
-            <strong>{formatClock(last.minute)}</strong> &nbsp; {last.text}
-            {game.minute >= SAFETY_CUTOFF - 15 && ' It is getting very late.'}
-          </>
-        )}
-      </footer>
+      {r ? (
+        <footer className="foot frame screen">
+          <strong>{formatClock(r.arrived)}</strong> &nbsp;{' '}
+          {r.lateness > 0 ? 'Morning over. School has begun.' : 'Morning over. The bell has not gone yet.'}
+        </footer>
+      ) : (
+        <Dock s={game} act={act} />
+      )}
     </div>
   );
 }
