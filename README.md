@@ -3,6 +3,8 @@
 *...and all of it will happen again.* The console is the C·I·C, the Child Information Center.
 (Working titles: *School Run*, *Tuesday*, *C·I·C*.)
 
+**Play:** https://shredinger137.github.io/all-of-this-has-happened-before/
+
 A turn-based browser game about getting a child out the door by 07:45, presented as a Colonial
 crisis console. You never quite know what today needs: the intel is graded, sometimes wrong, and
 confirming it costs minutes. Mornings roll on, Monday to Friday, week after week.
