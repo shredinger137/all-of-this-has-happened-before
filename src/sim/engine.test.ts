@@ -561,7 +561,7 @@ describe('the day: weather, school events, intel', () => {
     expect(s.objectives.dressed.status).toBe('done');
   });
 
-  it('rain makes the coat a requirement and the walk longer', () => {
+  it('rain makes the coat a requirement and the drive longer', () => {
     const s = seedWhere((g) => g.day.weather === 'rain' && !g.day.event);
     const ended = run(s, { type: 'wakeNow' }, { type: 'leave' });
     const r = results(ended);

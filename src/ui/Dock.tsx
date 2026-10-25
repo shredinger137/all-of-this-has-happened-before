@@ -124,7 +124,7 @@ export function Dock({ s, r, act, run, onNext, onRetry, onReplay, departing, onR
 
   const inc = currentIncident(s);
   const leaving = s.childAwake;
-  // You can walk out on most problems, but not the one at the door; waking her waits for quiet.
+  // You can leave on most problems, but not the one at the door; waking her waits for quiet.
   const disabled = !!inc && (!leaving || inc.id === 'bathroom');
   const last = s.history[s.history.length - 1];
 

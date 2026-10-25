@@ -1,14 +1,14 @@
-import { INCIDENTS, RAIN_WALK_MINUTES } from '../sim/content';
+import { INCIDENTS, RAIN_DRIVE_MINUTES } from '../sim/content';
 import { COMMUTE_MINUTES, formatClock } from '../sim/constants';
 import type { Results } from '../sim/engine';
 import type { GameState } from '../sim/types';
 
 /**
  * The jump: pressing leave plays a short sequence (door shut, what came with you, what stayed
- * behind, the walk, arrival) before the after-action report. Lines arrive one after another.
+ * behind, the drive, arrival) before the after-action report. Lines arrive one after another.
  */
 export function Departure({ s, r }: { s: GameState; r: Results }) {
-  const walk = COMMUTE_MINUTES + (s.day.weather === 'rain' ? RAIN_WALK_MINUTES : 0);
+  const walk = COMMUTE_MINUTES + (s.day.weather === 'rain' ? RAIN_DRIVE_MINUTES : 0);
   const unresolved = s.incidents.map((i) => INCIDENTS[i.id].title.toLowerCase());
   const behind = [...new Set([...unresolved, ...r.leftBehind.map((m) => m.toLowerCase())])];
   const late = r.lateness > 0;

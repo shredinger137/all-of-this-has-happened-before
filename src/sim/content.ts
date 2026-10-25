@@ -1146,12 +1146,24 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     endgame: () => true,
     responses: [
       {
+        id: 'home',
+        label: 'A snack at home',
+        hint: 'She sits down and eats it. Takes a few minutes',
+        minutes: 4,
+        both: true,
+        tags: [{ text: 'Mood ↑', tone: 'good' }],
+        apply: (c) => {
+          c.mood(1);
+          c.log('She ate a snack at the table.', true);
+        },
+      },
+      {
         id: 'snack',
-        label: 'A banana for the car',
+        label: 'A snack for the car',
         hint: 'Quick',
         minutes: 1,
         tags: [{ text: 'Handled', tone: 'neutral' }],
-        apply: (c) => c.log('She took a banana for the car.', true),
+        apply: (c) => c.log('She took a snack for the car.', true),
       },
       {
         id: 'no',
@@ -1845,7 +1857,7 @@ export const RAIN_CHANCES = [0.1, 0.3, 0.6, 0.85];
 export const COLD_CHANCE = 0.25;
 export const CALENDAR_RIGHT = 0.5;
 export const ASK_RIGHT = 0.7;
-export const RAIN_WALK_MINUTES = 3;
+export const RAIN_DRIVE_MINUTES = 3; // traffic is slower in the rain
 /** Raincoat and rain boots, versus 3 minutes for a coat on a cold day. */
 export const RAIN_GEAR_MINUTES = 5;
 /** A look outside settles the weather this often at first, and more surely as departure nears. */

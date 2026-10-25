@@ -40,7 +40,7 @@ import {
   JOKES,
   LIBRARY_CHANCE,
   RAIN_CHANCES,
-  RAIN_WALK_MINUTES,
+  RAIN_DRIVE_MINUTES,
   ROLL_ORDER,
   TASKS,
   WAVE_WARNING,
@@ -703,7 +703,7 @@ export function shoesAtDoorMinutes(s: GameState): number {
 /** If you left this minute: when you'd arrive and how early (+) or late (−), using only what you know. */
 export function leaveNowProjection(s: GameState): { arrive: number; spare: number; gateShut: boolean } {
   const d = s.day;
-  const walk = COMMUTE_MINUTES + (d.weatherKnown && d.weather === 'rain' ? RAIN_WALK_MINUTES : 0);
+  const walk = COMMUTE_MINUTES + (d.weatherKnown && d.weather === 'rain' ? RAIN_DRIVE_MINUTES : 0);
   const early = d.eventKnown && d.event && EVENTS[d.event].earlier;
   const start = d.meeting || early ? d.schoolStart : SCHOOL_START;
   const arrive = s.minute + walk + shoesAtDoorMinutes(s);
@@ -780,7 +780,7 @@ function landWave(s: GameState) {
   }
 }
 
-/** Nobody walks to school barefoot: shoes not on yet go on at the door, on your time. */
+/** Nobody goes to school barefoot: shoes not on yet go on at the door, on your time. */
 function shoesAtTheDoor(s: GameState) {
   if (s.objectives.shoesOn.status === 'done') return;
   s.parentActivity = undefined;
@@ -1170,7 +1170,7 @@ export function requirements(s: GameState): Requirement[] {
     reqs.push({
       id: 'coat',
       label: d.weather === 'rain' ? 'Rain gear on' : 'Coat on',
-      missing: d.weather === 'rain' ? 'Wet socks (it rained, no rain gear)' : 'Her coat (it was cold)',
+      missing: d.weather === 'rain' ? 'Rain gear (she got soaked between the car and the door)' : 'Her coat (it was cold)',
       severity: 'moderate',
       met: isDone('coat'),
       known: d.weather === 'cold' || d.weatherKnown,
@@ -1222,7 +1222,7 @@ export type Results = {
 export function results(s: GameState): Results {
   const d = s.day;
   const departed = s.departedAt ?? s.minute;
-  const arrived = departed + COMMUTE_MINUTES + (d.weather === 'rain' ? RAIN_WALK_MINUTES : 0);
+  const arrived = departed + COMMUTE_MINUTES + (d.weather === 'rain' ? RAIN_DRIVE_MINUTES : 0);
   const lateness = arrived - d.schoolStart;
 
   const reqs = requirements(s);
@@ -1245,7 +1245,7 @@ export function results(s: GameState): Results {
   const revealed: string[] = [];
   if (d.event) revealed.push(`${EVENTS[d.event].reveal}${d.eventKnown ? '' : ' You never confirmed it.'}`);
   else if (!d.eventKnown) revealed.push('Nothing special on at school, as it turned out.');
-  if (d.weather === 'rain') revealed.push('It rained on the way.');
+  if (d.weather === 'rain') revealed.push('It rained, and traffic was slow.');
   if (d.meeting) revealed.push('The principal was waiting at 07:50.');
   if (s.wave) revealed.push(`You got out ${s.wave.at - departed} min before ${s.wave.size === 1 ? 'another crisis' : `${s.wave.size} more crises`} hit.`);
 

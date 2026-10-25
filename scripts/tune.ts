@@ -180,7 +180,7 @@ function respondStrong(s: GameState): Action {
     case 'juice':
       return pick(ev === 'picture' || ev === 'assembly' || !tight ? 'change' : 'wipe');
     case 'hungryAgain':
-      return pick('snack');
+      return pick(tight ? 'snack' : 'home');
     case 'bagRaid':
       return pick(tight ? 'scoop' : 'repack');
     case 'wobble':
