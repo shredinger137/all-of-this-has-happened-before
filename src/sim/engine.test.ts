@@ -290,7 +290,7 @@ describe('the endgame', () => {
     expect(results(gone).revealed.join(' ')).toContain('before');
   });
 
-  it('arriving more than ten minutes late means the gate had shut: a serious miss', () => {
+  it('arriving more than ten minutes late means signing in tardy: a serious miss', () => {
     let s = run(ordinary(), { type: 'wakeNow' });
     while (!s.ended && s.minute < 8 * 60) s = stepOn(s);
     while (currentIncident(s)) s = stepOn(s);

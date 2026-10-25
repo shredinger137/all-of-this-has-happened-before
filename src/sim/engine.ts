@@ -1227,7 +1227,7 @@ export function results(s: GameState): Results {
 
   const reqs = requirements(s);
   if (lateness > GATE_CLOSES_AFTER) {
-    reqs.push({ id: 'gate', label: 'Gate', missing: 'Signed in at the office: the gate had shut', severity: 'severe', met: false, known: true });
+    reqs.push({ id: 'gate', label: 'Tardy', missing: 'On time for class (signed in tardy)', severity: 'severe', met: false, known: true });
   }
   const completed = reqs.filter((r) => r.met).map((r) => r.label);
   const misses = reqs.filter((r) => !r.met);
@@ -1238,7 +1238,7 @@ export function results(s: GameState): Results {
   const cost = misses.reduce((n, r) => n + SEVERITY_COST[r.severity], 0);
   const raw = 100 - 4 * late - cost + 4 * (s.householdMood - 3);
   const score = Math.max(0, Math.min(100, Math.round(raw)));
-  const grade = score >= 90 ? 'Made it' : score >= 70 ? 'Got there' : score >= 45 ? 'Messy' : 'Rough';
+  const grade = score >= 90 ? 'Made it' : score >= 70 ? 'Got there' : score >= 45 ? 'Hectic' : 'Hard morning';
 
   const notes = s.history.filter((h) => h.notable).slice(-5);
 
@@ -1250,12 +1250,12 @@ export function results(s: GameState): Results {
   if (s.wave) revealed.push(`You got out ${s.wave.at - departed} min before ${s.wave.size === 1 ? 'another crisis' : `${s.wave.size} more crises`} hit.`);
 
   let summary: string;
-  if (lateness <= 0 && misses.length === 0) summary = 'On time, with everything done. Something must have been forgotten.';
+  if (lateness <= 0 && misses.length === 0) summary = 'On time, with everything done.';
   else if (lateness <= 0 && severeMisses === 0) summary = `On time. Left behind: ${leftBehind.join(', ').toLowerCase()}.`;
   else if (lateness <= 0) summary = `On time, but without ${leftBehind.find((_, i) => misses[i].severity === 'severe')!.toLowerCase()}.`;
   else if (lateness <= 5 && misses.length <= 1) summary = `${lateness} minutes late, with most things finished.`;
-  else if (misses.length >= 4) summary = `${lateness} minutes late and only partly ready. Tomorrow is another morning.`;
-  else summary = `${lateness} minutes late. She got there.`;
+  else if (misses.length >= 4) summary = `${lateness} minutes late, with a few things left at home. She got there, and the day went fine.`;
+  else summary = `${lateness} minutes late. She got there, and the day went fine.`;
 
   return {
     departed,

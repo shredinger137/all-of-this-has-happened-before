@@ -38,8 +38,8 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
   announced on the plot and in the status bar ("2 crises incoming · 5 min") five minutes
   before it lands. When it lands, each crisis is a problem that can undo finished work: shoes off,
   juice down the clean top, the bag on the hall floor, the toilet. Waves grow (1, 2, 3) and come closer
-  together. You can't stop them, only finish up or get out first. Arrive 10+ minutes late and the
-  gate has shut.
+  together. You can't stop them, only finish up or get out first. Arrive 10+ minutes late and she signs
+  in tardy. The drop-off is always a good one.
 - **Leave.** The status bar always shows what leaving now means. Leaving is final: the door shuts,
   the drive plays out, then the after-action report. A wave still inbound lands on an empty house. What you leave behind is weighted:
   missing a stuffy on stuffy day is serious; a packed lunch is not.

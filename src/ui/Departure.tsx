@@ -7,12 +7,21 @@ import type { GameState } from '../sim/types';
  * The jump: pressing leave plays a short sequence (door shut, what came with you, what stayed
  * behind, the drive, arrival) before the after-action report. Lines arrive one after another.
  */
+const GOODBYES = [
+  'She ran in to find her friends.',
+  'She gave you a hug at the door.',
+  'Her teacher waved from the door.',
+  'She told you to have a good day.',
+];
+
 export function Departure({ s, r }: { s: GameState; r: Results }) {
   const walk = COMMUTE_MINUTES + (s.day.weather === 'rain' ? RAIN_DRIVE_MINUTES : 0);
   const unresolved = s.incidents.map((i) => INCIDENTS[i.id].title.toLowerCase());
   const behind = [...new Set([...unresolved, ...r.leftBehind.map((m) => m.toLowerCase())])];
   const late = r.lateness > 0;
-  const gate = r.misses.some((m) => m.id === 'gate');
+  const tardy = r.misses.some((m) => m.id === 'gate');
+  // However the morning went, the drop-off is good.
+  const goodbye = GOODBYES[s.seed % GOODBYES.length];
   const at = (step: number) => `${(0.4 + step * 0.7).toFixed(1)}s`;
   const lines: { t?: string; text: string; tone?: string }[] = [
     { t: formatClock(r.departed), text: 'Out the door.' },
@@ -47,13 +56,13 @@ export function Departure({ s, r }: { s: GameState; r: Results }) {
             <span style={{ animationDelay: at(lines.length) }} />
           </div>
         </div>
-        <div className={`arrival ${gate ? 'red' : late ? 'amber' : 'green'}`} style={{ animationDelay: at(lines.length + 3.7) }}>
+        <div className={`arrival ${late ? 'amber' : 'green'}`} style={{ animationDelay: at(lines.length + 3.7) }}>
           <span className="t">{formatClock(r.arrived)}</span>
-          {gate
-            ? 'Arrived. The gate has shut: sign in at the office.'
+          {tardy
+            ? 'Class had started, so she signed in tardy. Her friends were excited she made it.'
             : late
-              ? `Arrived. ${r.lateness} min late.`
-              : `Arrived. ${-r.lateness} min before the bell.`}
+              ? `Arrived ${r.lateness} min late. ${goodbye}`
+              : `Arrived ${-r.lateness} min before the bell. ${goodbye}`}
         </div>
       </div>
     </div>

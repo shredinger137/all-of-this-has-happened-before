@@ -51,7 +51,7 @@ function Projection({ s }: { s: GameState }) {
     <div className={`projection ${tone}`}>
       Leave now: in by {formatClock(arrive)} ·{' '}
       {spare >= 0 ? `${spare} min to spare` : `${-spare} min late`}
-      {gateShut && ' · gate shut: sign in at the office'}
+      {gateShut && ' · class will have started'}
     </div>
   );
 }
@@ -101,7 +101,7 @@ export function Dock({ s, r, act, run, onNext, onRetry, onReplay, departing, onR
         <div className="dock-text">
           <div className="dock-log">
             <strong>{formatClock(r.arrived)}</strong> &nbsp;{' '}
-            {r.lateness > 0 ? 'Morning over. School has begun.' : 'Morning over. The bell has not gone yet.'}
+            {r.lateness > 0 ? 'Dropped off. Class had started.' : 'Dropped off before the bell.'}
           </div>
         </div>
         {run ? (
