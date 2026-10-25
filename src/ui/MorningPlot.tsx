@@ -3,8 +3,8 @@ import { formatClock, SCHOOL_START, START_MINUTE } from '../sim/constants';
 import { childRate, childStalled, currentIncident, parentRate, taskDuration } from '../sim/engine';
 import type { GameState, Span } from '../sim/types';
 
-// The plot runs from 06:30 to 08:15 in 15-minute columns.
-const END = START_MINUTE + 105;
+// The plot runs from the start of the morning to 08:15 in 15-minute columns.
+const END = SCHOOL_START + 15;
 const pct = (m: number) => `${(Math.max(START_MINUTE, Math.min(END, m)) - START_MINUTE) * (100 / (END - START_MINUTE))}%`;
 const width = (a: number, b: number) =>
   `${(Math.min(END, b) - Math.max(START_MINUTE, a)) * (100 / (END - START_MINUTE))}%`;
@@ -59,7 +59,7 @@ function Lane({ s, lane }: { s: GameState; lane: Span['lane'] }) {
       {!s.ended && <div className="mark now" style={{ left: pct(s.minute) }} />}
       {inc && lane === contactLane && <div className="contact" style={{ left: pct(s.minute) }} title="Problem" />}
       {lane === 'child' && s.wave && !s.ended && (
-        <div className="inbound" style={{ left: pct(s.wave.at) }} title={`${s.wave.size} contacts inbound, landing ${formatClock(s.wave.at)}.`}>
+        <div className="inbound" style={{ left: pct(s.wave.at) }} title={`${s.wave.size === 1 ? 'A crisis' : `${s.wave.size} crises`} incoming at ${formatClock(s.wave.at)}.`}>
           <span className="inbound-trail" style={{ width: width(s.minute, s.wave.at) }} />
           <span className="inbound-label">
             ×{s.wave.size} · {s.wave.at - s.minute}m
@@ -77,7 +77,7 @@ export function MorningPlot({ s }: { s: GameState }) {
     <div className="plot frame" aria-label="Timeline of the morning">
       <div className="plot-tabs">
         <span className="plot-tab solid">Morning plot</span>
-        <span className="plot-tab optional">06:30 – 08:15</span>
+        <span className="plot-tab optional">{formatClock(START_MINUTE)} – {formatClock(END)}</span>
         <span className="plot-tab spacer" />
         <span className="plot-tab optional">You · her</span>
         <span className="plot-tab">{s.ended ? 'Complete' : formatClock(s.minute)}</span>

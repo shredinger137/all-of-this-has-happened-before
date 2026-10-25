@@ -18,7 +18,7 @@ function seedWhere(pred: (s: GameState) => boolean): GameState {
 const ordinary = () => seedWhere((s) => s.morningCondition === 'ordinary' && s.childTendency !== 'independent');
 
 describe('morning start', () => {
-  it('starts at 06:30 with the child asleep', () => {
+  it('starts at 06:45 with the child asleep', () => {
     const s = createGame(42);
     expect(s.minute).toBe(START_MINUTE);
     expect(s.childAwake).toBe(false);
@@ -32,8 +32,8 @@ describe('morning start', () => {
 
   it('wakes her naturally at 07:00 and pauses there', () => {
     let s = ordinary();
-    s = run(s, { type: 'startParent', task: 'lunch' }, { type: 'startParent', task: 'breakfastMade', variant: 'oatmeal' }, { type: 'startParent', task: 'parentReady' });
-    expect(s.minute).toBe(START_MINUTE + 30); // lunch 8 + oatmeal 7 + getting ready 15: right at 07:00
+    s = run(s, { type: 'startParent', task: 'lunch' }, { type: 'startParent', task: 'breakfastMade', variant: 'oatmeal' });
+    expect(s.minute).toBe(START_MINUTE + 15); // lunch 8 + oatmeal 7: right at 07:00
     while (!s.childAwake) s = reduce(s, currentIncident(s) ? { type: 'respond', response: 'leave' } : { type: 'wait' });
     expect(s.minute).toBe(NATURAL_WAKE);
     expect(s.groggyUntil).toBeUndefined();
@@ -82,12 +82,12 @@ describe('parallel activity', () => {
 });
 
 describe('supervised tasks', () => {
-  it('teeth only progress while you help, and assigning them takes you too', () => {
+  it('hair only progresses while you help, and assigning it takes you too', () => {
     const base = seedWhere((g) => {
-      const t = run(g, { type: 'wakeNow' }, { type: 'assignChild', task: 'teeth' });
-      return t.morningCondition === 'ordinary' && !currentIncident(t) && t.objectives.teeth.status === 'done';
+      const t = run(g, { type: 'wakeNow' }, { type: 'assignChild', task: 'hair' });
+      return t.morningCondition === 'ordinary' && !currentIncident(t) && t.objectives.hair.status === 'done';
     });
-    const s = run(base, { type: 'wakeNow' }, { type: 'assignChild', task: 'teeth' });
+    const s = run(base, { type: 'wakeNow' }, { type: 'assignChild', task: 'hair' });
     expect(s.minute).toBeGreaterThan(base.minute);
     expect(s.parentActivity).toBeUndefined();
   });

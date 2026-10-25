@@ -20,7 +20,7 @@ export function Departure({ s, r }: { s: GameState; r: Results }) {
     behind.length ? { text: `Left behind: ${behind.slice(0, 6).join(', ')}${behind.length > 6 ? '…' : '.'}`, tone: 'amber' } : { text: 'Left behind: nothing.', tone: 'green' },
   ];
   if (s.wave) {
-    lines.push({ text: `Contacts inbound: ${s.wave.size}. They land on an empty house.`, tone: 'cyan' });
+    lines.push({ text: `${s.wave.size === 1 ? 'A crisis was' : `${s.wave.size} crises were`} on the way. They hit an empty house.`, tone: 'cyan' });
   }
 
   return (

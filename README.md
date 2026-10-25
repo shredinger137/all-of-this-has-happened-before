@@ -22,7 +22,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 
 ## How to play
 
-- **06:30, before she wakes.** Read the briefing on the Intel screen: the forecast, the fridge calendar
+- **06:45, before she wakes.** Read the briefing on the Intel screen: the forecast, the fridge calendar
   (graded C3: usually right), anything you prepared last night. Prep quietly, or wake her early.
 - **Confirm or bet.** The school email (3 min) and looking outside (1 min) are certain. Asking her is
   free-ish and confidently unreliable (E5). Messaging another parent costs a **fate point**.
@@ -31,9 +31,9 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
   some lead to more choices (she's upset now; the door is shut).
 - **Small decisions.** Breakfast: what will you make? She has a preference today and you only have a clue
   (or ask her, once she's up). Hair: some days, braided pigtails. Jokes: you hear the whole thing.
-- **The endgame.** From about ten minutes before leaving time, waves of contacts. Each wave is
-  announced on the plot and in the status bar ("Contacts inbound: 2 · landing 07:43") five minutes
-  before it lands. When it lands, each contact is a problem that can undo finished work: shoes off,
+- **The endgame.** From about fifteen minutes before leaving time, waves of crises. Each wave is
+  announced on the plot and in the status bar ("2 crises incoming · 5 min") five minutes
+  before it lands. When it lands, each crisis is a problem that can undo finished work: shoes off,
   juice down the clean top, the bag on the hall floor, the toilet. Waves grow (1, 2, 3) and come closer
   together. You can't stop them, only finish up or get out first. Arrive 10+ minutes late and the
   gate has shut.
@@ -86,16 +86,15 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 
 ## Balance (`npx vite-node scripts/tune.ts`)
 
-The target: a good player should *barely* make it, and never feel they've won. `scripts/tune.ts` plays
-1,500 single mornings and 100 four-week runs per policy (`--only strong`, `--severe`, `--slices`,
-`--trace <seed>`); `npm run balance` is the older, simpler bot set.
+The point, not fairness: this is a game jam entry, and a good player should usually *not quite* make it.
+She gets more distractible the longer she behaves and the closer it gets to 07:45; the bathroom and
+hunger come due on their own. `scripts/tune.ts` plays 1,500 single mornings and 100 four-week runs per
+policy (`--only strong`, `--severe`, `--slices`, `--trace <seed>`); `npm run balance` is the older bot set.
 
 | Policy | median spare | on time | close call (0–3) | >5 spare | nothing left behind | serious misses |
 | --- | --- | --- | --- | --- | --- | --- |
-| strong, single mornings | 1 min | 66% | 50% | 4% | 0% | 0.04 / morning |
-| strong, full weeks | 0 min | 60% | 45% | 4% | 8% | 0.05 / morning |
-| mediocre, full weeks | −8 min | 2% | 1% | 0% | 6% | 0.41 / morning |
+| strong, single mornings | −2 min | 34% | 32% | 0% | 0% | 0.11 / morning |
+| strong, full weeks | −1 min | 35% | 32% | 0% | 0% | 0.18 / morning |
+| mediocre, full weeks | −9 min | 0% | 0% | 0% | 0% | 0.56 / morning |
 
-Most good mornings end with 1–3 small things let go. The mediocre bot takes the first option every time
-and leaves only when nearly done; real first-time players will watch the clock and do better, but how
-much better needs human playtesting. Rain days are hardest (on time ~45%).
+Rain days are hardest (on time ~21%).

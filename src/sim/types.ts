@@ -181,6 +181,9 @@ export type GameState = {
   hairStyle?: HairStyle; // what she ended up with
   carStuffyWant: boolean; // some days a stuffy has to come in the car
   caffeinatedUntil?: number; // coffee: you work faster until then
+  focus?: number; // jobs she's finished in a row without a problem; it never lasts
+  bathroomAt?: number; // when she'll need the bathroom (again)
+  hungryAt?: number; // when she'll be hungry (again)
   outcome?: Outcome; // the result of the last choice, until you carry on
   wave?: Wave; // inbound, if any
   waves: number; // how many have landed this morning

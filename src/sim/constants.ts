@@ -1,5 +1,5 @@
 // All clock values are absolute minutes after midnight.
-export const START_MINUTE = 6 * 60 + 30; // 06:30
+export const START_MINUTE = 6 * 60 + 45; // 06:45: time to get one or two things ready, not everything
 export const NATURAL_WAKE = 7 * 60; // 07:00
 export const DEPARTURE_DEADLINE = 7 * 60 + 45; // 07:45 (provisional, per spec)
 export const COMMUTE_MINUTES = 15;

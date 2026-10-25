@@ -1,4 +1,13 @@
 import {
+  BASE_DISTRACTION,
+  BATHROOM_AFTER_BREAKFAST,
+  BATHROOM_AFTER_WAKING,
+  CRUNCH_DISTRACTION,
+  CRUNCH_MINUTES,
+  FOCUS_CAP,
+  FOCUS_STEP,
+  HUNGRY_AFTER_BREAKFAST,
+  HUNGRY_AFTER_WAKING,
   MOOD_EFFECTS,
   MOOD_TAKES,
   LOOK_SETTLES,
@@ -356,6 +365,9 @@ function incidentModifier(s: GameState): number {
   let m = Math.min(0.12, WEEKLY_INCIDENT_CHANCE * (s.week - 1));
   if (isGroggy(s)) m += 0.35 * s.groggyLevel;
   m += MOOD_EFFECTS[s.householdMood].trouble;
+  m += BASE_DISTRACTION + Math.min(FOCUS_CAP, FOCUS_STEP * (s.focus ?? 0));
+  const crunch = (s.minute - (s.departureDeadline - CRUNCH_MINUTES)) / CRUNCH_MINUTES;
+  m += CRUNCH_DISTRACTION * Math.max(0, Math.min(1, crunch));
   return m;
 }
 
@@ -380,6 +392,8 @@ export function earliness(s: GameState): number {
 function wake(s: GameState, natural: boolean) {
   s.childAwake = true;
   s.wokenAt = s.minute;
+  s.bathroomAt = s.minute + BATHROOM_AFTER_WAKING;
+  s.hungryAt = s.minute + HUNGRY_AFTER_WAKING;
   if (s.carStuffyWant) log(s, 'First thing she says: a stuffy has to come in the car today.', true);
   if (natural) {
     if (s.morningCondition === 'lateBedtime') {
@@ -614,11 +628,36 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean; door?: b
       const id = o.pending.incidentId;
       o.pending = undefined;
       o.status = 'blocked';
+      s.focus = 0;
       openIncident(s, id, ca);
       event = true;
     } else if (o.progress >= taskDuration(s, ca) - EPS) {
       completeTask(s, ca);
       log(s, `${TASKS[ca].label}.`);
+      s.focus = (s.focus ?? 0) + 1;
+      if (s.focus === 2) log(s, 'Two jobs in a row, no trouble. That never lasts.');
+      if (ca === 'breakfastEaten') {
+        s.bathroomAt = s.minute + BATHROOM_AFTER_BREAKFAST[0] + Math.round(rand(s) * (BATHROOM_AFTER_BREAKFAST[1] - BATHROOM_AFTER_BREAKFAST[0]));
+        s.hungryAt = s.minute + HUNGRY_AFTER_BREAKFAST;
+      }
+      event = true;
+    }
+  }
+
+  // The bathroom and hunger come due on their own schedule, once each, while nothing else is open.
+  if (!engaged.door && s.childAwake && !s.ended && !s.incidents.some((i) => i.status === 'open')) {
+    const need: IncidentId | undefined =
+      s.bathroomAt !== undefined && s.minute >= s.bathroomAt && !s.firedIncidents.includes('bathroom')
+        ? 'bathroom'
+        : s.hungryAt !== undefined && s.minute >= s.hungryAt && !s.firedIncidents.includes('hungryAgain')
+          ? 'hungryAgain'
+          : undefined;
+    if (need) {
+      const c = s.childActivity;
+      if (c && s.objectives[c].status === 'active') s.objectives[c].status = 'blocked';
+      s.firedIncidents.push(need);
+      s.focus = 0;
+      openIncident(s, need, c && s.objectives[c].status === 'blocked' ? c : undefined);
       event = true;
     }
   }
@@ -632,7 +671,7 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean; door?: b
   } else if (!s.wave && s.childAwake && !s.ended && s.minute >= collapseStart(s) && s.minute >= (s.nextWaveAt ?? 0)) {
     const size = Math.min(3, 1 + s.waves);
     s.wave = { at: s.minute + WAVE_WARNING, size, announced: s.minute };
-    log(s, `Contacts: ${size} inbound, landing ${formatClock(s.wave.at)}.`, true);
+    log(s, `${size === 1 ? 'A crisis is' : `${size} crises are`} on the way. About ${WAVE_WARNING} minutes.`, true);
     event = true;
   }
 
@@ -735,7 +774,7 @@ function landWave(s: GameState) {
   let pool = ENDGAME_POOL.filter((id) => !s.firedIncidents.includes(id) && (INCIDENTS[id].endgame?.(s) ?? true));
   if (!pool.length && INCIDENTS.wobble.endgame!(s)) pool = ['wobble'];
   if (!pool.length) {
-    log(s, 'The contacts pass. Nothing left for them to undo.', true);
+    log(s, 'The crisis passes. Nothing left for it to undo.', true);
     return;
   }
   for (let i = 0; i < wave.size && pool.length; i++) {
@@ -1215,7 +1254,7 @@ export function results(s: GameState): Results {
   else if (!d.eventKnown) revealed.push('Nothing special on at school, as it turned out.');
   if (d.weather === 'rain') revealed.push('It rained on the way.');
   if (d.meeting) revealed.push('The principal was waiting at 07:50.');
-  if (s.wave) revealed.push(`You got out ${s.wave.at - departed} min before ${s.wave.size} more contacts landed.`);
+  if (s.wave) revealed.push(`You got out ${s.wave.at - departed} min before ${s.wave.size === 1 ? 'another crisis' : `${s.wave.size} more crises`} hit.`);
 
   let summary: string;
   if (lateness <= 0 && misses.length === 0) summary = 'On time, with everything done. Something must have been forgotten.';

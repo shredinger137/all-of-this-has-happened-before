@@ -29,7 +29,7 @@ function Lamps({ s }: { s: GameState }) {
     { label: 'Coffee', on: s.coffeeBuffer || (s.caffeinatedUntil ?? 0) > s.minute, tone: 'amber' },
     { label: 'Problem', on: !!currentIncident(s), tone: 'alarm' },
     { label: 'Late', on: s.minute >= s.departureDeadline, tone: 'alarm' },
-    { label: s.wave ? `Inbound ×${s.wave.size}` : 'Inbound', on: !!s.wave, tone: 'alarm' },
+    { label: 'Incoming', on: !!s.wave, tone: 'alarm' },
   ];
   return (
     <div className="lamps" aria-hidden>
@@ -62,7 +62,7 @@ function WaveWarning({ s }: { s: GameState }) {
   const left = s.wave.at - s.minute;
   return (
     <div className="wave-warning">
-      Contacts inbound: {s.wave.size} · landing {formatClock(s.wave.at)} · {left <= 0 ? 'now' : `${left} min`}
+      {s.wave.size === 1 ? 'Crisis incoming' : `${s.wave.size} crises incoming`} · {left <= 0 ? 'now' : `${left} min`}
     </div>
   );
 }

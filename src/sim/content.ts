@@ -145,11 +145,10 @@ export const TASKS: Record<TaskId, TaskDef> = {
     label: 'Teeth brushed',
     action: 'Brush teeth',
     doing: 'Brushing teeth',
-    hint: (s) => (done(s, 'breakfastEaten') ? 'Needs you there' : 'Needs you there. Better after breakfast'),
+    hint: (s) => (done(s, 'breakfastEaten') ? 'She can do it herself. Eventually' : 'Better after breakfast'),
     scored: true,
     missing: 'Brushed teeth',
     duration: () => 4,
-    supervised: true,
   },
   hair: {
     id: 'hair',
@@ -169,11 +168,10 @@ export const TASKS: Record<TaskId, TaskDef> = {
     label: 'Face clean',
     action: 'Wash her face',
     doing: 'Washing her face',
-    hint: (s) => (done(s, 'breakfastEaten') ? 'Breakfast is still on it' : 'Needs you there'),
+    hint: (s) => (done(s, 'breakfastEaten') ? 'Breakfast is still on it' : 'She can do it herself'),
     scored: true,
     missing: 'A clean face',
     duration: () => 2,
-    supervised: true,
   },
   carStuffy: {
     id: 'carStuffy',
@@ -811,7 +809,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
   bathroom: {
     id: 'bathroom',
     title: 'Bathroom',
-    context: 'Contact',
+    context: 'Crisis',
     headline: () => 'She has to go to the bathroom. Now.',
     detail: () => 'Of course she does.',
     deferrable: false,
@@ -1020,7 +1018,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
   shoesOff: {
     id: 'shoesOff',
     title: 'Shoes off',
-    context: 'Contact',
+    context: 'Crisis',
     headline: () => 'She has taken her shoes off.',
     detail: () => 'Both of them. She is wiggling her toes at you.',
     deferrable: false,
@@ -1052,7 +1050,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
   coatOff: {
     id: 'coatOff',
     title: 'Coat off',
-    context: 'Contact',
+    context: 'Crisis',
     headline: (s) => (s.day.weather === 'cold' ? 'The coat is off. Too hot, apparently.' : 'The raincoat is off. It is "crunchy".'),
     detail: () => 'It is on the hallway floor.',
     deferrable: false,
@@ -1088,7 +1086,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
   hairMess: {
     id: 'hairMess',
     title: 'Hair',
-    context: 'Contact',
+    context: 'Crisis',
     headline: (s) => (done(s, 'coat') ? 'Hood on, hood off. Eleven times.' : HAIR[s.hairStyle ?? 'down'].mess),
     detail: (s) => (done(s, 'coat') ? 'The hair is gone.' : 'You did that hair ten minutes ago.'),
     deferrable: false,
@@ -1121,7 +1119,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
   juice: {
     id: 'juice',
     title: 'Juice',
-    context: 'Contact',
+    context: 'Crisis',
     headline: () => 'Juice, all down her top.',
     detail: () => 'Apple. It is spreading.',
     deferrable: false,
@@ -1153,11 +1151,11 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
   hungryAgain: {
     id: 'hungryAgain',
     title: 'Hungry',
-    context: 'Contact',
-    headline: () => 'She is hungry again. Very hungry. Now.',
+    context: 'Crisis',
+    headline: (s) => (done(s, 'breakfastEaten') ? 'She is hungry again. Very hungry. Now.' : 'She is starving. She did not really eat breakfast.'),
     detail: () => 'She is standing in front of the open fridge.',
     deferrable: false,
-    endgame: (s) => done(s, 'breakfastEaten'),
+    endgame: () => true,
     responses: [
       {
         id: 'snack',
@@ -1185,7 +1183,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
   bagRaid: {
     id: 'bagRaid',
     title: 'Bag',
-    context: 'Contact',
+    context: 'Crisis',
     headline: () => 'Half her backpack is on the hallway floor.',
     detail: () => 'She wanted to show you a drawing. It is at the bottom.',
     deferrable: false,
@@ -1583,7 +1581,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
   wobble: {
     id: 'wobble',
     title: 'Wobble',
-    context: 'Contact',
+    context: 'Crisis',
     headline: () => 'Her lip is going.',
     detail: () => 'Something is about to happen. Nobody knows what.',
     deferrable: false,
@@ -1705,7 +1703,19 @@ export const COFFEE_MINUTES = 20;
 export const COFFEE_SPEED = 1.15;
 
 // ---------------------------------------------------------------------------
-// The endgame: as leaving time nears, waves of contacts. Each wave is announced, then lands.
+// The endgame: as leaving time nears, waves of crises. Each wave is announced, then lands.
+
+/** She gets more distractible: a little anyway, more the longer she's been good, more as time runs out. */
+export const BASE_DISTRACTION = 0.05;
+export const FOCUS_STEP = 0.06; // per job finished in a row without a problem
+export const FOCUS_CAP = 0.24;
+export const CRUNCH_MINUTES = 30; // the last half hour before leaving
+export const CRUNCH_DISTRACTION = 0.15; // extra chance by leaving time
+/** Bodies keep time: the bathroom and hunger come due, whatever else is going on. */
+export const BATHROOM_AFTER_BREAKFAST = [25, 40];
+export const BATHROOM_AFTER_WAKING = 50;
+export const HUNGRY_AFTER_BREAKFAST = 50;
+export const HUNGRY_AFTER_WAKING = 40;
 // ---------------------------------------------------------------------------
 
 export const ENDGAME_POOL: IncidentId[] = ['shoesOff', 'coatOff', 'hairMess', 'juice', 'hungryAgain', 'bagRaid', 'wobble', 'bathroom', 'joke', 'cats'];
