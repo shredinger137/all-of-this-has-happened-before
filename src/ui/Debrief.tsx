@@ -16,8 +16,8 @@ export function Debrief({ r, seed, label }: Props) {
         <div className="report-title">
           <div>
             <div className="context">{label}</div>
-            <h2>She's at school</h2>
-            <p>However the morning went, the drop-off was a good one.</p>
+            <h2>Morning complete</h2>
+            <p>Everyone got out of the house.</p>
             {r.revealed.length > 0 && <p className="revealed">{r.revealed.join(' ')}</p>}
           </div>
           <div className={`stamp ${late ? 'late' : 'ok'}`}>
