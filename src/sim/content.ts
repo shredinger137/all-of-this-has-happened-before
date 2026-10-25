@@ -383,23 +383,23 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'spoon',
     title: 'Wrong spoon',
     context: 'While eating breakfast',
-    headline: () => 'She wanted the blue spoon.',
+    headline: () => 'She wants her spoon, not this one.',
     deferrable: false,
     tasks: ['breakfastEaten'],
     // Only breakfasts eaten with a spoon.
     chance: (s) => (s.perks.includes('spoons') || !['cereal', 'oatmeal'].includes(eating(s)) ? 0 : 0.3 + picky(s)),
     responses: [
       {
-        id: 'blue',
-        label: 'Get the blue spoon',
+        id: 'hers',
+        label: 'Get her spoon',
         hint: 'Simple, if it is clean',
         minutes: 2,
         tags: [{ text: 'Breakfast resumes', tone: 'neutral' }],
         apply: (c) => {
-          if (c.roll() < 0.7) c.log('She went back to eating with the blue spoon.', true);
+          if (c.roll() < 0.7) c.log('She went back to eating with her spoon.', true);
           else {
             c.addExtra(2);
-            c.log('The blue spoon was in the dishwasher. Washed it.', true);
+            c.log('Her spoon was in the dishwasher. You washed it.', true);
           }
         },
       },
@@ -413,7 +413,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           if (c.roll() < 0.7) {
             c.mood(1);
-            c.log('She picked the green spoon and was happy with it.', true);
+            c.log('She picked one and was happy with it.', true);
           } else c.log('She picked one and kept eating.', true);
         },
       },
@@ -1860,7 +1860,7 @@ export const EARLY_START_MINUTES = 10; // a meeting with the principal
 export const PERKS: Record<PerkId, { name: string; note: string }> = {
   shoeRack: { name: 'Shoe rack', note: 'Her shoes start by the door half the time.' },
   chart: { name: 'Morning chart', note: 'She gets on with things a little faster.' },
-  spoons: { name: 'Spare blue spoons', note: 'The spoon question never comes up.' },
+  spoons: { name: 'A second set of her spoons', note: 'The spoon question never comes up.' },
   hooks: { name: 'Coat hooks by the door', note: 'Coats take a minute, not three.' },
   calendar: { name: 'Family calendar', note: 'The calendar on the fridge is always right.' },
 };

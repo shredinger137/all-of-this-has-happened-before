@@ -144,7 +144,7 @@ function respondStrong(s: GameState): Action {
   const pick = (r: string): Action => ({ type: 'respond', response: r });
   switch (id) {
     case 'spoon':
-      return pick(risk() < 0.25 ? 'insist' : 'blue');
+      return pick(risk() < 0.25 ? 'insist' : 'hers');
     case 'spill':
       if (isDone(s, 'dressed') && (ev === 'picture' || ev === 'assembly')) return pick('together');
       return pick(tight ? 'later' : 'wipe');
