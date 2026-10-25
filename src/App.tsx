@@ -113,8 +113,34 @@ export default function App() {
     if (game.ended && !before.ended) sound.done();
     else if (currentIncident(game) && currentIncident(game)?.uid !== currentIncident(before)?.uid) sound.alert();
     else if (game.wave && game.wave.announced !== before.wave?.announced) sound.ping();
-    else sound.click();
   }, [game]);
+
+  // Every button blips on hover (mouse only) and clicks when pressed.
+  useEffect(() => {
+    let last: Element | null = null;
+    const button = (e: Event) => {
+      const b = (e.target as Element | null)?.closest?.('button');
+      return b && !b.disabled ? b : null;
+    };
+    const over = (e: PointerEvent) => {
+      const b = button(e);
+      if (b !== last && b && e.pointerType === 'mouse') sound.hover();
+      last = b;
+    };
+    const press = (e: MouseEvent) => {
+      sound.unlock();
+      if (button(e)) sound.select();
+    };
+    const key = () => sound.unlock();
+    document.addEventListener('pointerover', over);
+    document.addEventListener('click', press, true);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('pointerover', over);
+      document.removeEventListener('click', press, true);
+      document.removeEventListener('keydown', key);
+    };
+  }, []);
 
   const act = useCallback((a: Action) => setGame((g) => (g ? reduce(g, a) : g)), []);
 

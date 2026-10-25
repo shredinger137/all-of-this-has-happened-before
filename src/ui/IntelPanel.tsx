@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { EVENTS, TASKS } from '../sim/content';
-import { formatClock } from '../sim/constants';
 import { currentIncident, offered, parentRate, suspectedEvents } from '../sim/engine';
 import type { Action, GameState, Intel, TaskId } from '../sim/types';
 
@@ -18,7 +17,7 @@ function IntelRow({ i }: { i: Intel }) {
       </span>
       <span className="what">
         <span className="source">
-          {i.source} <span className="t">{formatClock(i.minute)}</span>
+          {i.source}
         </span>
         <span className="text">{i.text}</span>
       </span>

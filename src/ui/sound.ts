@@ -1,5 +1,8 @@
-// Tiny synthesized sounds: a soft mechanical click and an understated alert.
+// Interface sounds: two recorded blips for buttons (hover, select), and small synthesized alerts.
 let ctx: AudioContext | undefined;
+let unlocked = false; // browsers won't play anything before the first click or key
+const samples: Partial<Record<Sample, AudioBuffer | 'loading'>> = {};
+type Sample = 'hover' | 'select';
 let muted = readMuted();
 
 function readMuted(): boolean {
@@ -48,8 +51,42 @@ function ready(): boolean {
   }
 }
 
-export function click() {
-  if (ready()) tone(1800, 0, 0.03, 0.03);
+function play(name: Sample, gain: number) {
+  if (!unlocked || !ready() || !ctx) return;
+  const b = samples[name];
+  if (b === undefined) load(name); // this press goes quiet; the next one plays
+  if (!b || b === 'loading') return;
+  const src = ctx.createBufferSource();
+  const g = ctx.createGain();
+  src.buffer = b;
+  g.gain.value = gain;
+  src.connect(g).connect(ctx.destination);
+  src.start();
+}
+
+/** First click or key: audio may start, and the button sounds load ahead of use. */
+export function unlock() {
+  if (unlocked) return;
+  unlocked = true;
+  if (!ready() || !ctx) return;
+  for (const n of ['hover', 'select'] as Sample[]) if (samples[n] === undefined) load(n);
+}
+
+function load(name: Sample) {
+  samples[name] = 'loading';
+  fetch(`sfx/${name}.wav`)
+    .then((r) => r.arrayBuffer())
+    .then((a) => ctx!.decodeAudioData(a))
+    .then((buf) => (samples[name] = buf))
+    .catch(() => (samples[name] = undefined));
+}
+
+export function hover() {
+  play('hover', 0.25);
+}
+
+export function select() {
+  play('select', 0.4);
 }
 
 export function alert() {
