@@ -24,13 +24,16 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 
 - **06:45, before she wakes.** Read the briefing on the Intel screen: the forecast, the fridge calendar
   (graded C3: usually right), anything you prepared last night. Prep quietly, or wake her early.
-- **Confirm or bet.** The school email (3 min) and looking outside (1 min) are certain. Asking her is
-  free-ish and confidently unreliable (E5). Messaging another parent costs a **fate point**.
-- **She's up.** You do one thing, she does one thing. Problems interrupt; the phone and doorbell
-  interrupt *you*. Put a problem off for too long and it comes back worse. Every choice shows its result;
+- **Confirm or bet.** The school email (3 min) is certain. Looking outside (1 min) shows the weather now,
+  which doesn't always settle it; look again later. Asking her is free-ish and confidently unreliable (E5).
+  Messaging another parent costs a **fate point**; the class group chat sometimes settles it for free.
+- **She's up.** You do one thing, she does one thing. Coat and shoes wait until she's dressed. Problems
+  interrupt; work calls, the group chat and the doorbell interrupt *you*. The bathroom and hunger keep
+  their own clock. Put a problem off for too long and it comes back worse. Every choice shows its result;
   some lead to more choices (she's upset now; the door is shut).
 - **Small decisions.** Breakfast: what will you make? She has a preference today and you only have a clue
-  (or ask her, once she's up). Hair: some days, braided pigtails. Jokes: you hear the whole thing.
+  (or ask her, once she's up). Hair: down, a ponytail, pigtails or braids, her choice, different most days.
+  Jokes: you hear the whole thing. Her mood counts at every step and shows in what she does.
 - **The endgame.** From about fifteen minutes before leaving time, waves of crises. Each wave is
   announced on the plot and in the status bar ("2 crises incoming · 5 min") five minutes
   before it lands. When it lands, each crisis is a problem that can undo finished work: shoes off,
@@ -53,7 +56,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 | `src/sim/content.ts` | Tasks, incidents + responses, school events, intel odds, perks. **Most tuning happens here.** |
 | `src/sim/engine.ts` | Pure, deterministic morning: `createGame(seed, setup)`, `reduce`, `requirements`, `results` |
 | `src/sim/run.ts` | The continuous run: weeks, evening cards, fate, carry-over, weekly perks |
-| `src/ui/` | `GameScreen` (one morning), `RunScreen` (evening, week report), Intel/Status/Log/Action panels, `Dock` status bar, `music.ts` (tiered background music), `sound.ts` |
+| `src/ui/` | `GameScreen` (one morning), `RunScreen` (evening, week report), Intel/Checklist/Log/Action panels, `Intro`, `Dock` status bar, `music.ts` (tiered background music), `sound.ts` |
 | `public/music/` | The background tracks, generated for this game with Suno and Gemini |
 | `scripts/balance.ts` | Bot strategies, including calendar-trusting vs email-reading |
 | `docs/` | Spec, design doc, reference notes (`ui-reference-notes.md`: why it reads as Galactica) |
@@ -74,7 +77,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 ## Decisions beyond the spec
 
 - **Prep is 25% slower once she's awake** ("she keeps needing you").
-- **Supervised tasks**: teeth and hair only progress while you help. **Help her**: 1.5× speed.
+- **Supervised tasks**: hair only progresses while you help; teeth and face are hers to do. **Help her**: 1.5× speed.
 - **Tea**: 15% faster for 20 minutes (two minutes to make if you filled the kettle the night before). **Fate** makes one risky choice certain.
 - Risky responses show their odds ("Upset 45%"); escalation costs mood, time, and 2 minutes for both.
 - **Leaving mid-incident** is allowed; the problem goes unresolved. The toilet is no longer an ambush at
