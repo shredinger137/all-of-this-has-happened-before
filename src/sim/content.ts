@@ -806,7 +806,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'bathroom',
     title: 'Bathroom',
     context: 'Crisis',
-    headline: () => 'She has to go to the bathroom. Now.',
+    headline: () => 'She has to go to the bathroom.',
     deferrable: false,
     responses: [
       {
@@ -1141,7 +1141,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'hungryAgain',
     title: 'Hungry',
     context: 'Crisis',
-    headline: (s) => (done(s, 'breakfastEaten') ? 'She is hungry again. Very hungry. Now.' : 'She is starving. She did not really eat breakfast.'),
+    headline: (s) => (done(s, 'breakfastEaten') ? 'She is hungry again.' : 'She is hungry.'),
     deferrable: false,
     endgame: () => true,
     responses: [
