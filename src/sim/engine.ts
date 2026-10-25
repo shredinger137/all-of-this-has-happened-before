@@ -1,4 +1,6 @@
 import {
+  MOOD_EFFECTS,
+  MOOD_TAKES,
   LOOK_SETTLES,
   LOOK_SETTLES_LATE,
   ASK_RIGHT,
@@ -343,7 +345,7 @@ export function childStalled(s: GameState, task: TaskId): boolean {
 export function childRate(s: GameState): number {
   let rate = 1;
   if (isGroggy(s)) rate *= 1 - 0.35 * s.groggyLevel;
-  if (s.householdMood <= 1) rate *= 0.8;
+  rate *= MOOD_EFFECTS[s.householdMood].speed;
   if (s.childTendency === 'independent') rate *= 1.07;
   if (s.perks.includes('chart')) rate *= 1.1;
   if (s.parentActivity === 'help') rate *= 1.5;
@@ -353,8 +355,7 @@ export function childRate(s: GameState): number {
 function incidentModifier(s: GameState): number {
   let m = Math.min(0.12, WEEKLY_INCIDENT_CHANCE * (s.week - 1));
   if (isGroggy(s)) m += 0.35 * s.groggyLevel;
-  if (s.householdMood <= 1) m += 0.15;
-  if (s.householdMood >= 4) m -= 0.1;
+  m += MOOD_EFFECTS[s.householdMood].trouble;
   return m;
 }
 
@@ -362,8 +363,7 @@ function incidentModifier(s: GameState): number {
 export function escalationChance(s: GameState, base = 0.4): number {
   let chance = base;
   if (isGroggy(s)) chance += 0.3 * s.groggyLevel;
-  if (s.householdMood <= 1) chance += 0.15;
-  if (s.householdMood >= 4) chance -= 0.1;
+  chance += MOOD_EFFECTS[s.householdMood].backfire;
   return Math.max(0, Math.min(1, chance));
 }
 
@@ -473,7 +473,10 @@ function rollIncident(s: GameState, task: TaskId) {
   for (const id of ROLL_ORDER) {
     const def = INCIDENTS[id];
     if (!def.tasks?.includes(task) || s.firedIncidents.includes(id)) continue;
-    const p = Math.max(0, Math.min(0.9, (def.chance?.(s) ?? 0) + (def.external ? 0 : incidentModifier(s))));
+    // A chance of exactly 0 means it can't happen today (a perk, the wrong breakfast, the wrong mood).
+    const base = def.chance?.(s) ?? 0;
+    if (base === 0) continue;
+    const p = Math.max(0, Math.min(0.9, base + (def.external ? 0 : incidentModifier(s))));
     if (rand(s) < p) {
       const lo = Math.max(o.progress + 0.5, 1);
       const hi = Math.max(lo, dur - 1);
@@ -711,7 +714,7 @@ function checkCutoff(s: GameState) {
  */
 export function collapseStart(s: GameState): number {
   const deferred = s.incidents.filter((i) => i.status === 'deferred').length;
-  return s.departureDeadline - COLLAPSE_LEAD - 2 * deferred - (s.householdMood <= 2 ? 3 : 0);
+  return s.departureDeadline - COLLAPSE_LEAD - 2 * deferred - MOOD_EFFECTS[s.householdMood].collapse;
 }
 
 /** Something finished comes undone: back on the list, without a second incident on top. */
@@ -924,6 +927,9 @@ export function reduce(prev: GameState, action: Action): GameState {
         return s;
       }
       s.objectives[task].status = 'active';
+      // How she takes it shows her mood. Picked without the RNG so it doesn't shift the morning.
+      const takes = MOOD_TAKES[s.householdMood];
+      if (takes.length) log(s, `${TASKS[task].doing}. ${takes[(s.minute + task.length) % takes.length]}`);
       rollIncident(s, task);
       if (TASKS[task].supervised) {
         // Supervised tasks take you too, so they run the clock like a parent task.

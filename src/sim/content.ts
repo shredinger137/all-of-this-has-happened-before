@@ -1482,6 +1482,104 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     ],
   },
 
+  flop: {
+    id: 'flop',
+    title: 'On the floor',
+    context: 'Not today',
+    headline: () => 'She is lying on the floor. Boneless.',
+    detail: (s) => (s.householdMood === 0 ? 'Full meltdown. The volume is rising.' : 'She can hear you. She is choosing not to.'),
+    deferrable: false,
+    tasks: ['breakfastEaten', 'dressed', 'teeth', 'face', 'hair', 'shoesOn', 'coat'],
+    chance: (s) => [0.35, 0.25, 0.1, 0, 0, 0][s.householdMood],
+    responses: [
+      {
+        id: 'scoop',
+        label: 'Scoop her up and carry on',
+        hint: 'Reliable. She stays cross',
+        minutes: 2,
+        both: true,
+        tags: [{ text: 'Back to it', tone: 'neutral' }],
+        apply: (c) => c.log('Carried there, boneless the whole way.', true),
+      },
+      {
+        id: 'sit',
+        label: 'Lie down on the floor with her',
+        hint: 'Takes a few minutes. Turns it around',
+        minutes: 3,
+        both: true,
+        tags: [{ text: 'Mood ↑', tone: 'good' }],
+        apply: (c) => {
+          c.mood(1);
+          c.log('You lay on the floor too. Eventually she laughed.', true);
+        },
+      },
+      {
+        id: 'count',
+        label: 'Count to three',
+        hint: 'Free, if she gets up',
+        minutes: 0,
+        risky: true,
+        riskBase: 0.5,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
+        apply: (c) => {
+          if (!c.escalate({ extra: 2 })) c.log('She was up by two.', true);
+        },
+      },
+    ],
+  },
+
+  helper: {
+    id: 'helper',
+    title: 'A helper',
+    context: 'She wants to help',
+    headline: () => 'She wants to help.',
+    detail: () => 'She has pulled a chair over to the counter.',
+    deferrable: false,
+    external: true,
+    tasks: ['lunch', 'breakfastMade', 'bagChecked'],
+    chance: (s) => (s.childAwake && !s.childActivity ? [0, 0, 0, 0, 0.2, 0.35][s.householdMood] : 0),
+    responses: [
+      {
+        id: 'yes',
+        label: 'Yes, you can help',
+        hint: 'It will take longer. She will be very proud',
+        minutes: 0,
+        tags: [{ text: 'Mood ↑', tone: 'good' }, { text: 'Your job slows', tone: 'bad' }],
+        apply: (c) => {
+          c.addExtra(3);
+          c.mood(1);
+          c.log('She helped. It took longer. She is very proud.', true);
+        },
+      },
+      {
+        id: 'job',
+        label: 'Give her a job of her own',
+        hint: 'Point that energy somewhere useful',
+        minutes: 1,
+        tags: [{ text: 'Useful', tone: 'good' }],
+        apply: (c) => {
+          if (c.s.objectives.shoesFound.status !== 'done') {
+            c.completeTask('shoesFound');
+            c.log('"Find your shoes." She did, in under a minute.', true);
+          } else c.log('She carried her water bottle to the door. Mission accomplished.', true);
+        },
+      },
+      {
+        id: 'no',
+        label: 'Not now, but thank you',
+        hint: 'Free. She may deflate a little',
+        minutes: 0,
+        tags: [{ text: 'Mood may dip', tone: 'bad' }],
+        apply: (c) => {
+          if (c.roll() < 0.3) {
+            c.mood(-1);
+            c.log('Her face fell, just a little.', true);
+          } else c.log('She went off to find something else to do.', true);
+        },
+      },
+    ],
+  },
+
   wobble: {
     id: 'wobble',
     title: 'Wobble',
@@ -1517,7 +1615,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
 };
 
 /** Order matters: the first incident that hits for a task wins. */
-export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'cats', 'bug', 'joke', 'stuffyWash', 'phone', 'groupChat', 'doorbell'];
+export const ROLL_ORDER: IncidentId[] = ['flop', 'spoon', 'spill', 'socks', 'outfit', 'cats', 'bug', 'joke', 'stuffyWash', 'helper', 'phone', 'groupChat', 'doorbell'];
 export const COMPOUND_MINUTES = 8;
 
 // ---------------------------------------------------------------------------
@@ -1781,3 +1879,26 @@ export const PERKS: Record<PerkId, { name: string; note: string }> = {
 };
 
 export const MOOD_LABELS = ['Meltdown', 'Upset', 'Tense', 'Calm', 'Good', 'Bright'] as const;
+
+/**
+ * Every step of her mood counts, from Meltdown (0) to Bright (5): how fast she goes, how often
+ * things go wrong, how often a risky call backfires, and how early the house starts to fall apart.
+ */
+export const MOOD_EFFECTS: { speed: number; trouble: number; backfire: number; collapse: number; seen: string }[] = [
+  { speed: 0.75, trouble: 0.2, backfire: 0.2, collapse: 5, seen: 'On the floor' },
+  { speed: 0.85, trouble: 0.12, backfire: 0.12, collapse: 3, seen: 'Slow. Saying no' },
+  { speed: 0.95, trouble: 0.05, backfire: 0.05, collapse: 1, seen: 'Short answers' },
+  { speed: 1, trouble: 0, backfire: 0, collapse: 0, seen: 'Going along with it' },
+  { speed: 1.05, trouble: -0.05, backfire: -0.05, collapse: 0, seen: 'Chatty. Cooperative' },
+  { speed: 1.1, trouble: -0.1, backfire: -0.1, collapse: 0, seen: 'Singing. Helping' },
+];
+
+/** How she takes being sent to a job, by mood. Calm gets no comment. */
+export const MOOD_TAKES: string[][] = [
+  ['A scream into the carpet first.', 'She goes, the way a glacier goes.'],
+  ['"No." Then, eventually, yes.', 'She flops onto the floor first.', 'A long, theatrical sigh.'],
+  ['Short answers.', 'She goes, slowly.'],
+  [],
+  ['She goes, chatting the whole way.', '"Okay!"'],
+  ['She skips there.', 'Singing, a little off-key.', '"I can do it myself!"'],
+];

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEPARTURE_DEADLINE, NATURAL_WAKE, START_MINUTE } from './constants';
-import { collapseStart, createGame, currentIncident, offered, parentRate, reduce, results, shoesAtDoorMinutes } from './engine';
+import { childRate, collapseStart, createGame, currentIncident, escalationChance, offered, parentRate, reduce, results, shoesAtDoorMinutes } from './engine';
 import { INCIDENTS } from './content';
 import type { Action, EventId, GameState } from './types';
 
@@ -210,6 +210,8 @@ const INCIDENT_FALLBACK: Record<string, string> = {
   upset: 'hug',
   wrongBreakfast: 'remake',
   hairdo: 'down',
+  flop: 'scoop',
+  helper: 'no',
   joke: 'interrupt',
   closedDoor: 'sorry',
   cats: 'let',
@@ -352,6 +354,31 @@ describe('follow-through', () => {
     expect(braided.hairStyle).toBe('braids');
     const down = seedWhere((g) => g.hairWant === 'down');
     expect(currentIncident(run(down, { type: 'wakeNow' }, { type: 'assignChild', task: 'hair' }))?.id).not.toBe('hairdo');
+  });
+
+  it('every step of her mood counts', () => {
+    const s = createGame(7, { mood: 3 });
+    const at = (mood: number) => ({ ...s, householdMood: mood } as GameState);
+    for (let m = 1; m <= 5; m++) {
+      expect(childRate(at(m))).toBeGreaterThan(childRate(at(m - 1)));
+      expect(escalationChance(at(m))).toBeLessThan(escalationChance(at(m - 1)));
+      expect(collapseStart(at(m))).toBeGreaterThanOrEqual(collapseStart(at(m - 1)));
+    }
+  });
+
+  it('she only ends up on the floor when her mood is low', () => {
+    for (let seed = 1; seed < 300; seed++) {
+      const s = createGame(seed, { mood: 3 });
+      const g = run({ ...s, householdMood: 3 } as GameState, { type: 'wakeNow' }, { type: 'assignChild', task: 'dressed' });
+      // Waking her early can cost a step of mood; only check mornings that stayed calm.
+      if (g.householdMood >= 3) expect(g.objectives.dressed.pending?.incidentId).not.toBe('flop');
+    }
+    let low = 0;
+    for (let seed = 1; seed < 300; seed++) {
+      const g = run(createGame(seed, { mood: 1 }), { type: 'wakeNow' }, { type: 'assignChild', task: 'dressed' });
+      if (g.objectives.dressed.pending?.incidentId === 'flop') low++;
+    }
+    expect(low).toBeGreaterThan(20);
   });
 
   it('a joke goes all the way through, line by line, and ends with a laugh', () => {

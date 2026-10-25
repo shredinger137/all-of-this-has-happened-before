@@ -199,6 +199,10 @@ function respondStrong(s: GameState): Action {
       return pick(ok('listen') ? 'listen' : 'laugh');
     case 'closedDoor':
       return pick('joke');
+    case 'flop':
+      return pick(tight ? 'scoop' : 'sit');
+    case 'helper':
+      return pick(isDone(s, 'shoesFound') && !tight ? 'yes' : 'job');
   }
 }
 

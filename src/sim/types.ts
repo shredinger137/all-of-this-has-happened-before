@@ -60,6 +60,8 @@ export type IncidentId =
   | 'upset'
   | 'wrongBreakfast'
   | 'hairdo'
+  | 'flop'
+  | 'helper'
   | 'joke'
   | 'closedDoor'
   | 'cats';

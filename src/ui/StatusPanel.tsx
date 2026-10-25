@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CONDITIONS, EVENTS, MOOD_LABELS, TASKS, TENDENCIES } from '../sim/content';
+import { CONDITIONS, EVENTS, MOOD_EFFECTS, MOOD_LABELS, TASKS, TENDENCIES } from '../sim/content';
 import { formatClock } from '../sim/constants';
 import { childRate, childStalled, isGroggy, parentRate, requirements, taskDuration } from '../sim/engine';
 import type { GameState, TaskId } from '../sim/types';
@@ -13,6 +13,15 @@ export function MoodBar({ mood }: { mood: number }) {
       ))}
     </div>
   );
+}
+
+/** What her mood is doing to the morning, for the tooltip. */
+function moodEffect(mood: number): string {
+  const e = MOOD_EFFECTS[mood];
+  if (e.speed === 1) return 'No effect either way.';
+  const pct = Math.round((e.speed - 1) * 100);
+  const trouble = Math.round(e.trouble * 100);
+  return `She works ${Math.abs(pct)}% ${pct > 0 ? 'faster' : 'slower'}; problems ${trouble > 0 ? 'more' : 'less'} likely (${trouble > 0 ? '+' : ''}${trouble} pts).`;
 }
 
 const LOOSE_ENDS = new Set(['noSocks', 'wellies', 'stainedShirt', 'messyKitchen', 'smellyKit', 'stuffyDamp', 'mood']);
@@ -120,7 +129,9 @@ export function StatusPanel({ s, head }: { s: GameState; head?: ReactNode }) {
         </div>
         <div className="row" style={{ marginBottom: 5 }}>
           <span className="k">Household mood</span>
-          <span className={`v ${mood <= 1 ? 'red' : mood === 2 ? 'amber' : 'green'}`}>{MOOD_LABELS[mood]}</span>
+          <span className={`v ${mood <= 1 ? 'red' : mood === 2 ? 'amber' : 'green'}`} title={moodEffect(mood)}>
+            {MOOD_LABELS[mood]} · {MOOD_EFFECTS[mood].seen}
+          </span>
         </div>
         <MoodBar mood={mood} />
         {((s.caffeinatedUntil ?? 0) > s.minute || s.coffeeBuffer) && (
