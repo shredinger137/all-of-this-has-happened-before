@@ -126,7 +126,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     hint: (s) => (done(s, 'breakfastMade') ? 'Breakfast is ready' : 'Nothing made yet. Cereal will be slower'),
     scored: true,
     missing: 'Breakfast',
-    duration: (s) => (done(s, 'breakfastMade') ? 20 : 24),
+    duration: (s) => (done(s, 'breakfastMade') ? 17 : 21),
   },
   dressed: {
     id: 'dressed',

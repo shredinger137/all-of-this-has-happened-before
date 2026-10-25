@@ -96,8 +96,8 @@ policy (`--only strong`, `--severe`, `--slices`, `--trace <seed>`); `npm run bal
 
 | Policy | median spare | on time | close call (0–3) | >5 spare | nothing left behind | serious misses |
 | --- | --- | --- | --- | --- | --- | --- |
-| strong, single mornings | −2 min | 34% | 32% | 0% | 0% | 0.11 / morning |
-| strong, full weeks | −1 min | 35% | 32% | 0% | 0% | 0.18 / morning |
-| mediocre, full weeks | −9 min | 0% | 0% | 0% | 0% | 0.56 / morning |
+| strong, single mornings | −1 min | 41% | 38% | 0% | 0% | 0.10 / morning |
+| strong, full weeks | −1 min | 40% | 34% | 1% | 0% | 0.18 / morning |
+| mediocre, full weeks | −9 min | 0% | 0% | 0% | 1% | 0.59 / morning |
 
 Rain days are hardest (on time ~21%).
