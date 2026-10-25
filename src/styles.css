@@ -609,6 +609,43 @@ button { font: inherit; color: inherit; }
   .dock-key { min-width: 0; width: 96px; padding: 12px 8px; font-size: 9.5px; letter-spacing: 0.1em; line-height: 1.3; }
   .dock-keys .dock-key { width: 84px; }
   .report-doc { --c: 16px; padding: 20px 16px 22px; }
+  /* Phone pass: everything above the work area is compressed so the choices get the screen. */
+  .site-top { margin: 0 4px 4px; gap: 8px; }
+  .brand { font-size: 13px; letter-spacing: 0.24em; }
+  .site-top .tool { padding: 6px 8px; font-size: 8px; letter-spacing: 0.1em; }
+  .head { padding: 7px 10px 6px; gap: 8px; align-items: center; }
+  .head .small { display: none; }
+  .head-eyebrow { font-size: 8px; }
+  .head h1 { font-size: 13.5px; margin: 3px 0 0; overflow-wrap: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .head-title { min-width: 0; }
+  .timebox { padding: 5px 8px 6px; }
+  .time { font-size: 18px; }
+  .segments { margin-top: 4px; }
+  .segments i { width: 3px; height: 4px; }
+  .plot { padding: 0 6px 6px; margin: 0 2px 4px; }
+  .plot-tabs { display: none; }
+  .plot-grid { padding: 4px 6px 5px 4px; row-gap: 3px; grid-template-columns: 28px 1fr; }
+  .track { height: 10px; }
+  .track.axis { height: 12px; }
+  .workarea > .tabs { padding: 0 4px; gap: 2px; }
+  .workarea > .tabs .tab { min-width: 0; padding: 7px 4px 8px; font-size: 8px; letter-spacing: 0.06em; clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 100%, 0 100%); white-space: nowrap; }
+  .workarea > .tabs .tab { flex: 1 1 auto; }
+  .tab-count { margin-left: 3px; }
+  .sectionhead .sectitle { font-size: 9.5px; letter-spacing: 0.1em; }
+  .sectionhead .status { font-size: 8px; letter-spacing: 0.08em; text-align: right; }
+  .summary { font-size: 12.5px; line-height: 1.4; margin-bottom: 8px; }
+  .btnline { min-height: 44px; padding: 7px 10px; }
+  .btnline .label { font-size: 10px; }
+  .btnline .sub { font-size: 11.5px; margin-top: 2px; }
+  .dock { padding: 5px 6px 5px 8px; gap: 4px 8px; }
+  .dock .lamp:not(.on) { display: none; }
+  .dock .lamps:not(:has(.lamp.on)) { display: none; }
+  .dock .lamps { padding-bottom: 4px; }
+  .dock-key { padding: 9px 6px; width: 84px; }
+  /* The status bar keeps the latest line and the leave-now line; what's not done lives on the Checklist tab. */
+  .dock-text .warning { display: none; }
+  .dock-text > .dock-log { -webkit-line-clamp: 1; }
+  .dock-text .projection { font-size: 10.5px; }
   .report-title { flex-direction: column-reverse; gap: 8px; }
   .report-title h2 { font-size: 18px; }
   .stamp { font-size: 14px; align-self: flex-end; }

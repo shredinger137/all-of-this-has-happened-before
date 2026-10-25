@@ -87,7 +87,8 @@ export function GameScreen({ game, seed, act, run, onNext, onRetry, onReplay }: 
   }, [game.childAwake]);
   // Switching layouts: a phone has no separate actions column, a wide screen has no actions tab.
   useEffect(() => {
-    setTab((t) => (narrow ? t : t === 'actions' ? 'intel' : t));
+    // On a phone the choices come first; on a wide screen they always have their own column.
+    setTab((t) => (narrow ? 'actions' : t === 'actions' ? 'intel' : t));
   }, [narrow]);
 
   const r = game.ended ? results(game) : undefined;
