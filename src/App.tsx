@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GameScreen } from './ui/GameScreen';
+import { Intro } from './ui/Intro';
 import { RunScreen } from './ui/RunScreen';
 import * as music from './ui/music';
 import * as sound from './ui/sound';
@@ -78,6 +79,7 @@ export default function App() {
   const [muted, setMuted] = useState(sound.isMuted());
   const [musicOn, setMusicOn] = useState(music.isEnabled());
   const [confirmReset, setConfirmReset] = useState(false);
+  const [intro, setIntro] = useState(true);
   const prev = useRef(game);
 
   useEffect(() => {
@@ -175,6 +177,7 @@ export default function App() {
 
   return (
     <div className="site">
+      {intro && <Intro onDone={() => setIntro(false)} />}
       <div className="site-top">
         <div className="brand">
           C·I·C <span>Child Information Center</span>
