@@ -1,6 +1,6 @@
 # All of This Has Happened Before
 
-*...and all of it will happen again.* The console is the C·I·C, the Child Information Center.
+The console is the C·I·C, the Child Information Center.
 (Working titles: *School Run*, *Tuesday*, *C·I·C*.)
 
 **Play:** https://shredinger137.github.io/all-of-this-has-happened-before/

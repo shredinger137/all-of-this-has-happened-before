@@ -388,7 +388,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     detail: () => 'Breakfast has stopped.',
     deferrable: false,
     tasks: ['breakfastEaten'],
-    chance: (s) => (s.perks.includes('spoons') ? 0 : 0.3 + picky(s)),
+    // Only breakfasts eaten with a spoon.
+    chance: (s) => (s.perks.includes('spoons') || !['cereal', 'oatmeal'].includes(eating(s)) ? 0 : 0.3 + picky(s)),
     responses: [
       {
         id: 'blue',
@@ -448,8 +449,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'spill',
     title: 'Spilled breakfast',
     context: 'While eating breakfast',
-    headline: (s) => (done(s, 'dressed') ? 'Cereal everywhere. Including her top.' : 'Her cereal is on the floor.'),
-    detail: () => 'Most of the bowl, and a fair amount of milk.',
+    headline: (s) => (done(s, 'dressed') ? SPILLS[eating(s)].top : SPILLS[eating(s)].floor),
+    detail: (s) => SPILLS[eating(s)].detail,
     deferrable: false,
     tasks: ['breakfastEaten'],
     chance: () => 0.2,
@@ -463,7 +464,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         both: true,
         apply: (c) => {
           c.addExtra(2);
-          c.log(done(c.s, 'dressed') ? 'Cleaned up and changed her top.' : 'Cleaned up and poured another bowl.', true);
+          c.log(done(c.s, 'dressed') ? 'Cleaned up and changed her top.' : `Cleaned up and ${SPILLS[eating(c.s)].again}.`, true);
         },
       },
       {
@@ -1501,6 +1502,39 @@ export const BREAKFASTS: Record<Breakfast, { name: string; minutes: number }> = 
   pancakes: { name: 'Pancakes', minutes: 12 },
 };
 export const BREAKFAST_ORDER: Breakfast[] = ['cereal', 'toast', 'oatmeal', 'pancakes'];
+
+/** What is actually on her plate: what you made, or cereal if you made nothing. */
+export function eating(s: GameState): Breakfast {
+  return done(s, 'breakfastMade') && s.breakfastChoice ? s.breakfastChoice : 'cereal';
+}
+
+/** How each breakfast ends up on the floor. */
+const SPILLS: Record<Breakfast, { floor: string; top: string; detail: string; again: string }> = {
+  cereal: {
+    floor: 'Her cereal is on the floor.',
+    top: 'Cereal and milk everywhere. Including her top.',
+    detail: 'Most of the bowl, and a fair amount of milk.',
+    again: 'poured another bowl',
+  },
+  toast: {
+    floor: 'Her toast is on the floor. Jam side down.',
+    top: 'Jam everywhere. Including her top.',
+    detail: 'Of course it landed jam side down.',
+    again: 'made another slice',
+  },
+  oatmeal: {
+    floor: 'Her oatmeal is on the floor.',
+    top: 'Oatmeal everywhere. Including her top.',
+    detail: 'Upside down, which is somehow worse.',
+    again: 'scraped together a second bowl',
+  },
+  pancakes: {
+    floor: 'Her pancakes are on the floor.',
+    top: 'Syrup everywhere. Including her top.',
+    detail: 'Syrup on the chair, the floor, and the cat.',
+    again: 'saved what was left of the stack',
+  },
+};
 export const BREAKFAST_CLUE_CHANCE = 0.6; // she said something about it last night
 export const BREAKFAST_CLUE_RIGHT = 0.75; // and still wants it this morning
 export const BRAIDS_CHANCE = 0.35;

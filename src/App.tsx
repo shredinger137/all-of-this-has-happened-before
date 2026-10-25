@@ -151,12 +151,10 @@ export default function App() {
           C·I·C <span>Child Information Center</span>
         </div>
         <div className="caption">
-          {drill !== undefined ? (
+          {drill !== undefined && (
             <>
-              Drill · seed {drill} · share the URL to replay this morning · <a href="./">back to the week</a>
+              Drill · seed {drill} · <a href="./">back to the week</a>
             </>
-          ) : (
-            'Your week is saved in this browser'
           )}
         </div>
         {drill === undefined && (
