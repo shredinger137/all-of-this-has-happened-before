@@ -15,8 +15,8 @@ export function Departure({ s, r }: { s: GameState; r: Results }) {
   const gate = r.misses.some((m) => m.id === 'gate');
   const at = (step: number) => `${(0.4 + step * 0.7).toFixed(1)}s`;
   const lines: { t?: string; text: string; tone?: string }[] = [
-    { t: formatClock(r.departed), text: 'Door shut. Keys. Out.' },
-    { text: r.completed.length ? `With you: ${r.completed.join(', ').toLowerCase()}.` : 'With you: her. That is what counts.' },
+    { t: formatClock(r.departed), text: 'Out the door.' },
+    { text: r.completed.length ? `With you: ${r.completed.join(', ').toLowerCase()}.` : 'With you: just her.' },
     behind.length ? { text: `Left behind: ${behind.slice(0, 6).join(', ')}${behind.length > 6 ? '…' : '.'}`, tone: 'amber' } : { text: 'Left behind: nothing.', tone: 'green' },
   ];
   if (s.wave) {

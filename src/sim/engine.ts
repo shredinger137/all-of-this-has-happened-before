@@ -632,7 +632,7 @@ function tick(s: GameState, engaged: { parent: boolean; child: boolean; door?: b
       completeTask(s, ca);
       log(s, `${TASKS[ca].label}.`);
       s.focus = (s.focus ?? 0) + 1;
-      if (s.focus === 2) log(s, 'Two jobs in a row, no trouble. That never lasts.');
+      if (s.focus === 2) log(s, 'She has been on task for a while.');
       if (ca === 'breakfastEaten') {
         s.bathroomAt = s.minute + BATHROOM_AFTER_BREAKFAST[0] + Math.round(rand(s) * (BATHROOM_AFTER_BREAKFAST[1] - BATHROOM_AFTER_BREAKFAST[0]));
         s.hungryAt = s.minute + HUNGRY_AFTER_BREAKFAST;
@@ -771,7 +771,7 @@ function landWave(s: GameState) {
   let pool = ENDGAME_POOL.filter((id) => !s.firedIncidents.includes(id) && (INCIDENTS[id].endgame?.(s) ?? true));
   if (!pool.length && INCIDENTS.wobble.endgame!(s)) pool = ['wobble'];
   if (!pool.length) {
-    log(s, 'The crisis passes. Nothing left for it to undo.', true);
+    log(s, 'The crisis passed without doing any damage.', true);
     return;
   }
   for (let i = 0; i < wave.size && pool.length; i++) {
@@ -792,7 +792,7 @@ function shoesAtTheDoor(s: GameState) {
   }
   const o = s.objectives.shoesOn;
   const minutes = Math.max(1, Math.ceil((taskDuration(s, 'shoesOn') - o.progress) / childRate({ ...s, parentActivity: 'help' })));
-  log(s, 'Shoes on at the door. Every second of it.', true);
+  log(s, 'Shoes on at the door.', true);
   spend(s, minutes, true, true);
   completeTask(s, 'shoesOn');
 }

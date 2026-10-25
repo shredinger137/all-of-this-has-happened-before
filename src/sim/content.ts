@@ -145,7 +145,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     label: 'Teeth brushed',
     action: 'Brush teeth',
     doing: 'Brushing teeth',
-    hint: (s) => (done(s, 'breakfastEaten') ? 'She can do it herself. Eventually' : 'Better after breakfast'),
+    hint: (s) => (done(s, 'breakfastEaten') ? 'She can do it herself' : 'Better after breakfast'),
     scored: true,
     missing: 'Brushed teeth',
     duration: () => 4,
@@ -365,7 +365,7 @@ export type IncidentDef = {
   title: string; // short label for logs and deferred list
   context: string; // "While getting dressed"
   headline: (s: GameState) => string;
-  detail: (s: GameState) => string;
+  detail?: (s: GameState) => string | undefined; // a second line, only when it adds something
   deferrable: boolean;
   tasks?: TaskId[]; // tasks this can interrupt (rolled when the task starts)
   chance?: (s: GameState) => number; // base chance before global modifiers
@@ -384,7 +384,6 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Wrong spoon',
     context: 'While eating breakfast',
     headline: () => 'She wanted the blue spoon.',
-    detail: () => 'Breakfast has stopped.',
     deferrable: false,
     tasks: ['breakfastEaten'],
     // Only breakfasts eaten with a spoon.
@@ -397,7 +396,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         minutes: 2,
         tags: [{ text: 'Breakfast resumes', tone: 'neutral' }],
         apply: (c) => {
-          if (c.roll() < 0.7) c.log('Breakfast resumed with the blue spoon.', true);
+          if (c.roll() < 0.7) c.log('She went back to eating with the blue spoon.', true);
           else {
             c.addExtra(2);
             c.log('The blue spoon was in the dishwasher. Washed it.', true);
@@ -414,8 +413,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           if (c.roll() < 0.7) {
             c.mood(1);
-            c.log('She chose the green spoon. Very pleased about it.', true);
-          } else c.log('She chose a spoon. Breakfast resumed.', true);
+            c.log('She picked the green spoon and was happy with it.', true);
+          } else c.log('She picked one and kept eating.', true);
         },
       },
       {
@@ -438,7 +437,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           c.skipTask('breakfastEaten');
           c.flag('hungry');
-          c.log('Breakfast abandoned over a spoon.', true);
+          c.log('She stopped eating.', true);
         },
       },
     ],
@@ -449,7 +448,6 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Spilled breakfast',
     context: 'While eating breakfast',
     headline: (s) => (done(s, 'dressed') ? SPILLS[eating(s)].top : SPILLS[eating(s)].floor),
-    detail: (s) => SPILLS[eating(s)].detail,
     deferrable: false,
     tasks: ['breakfastEaten'],
     chance: () => 0.2,
@@ -498,9 +496,9 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'socks',
     title: 'Socks',
     context: 'While getting dressed',
-    worse: 'The socks have become a principle. She is sitting on the stairs.',
+    worse: "She still won't wear the socks, and now she's sitting on the stairs.",
     headline: () => "She doesn't want those socks.",
-    detail: () => 'She says they feel wrong. Getting dressed has stopped.',
+    detail: () => 'She says they feel wrong.',
     deferrable: true,
     tasks: ['dressed'],
     chance: (s) => (done(s, 'clothesOut') ? 0.2 : 0.4) + picky(s),
@@ -514,7 +512,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         both: true,
         apply: (c) => {
           if (c.roll() < 0.7) c.mood(1);
-          c.log('Socks dispute resolved by choice.', true);
+          c.log('She picked another pair.', true);
         },
       },
       {
@@ -524,10 +522,10 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         minutes: 3,
         tags: [{ text: 'Better if clothes laid out', tone: 'neutral' }],
         apply: (c) => {
-          if (done(c.s, 'clothesOut') || c.roll() < 0.6) c.log('Found the soft socks. Accepted.', true);
+          if (done(c.s, 'clothesOut') || c.roll() < 0.6) c.log('She took the soft socks.', true);
           else {
             c.addExtra(3);
-            c.log('The soft socks were in the wash. She wore these, eventually.', true);
+            c.log('The soft socks were in the wash. She wore these in the end.', true);
           }
         },
       },
@@ -539,7 +537,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         tags: [{ text: 'May upset her', tone: 'bad' }],
         risky: true,
         apply: (c) => {
-          if (!c.escalate({ extra: 3 })) c.log('She wore the socks. Under protest.', true);
+          if (!c.escalate({ extra: 3 })) c.log('She wore them, complaining.', true);
         },
       },
       {
@@ -550,7 +548,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         tags: [{ text: 'No socks', tone: 'bad' }, { text: 'Shoes slower', tone: 'bad' }],
         apply: (c) => {
           c.flag('noSocks');
-          c.log('Socks postponed indefinitely.', true);
+          c.log('No socks for now.', true);
         },
       },
     ],
@@ -614,7 +612,6 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'The cats',
     context: 'Distracted',
     headline: () => 'She is playing with the cats.',
-    detail: () => 'Both of them. On the floor. Very involved.',
     deferrable: false,
     tasks: ['breakfastEaten', 'dressed', 'teeth', 'face', 'hair', 'shoesOn', 'coat'],
     chance: (s) => (s.childTendency === 'dawdler' ? 0.3 : 0.15),
@@ -623,13 +620,13 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       {
         id: 'together',
         label: 'Two minutes of cats, together',
-        hint: 'Then back to it. Usually',
+        hint: 'Then back to it',
         minutes: 2,
         both: true,
         tags: [{ text: 'Mood ↑', tone: 'good' }],
         apply: (c) => {
           c.mood(1);
-          c.log('Two minutes of cats. Everyone feels better, including the cats.', true);
+          c.log('Two minutes with the cats, then back to it.', true);
         },
       },
       {
@@ -641,7 +638,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         riskBase: 0.4,
         tags: [{ text: 'May upset her', tone: 'bad' }],
         apply: (c) => {
-          if (!c.escalate({ extra: 1 })) c.log('Cats evicted. She waved them goodbye through the glass.', true);
+          if (!c.escalate({ extra: 1 })) c.log('You put the cats out and shut the door.', true);
         },
       },
       {
@@ -663,7 +660,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'A bug',
     context: 'Distracted',
     headline: () => "She's found a fascinating bug.",
-    detail: () => "It's on the windowsill. She would like you to see it.",
+    detail: () => 'She wants you to come and see it.',
     deferrable: false,
     tasks: ['breakfastEaten', 'dressed', 'teeth', 'hair', 'shoesOn'],
     chance: (s) => (s.childTendency === 'dawdler' ? 0.3 : 0.1),
@@ -677,7 +674,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         both: true,
         apply: (c) => {
           c.mood(1);
-          c.log('Spent three minutes admiring a beetle.', true);
+          c.log('You looked at the bug together.', true);
         },
       },
       {
@@ -690,7 +687,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           if (!c.escalate({ extra: 2 })) {
             c.flag('promisedBug');
-            c.log('Bug viewing postponed until after school.', true);
+            c.log('You promised to look at it after school.', true);
           }
         },
       },
@@ -702,7 +699,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         tags: [{ text: 'Her task slows', tone: 'bad' }],
         apply: (c) => {
           c.addExtra(4);
-          c.log('She watched the bug for some time.', true);
+          c.log('She watched the bug for a while.', true);
         },
       },
     ],
@@ -712,9 +709,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'shoesMissing',
     title: 'Missing shoes',
     context: 'Putting on shoes',
-    worse: 'Still no shoes. She has started looking in the fridge.',
+    worse: 'Still no shoes.',
     headline: () => "Her shoes aren't by the door.",
-    detail: () => 'Nobody knows where they are.',
     deferrable: true,
     responses: [
       {
@@ -743,7 +739,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
           if (!c.escalate({ extra: 2 })) {
             const d = c.s.day;
             c.log(
-              d.weatherKnown && d.weather === 'rain' ? 'Rain boots on. For once, the right call.' : d.weatherKnown ? 'Rain boots on. It is not raining.' : 'Rain boots on. Maybe it will rain.',
+              d.weatherKnown && d.weather === 'rain' ? "Rain boots on. It's raining, so that works." : d.weatherKnown ? 'Rain boots on, on a dry day.' : 'Rain boots on.',
               true,
             );
           }
@@ -773,8 +769,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
           c.flag('askedBook');
           if (c.roll() < 0.5) {
             c.flag('bookFound');
-            c.log('Library book found under her bed. She knew all along.', true);
-          } else c.keepOpen("She doesn't remember. It was \"somewhere\".");
+            c.log('She remembered: under her bed.', true);
+          } else c.keepOpen("She doesn't remember where it is.");
         },
       },
       {
@@ -811,7 +807,6 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Bathroom',
     context: 'Crisis',
     headline: () => 'She has to go to the bathroom. Now.',
-    detail: () => 'Of course she does.',
     deferrable: false,
     responses: [
       {
@@ -820,7 +815,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         hint: 'Reliable',
         minutes: 4,
         tags: [{ text: 'Reliable', tone: 'neutral' }],
-        apply: (c) => c.log('A last-minute bathroom trip.', true),
+        apply: (c) => c.log('Bathroom trip.', true),
       },
       {
         id: 'hurry',
@@ -831,7 +826,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         riskBase: 0.35,
         risky: true,
         apply: (c) => {
-          if (!c.escalate({ extra: 0 })) c.log('A very quick bathroom trip.', true);
+          if (!c.escalate({ extra: 0 })) c.log('A quick bathroom trip.', true);
         },
       },
     ],
@@ -842,7 +837,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Stuffy in the wash',
     context: 'Choosing a stuffy',
     headline: () => 'Bun-Bun is in the washing machine.',
-    detail: () => 'Mid-cycle. She will accept no substitute. Probably.',
+    detail: () => "It's mid-cycle. She wants Bun-Bun.",
     deferrable: false,
     tasks: ['stuffy'],
     chance: (s) => 0.35 + picky(s),
@@ -857,7 +852,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
           c.flag('stuffyDamp');
           c.mood(1);
           c.completeTask('stuffy');
-          c.log('Bun-Bun rescued from the drum. Slightly damp.', true);
+          c.log('You got Bun-Bun out. Damp.', true);
         },
       },
       {
@@ -870,7 +865,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         risky: true,
         riskBase: 0.5,
         apply: (c) => {
-          if (!c.escalate({ extra: 2 })) c.log('She took the giraffe. Bun-Bun was not mentioned again.', true);
+          if (!c.escalate({ extra: 2 })) c.log('She took the giraffe.', true);
         },
       },
       {
@@ -893,8 +888,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Work call',
     context: 'While you were busy',
     headline: () => "Your phone is ringing. It's work.",
-    worse: "Work again. Twice in ten minutes means something is on fire.",
-    detail: () => 'Nobody calls this early unless it matters. Or unless they want to "just quickly" ask something.',
+    worse: 'Work is calling again.',
     deferrable: false,
     external: true,
     tasks: ['lunch', 'breakfastMade', 'parentReady', 'shoesFound', 'clothesOut', 'bagChecked', 'project', 'email'],
@@ -903,14 +897,14 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       {
         id: 'quick',
         label: 'Answer, keep it short',
-        hint: 'It is never just a quick question',
+        hint: 'Might run long',
         minutes: 1,
         tags: [{ text: '40% runs long', tone: 'bad' }],
         apply: (c) => {
           if (c.roll() < 0.4) {
             c.spend(3);
-            c.log('Short, it was not. A spreadsheet, read aloud.', true);
-          } else c.log('Kept it to a minute. They will send an email instead.', true);
+            c.log('It ran long.', true);
+          } else c.log('You kept it to a minute.', true);
         },
       },
       {
@@ -922,8 +916,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           if (c.roll() < 0.3) {
             c.mood(1);
-            c.log('Your 09:00 is canceled. You stop rushing a little, and she can tell.', true);
-          } else c.log('It could have been an email.', true);
+            c.log('Your 09:00 is canceled. You relax a little, and so does she.', true);
+          } else c.log('Nothing urgent.', true);
         },
       },
       {
@@ -933,10 +927,10 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         minutes: 0,
         tags: [{ text: 'They call back', tone: 'bad' }],
         apply: (c) => {
-          if (c.incident.worse) c.log('You let it ring again. There will be a thread waiting for you.', true);
+          if (c.incident.worse) c.log('You let it ring again.', true);
           else {
             c.later();
-            c.log('You let it ring. A voicemail, and a text: "Call me when you can."', true);
+            c.log('You let it ring. They left a voicemail.', true);
           }
         },
       },
@@ -948,8 +942,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Group chat',
     context: 'While you were busy',
     headline: () => 'The class parents\' group chat is going off.',
-    detail: (s) =>
-      s.day.eventKnown ? 'Forty messages. Someone has lost a water bottle.' : 'Forty messages. Somewhere in there, someone will have said what today is.',
+    detail: (s) => (s.day.eventKnown ? undefined : "Someone in there might have said what's on today."),
     deferrable: false,
     external: true,
     tasks: ['lunch', 'breakfastMade', 'parentReady', 'clothesOut', 'bagChecked', 'tea'],
@@ -958,13 +951,13 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       {
         id: 'read',
         label: 'Scroll back through it',
-        hint: 'Slow, but someone always knows',
+        hint: "Might tell you what's on today",
         minutes: 3,
         tags: [{ text: 'Might settle what today is', tone: 'good' }],
         apply: (c) => {
-          if (c.s.day.eventKnown) c.log('Nothing you did not know. A lost water bottle, and a lot of thumbs.', true);
+          if (c.s.day.eventKnown) c.log('Nothing new.', true);
           else if (c.roll() < 0.7) c.learnEvent('Group chat');
-          else c.log('Forty messages about a lost water bottle. Nothing about today.', true);
+          else c.log('Nothing about today.', true);
         },
       },
       {
@@ -973,7 +966,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         hint: 'Free, and you learn nothing',
         minutes: 0,
         tags: [{ text: 'Free', tone: 'neutral' }],
-        apply: (c) => c.log('Muted. Whatever they know, they know without you.', true),
+        apply: (c) => c.log('Muted.', true),
       },
     ],
   },
@@ -992,10 +985,10 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       {
         id: 'sign',
         label: 'Sign for it',
-        hint: 'Quick, if the delivery driver is',
+        hint: 'Quick',
         minutes: 2,
         tags: [{ text: 'Reliable', tone: 'neutral' }],
-        apply: (c) => c.log('Signed for a package. It was for the neighbors.', true),
+        apply: (c) => c.log('You signed for a package.', true),
       },
       {
         id: 'ignore',
@@ -1007,7 +1000,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           if (c.roll() < 0.5) {
             c.spend(2);
-            c.log(done(c.s, 'dressed') ? 'She answered the door. The delivery driver got the whole story about the cats.' : 'She answered the door. In her pajamas. The delivery driver was charmed.', true);
+            c.log(done(c.s, 'dressed') ? 'She got to the door first.' : 'She answered the door in her pajamas.', true);
           } else c.log('The driver left a note.', true);
         },
       },
@@ -1020,7 +1013,6 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Shoes off',
     context: 'Crisis',
     headline: () => 'She has taken her shoes off.',
-    detail: () => 'Both of them. She is wiggling her toes at you.',
     deferrable: false,
     endgame: (s) => done(s, 'shoesOn'),
     responses: [
@@ -1031,7 +1023,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         minutes: 3,
         both: true,
         tags: [{ text: 'Shoes stay on', tone: 'neutral' }],
-        apply: (c) => c.log('Shoes back on. Laces double-knotted.', true),
+        apply: (c) => c.log('Shoes back on.', true),
       },
       {
         id: 'leave',
@@ -1051,8 +1043,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'coatOff',
     title: 'Coat off',
     context: 'Crisis',
-    headline: (s) => (s.day.weather === 'cold' ? 'The coat is off. Too hot, apparently.' : 'The raincoat is off. It is "crunchy".'),
-    detail: () => 'It is on the hallway floor.',
+    headline: (s) => (s.day.weather === 'cold' ? "She took her coat off. She says she's too hot." : 'She took her raincoat off.'),
     deferrable: false,
     endgame: (s) => done(s, 'coat'),
     responses: [
@@ -1066,7 +1057,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         riskBase: 0.3,
         tags: [{ text: 'May upset her', tone: 'bad' }],
         apply: (c) => {
-          if (!c.escalate({ extra: 0 })) c.log('Coat back on. Zipped all the way up.', true);
+          if (!c.escalate({ extra: 0 })) c.log('Coat back on.', true);
         },
       },
       {
@@ -1077,7 +1068,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         tags: [{ text: 'Coat undone', tone: 'bad' }],
         apply: (c) => {
           c.reopen('coat');
-          c.log('The coat stays on the floor.', true);
+          c.log('The coat stays off.', true);
         },
       },
     ],
@@ -1087,8 +1078,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'hairMess',
     title: 'Hair',
     context: 'Crisis',
-    headline: (s) => (done(s, 'coat') ? 'Hood on, hood off. Eleven times.' : HAIR[s.hairStyle ?? 'down'].mess),
-    detail: (s) => (done(s, 'coat') ? 'The hair is gone.' : 'You did that hair ten minutes ago.'),
+    headline: (s) => (done(s, 'coat') ? 'Her hood has messed up her hair.' : HAIR[s.hairStyle ?? 'down'].mess),
     deferrable: false,
     endgame: (s) => done(s, 'hair'),
     responses: [
@@ -1100,7 +1090,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         minutesFor: (s) => HAIR[s.hairStyle ?? 'down'].redo,
         both: true,
         tags: [{ text: 'Hair fixed', tone: 'neutral' }],
-        apply: (c) => c.log(done(c.s, 'coat') ? 'Hair redone. Hood confiscated.' : 'Hair redone. Hands off it now.', true),
+        apply: (c) => c.log('Hair redone.', true),
       },
       {
         id: 'leave',
@@ -1121,7 +1111,6 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Juice',
     context: 'Crisis',
     headline: () => 'Juice, all down her top.',
-    detail: () => 'Apple. It is spreading.',
     deferrable: false,
     endgame: (s) => done(s, 'dressed') && !has(s, 'stainedShirt'),
     responses: [
@@ -1153,7 +1142,6 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Hungry',
     context: 'Crisis',
     headline: (s) => (done(s, 'breakfastEaten') ? 'She is hungry again. Very hungry. Now.' : 'She is starving. She did not really eat breakfast.'),
-    detail: () => 'She is standing in front of the open fridge.',
     deferrable: false,
     endgame: () => true,
     responses: [
@@ -1163,7 +1151,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         hint: 'Quick',
         minutes: 1,
         tags: [{ text: 'Handled', tone: 'neutral' }],
-        apply: (c) => c.log('Banana in hand. Crisis averted.', true),
+        apply: (c) => c.log('She took a banana for the car.', true),
       },
       {
         id: 'no',
@@ -1174,7 +1162,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         riskBase: 0.5,
         tags: [{ text: 'May upset her', tone: 'bad' }],
         apply: (c) => {
-          if (!c.escalate({ extra: 0 })) c.log('She accepted that. Surprisingly.', true);
+          if (!c.escalate({ extra: 0 })) c.log('She let it go.', true);
         },
       },
     ],
@@ -1185,7 +1173,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Bag',
     context: 'Crisis',
     headline: () => 'Half her backpack is on the hallway floor.',
-    detail: () => 'She wanted to show you a drawing. It is at the bottom.',
+    detail: () => 'She was looking for a drawing to show you.',
     deferrable: false,
     endgame: (s) => done(s, 'bagChecked'),
     responses: [
@@ -1195,7 +1183,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         hint: 'Everything back where it was',
         minutes: 3,
         tags: [{ text: 'Bag checked', tone: 'neutral' }],
-        apply: (c) => c.log('Bag repacked. Drawing admired.', true),
+        apply: (c) => c.log('You repacked the bag and looked at the drawing.', true),
       },
       {
         id: 'scoop',
@@ -1205,7 +1193,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         tags: [{ text: 'Bag unchecked', tone: 'bad' }],
         apply: (c) => {
           c.reopen('bagChecked');
-          c.log('Everything scooped back in. Probably everything.', true);
+          c.log('You pushed everything back in.', true);
         },
       },
     ],
@@ -1227,10 +1215,10 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         id: 'listen',
         label: 'Go on',
         labelFor: (_s, inc) => JOKES[inc.joke ?? 0].lines[inc.stage ?? 0].you,
-        hint: 'All the way through. There is no other way',
+        hint: 'She needs you to hear all of it',
         minutes: 1,
         both: true,
-        tags: [{ text: 'She is delighted', tone: 'good' }],
+        tags: [{ text: "She's happy", tone: 'good' }],
         available: (_s, inc) => (inc.stage ?? 0) < JOKES[inc.joke ?? 0].lines.length - 1,
         apply: (c) => {
           const joke = JOKES[c.incident.joke ?? 0];
@@ -1243,7 +1231,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         id: 'laugh',
         label: 'Laugh',
         labelFor: (_s, inc) => JOKES[inc.joke ?? 0].lines[inc.stage ?? 0].you,
-        hint: 'Properly. She will check',
+        hint: "She'll notice if you don't mean it",
         minutes: 1,
         both: true,
         tags: [{ text: 'Mood ↑', tone: 'good' }],
@@ -1290,7 +1278,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           c.unflag('sulking');
           c.mood(1);
-          c.log('You heard the joke through the door. Then the door opened.', true);
+          c.log('You listened through the door, and she came out.', true);
         },
       },
       {
@@ -1302,7 +1290,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         tags: [{ text: 'Door opens', tone: 'good' }],
         apply: (c) => {
           c.unflag('sulking');
-          c.log('Apology accepted. Eventually.', true);
+          c.log('She accepted the apology.', true);
         },
       },
       {
@@ -1324,7 +1312,6 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Upset',
     context: 'It went badly',
     headline: () => 'She is upset now.',
-    detail: () => 'Arms folded. Bottom lip out. Not moving.',
     deferrable: false,
     responses: [
       {
@@ -1336,13 +1323,13 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         tags: [{ text: 'Mood ↑', tone: 'good' }],
         apply: (c) => {
           c.mood(1);
-          c.log('A hug, a sniff, a nod. Back on track.', true);
+          c.log('A hug helped.', true);
         },
       },
       {
         id: 'wait',
         label: 'Give her a minute',
-        hint: 'She will come around. Eventually',
+        hint: "She'll come around",
         minutes: 3,
         tags: [{ text: 'Slow', tone: 'bad' }],
         apply: (c) => c.log('She came around in her own time.', true),
@@ -1353,7 +1340,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         hint: 'Free. She stays upset',
         minutes: 0,
         tags: [{ text: 'Mood stays down', tone: 'bad' }],
-        apply: (c) => c.log('You carried on. So did the sulk.', true),
+        apply: (c) => c.log("You kept going. She's still upset.", true),
       },
     ],
   },
@@ -1363,20 +1350,20 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Breakfast',
     context: 'Sitting down to breakfast',
     headline: (s) => `She wanted ${BREAKFASTS[s.breakfastWant].name.toLowerCase()}.`,
-    detail: (s) => `That is ${BREAKFASTS[s.breakfastChoice ?? 'toast'].name.toLowerCase()}. She has noticed.`,
+    detail: (s) => `You made ${BREAKFASTS[s.breakfastChoice ?? 'toast'].name.toLowerCase()}.`,
     deferrable: false,
     responses: [
       {
         id: 'negotiate',
         label: 'Talk her round',
-        hint: 'Honey on top? Takes a minute or two',
+        hint: 'Takes a minute or two',
         minutes: 2,
         both: true,
         risky: true,
         riskBase: 0.45,
         tags: [{ text: 'She might eat it', tone: 'neutral' }],
         apply: (c) => {
-          if (!c.escalate({ extra: 2 })) c.log('She ate it. With a lot of honey.', true);
+          if (!c.escalate({ extra: 2 })) c.log('She ate it.', true);
         },
       },
       {
@@ -1401,7 +1388,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         riskBase: 0.6,
         tags: [{ text: 'May upset her', tone: 'bad' }],
         apply: (c) => {
-          if (!c.escalate({ extra: 3 })) c.log('She looked at you for a long time. Then ate it.', true);
+          if (!c.escalate({ extra: 3 })) c.log('She ate it.', true);
         },
       },
     ],
@@ -1412,14 +1399,13 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'Hair',
     context: 'Doing her hair',
     headline: (s) => `She wants ${HAIR[s.hairWant].name}.`,
-    detail: (s) => HAIR[s.hairWant].ask,
     deferrable: false,
     responses: [
       {
         id: 'yes',
         label: 'Yes',
         labelFor: (s) => `${HAIR[s.hairWant].title} it is`,
-        hint: 'She will be pleased. It costs what it costs',
+        hint: "She'll be happy. It takes longer",
         minutes: 0,
         tags: [{ text: 'Her way', tone: 'good' }, { text: 'Takes longer', tone: 'bad' }],
         apply: (c) => {
@@ -1427,7 +1413,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
           c.addExtra(HAIR[want].extra);
           c.mood(1);
           c.s.hairStyle = want;
-          c.log(`${HAIR[want].title} it is. Hold still.`, true);
+          c.log(`You did ${HAIR[want].name}.`, true);
         },
       },
       {
@@ -1443,7 +1429,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           c.addExtra(HAIR.ponytail.extra);
           c.s.hairStyle = 'ponytail';
-          if (!c.escalate({ extra: 1 })) c.log('The sparkly clip carried the day.', true);
+          if (!c.escalate({ extra: 1 })) c.log('She went for the ponytail with the clip.', true);
         },
       },
       {
@@ -1456,7 +1442,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         tags: [{ text: 'May upset her', tone: 'bad' }],
         apply: (c) => {
           c.s.hairStyle = 'down';
-          if (!c.escalate({ extra: 1 })) c.log('Down and brushed. She checked it in the mirror, and allowed it.', true);
+          if (!c.escalate({ extra: 1 })) c.log('Down and brushed.', true);
         },
       },
       {
@@ -1473,7 +1459,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
           c.s.hairStyle = 'down';
           if (!c.escalate({ extra: 1 })) {
             c.flag('promisedBraids');
-            c.log('Braids promised for Saturday. Pinky swear.', true);
+            c.log('You promised braids on Saturday.', true);
           }
         },
       },
@@ -1484,8 +1470,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'flop',
     title: 'On the floor',
     context: 'Not today',
-    headline: () => 'She is lying on the floor. Boneless.',
-    detail: (s) => (s.householdMood === 0 ? 'Full meltdown. The volume is rising.' : 'She can hear you. She is choosing not to.'),
+    headline: () => "She's lying on the floor and won't get up.",
+    detail: (s) => (s.householdMood === 0 ? "She's screaming." : undefined),
     deferrable: false,
     tasks: ['breakfastEaten', 'dressed', 'teeth', 'face', 'hair', 'shoesOn', 'coat'],
     chance: (s) => [0.35, 0.25, 0.1, 0, 0, 0][s.householdMood],
@@ -1497,7 +1483,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         minutes: 2,
         both: true,
         tags: [{ text: 'Back to it', tone: 'neutral' }],
-        apply: (c) => c.log('Carried there, boneless the whole way.', true),
+        apply: (c) => c.log('You carried her.', true),
       },
       {
         id: 'sit',
@@ -1508,7 +1494,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         tags: [{ text: 'Mood ↑', tone: 'good' }],
         apply: (c) => {
           c.mood(1);
-          c.log('You lay on the floor too. Eventually she laughed.', true);
+          c.log('You lay down with her until she laughed.', true);
         },
       },
       {
@@ -1520,7 +1506,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         riskBase: 0.5,
         tags: [{ text: 'May upset her', tone: 'bad' }],
         apply: (c) => {
-          if (!c.escalate({ extra: 2 })) c.log('She was up by two.', true);
+          if (!c.escalate({ extra: 2 })) c.log('She got up.', true);
         },
       },
     ],
@@ -1531,7 +1517,6 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     title: 'A helper',
     context: 'She wants to help',
     headline: () => 'She wants to help.',
-    detail: () => 'She has pulled a chair over to the counter.',
     deferrable: false,
     external: true,
     tasks: ['lunch', 'breakfastMade', 'bagChecked'],
@@ -1546,7 +1531,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           c.addExtra(3);
           c.mood(1);
-          c.log('She helped. It took longer. She is very proud.', true);
+          c.log('She helped. It took longer, and she was proud of it.', true);
         },
       },
       {
@@ -1558,8 +1543,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           if (c.s.objectives.shoesFound.status !== 'done') {
             c.completeTask('shoesFound');
-            c.log('"Find your shoes." She did, in under a minute.', true);
-          } else c.log('She carried her water bottle to the door. Mission accomplished.', true);
+            c.log('You asked her to find her shoes, and she did.', true);
+          } else c.log('She took her water bottle to the door.', true);
         },
       },
       {
@@ -1571,7 +1556,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           if (c.roll() < 0.3) {
             c.mood(-1);
-            c.log('Her face fell, just a little.', true);
+            c.log('She looked disappointed.', true);
           } else c.log('She went off to find something else to do.', true);
         },
       },
@@ -1582,8 +1567,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'wobble',
     title: 'Wobble',
     context: 'Crisis',
-    headline: () => 'Her lip is going.',
-    detail: () => 'Something is about to happen. Nobody knows what.',
+    headline: () => "She's about to cry.",
     deferrable: false,
     endgame: (s) => s.householdMood >= 1,
     responses: [
@@ -1594,7 +1578,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         minutes: 2,
         both: true,
         tags: [{ text: 'Mood holds', tone: 'good' }],
-        apply: (c) => c.log('A long hug by the door. Better.', true),
+        apply: (c) => c.log('A hug by the door helped.', true),
       },
       {
         id: 'distract',
@@ -1605,7 +1589,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         riskBase: 0.5,
         tags: [{ text: 'May upset her', tone: 'bad' }],
         apply: (c) => {
-          if (!c.escalate({ extra: 0 })) c.log('It was a very good bird.', true);
+          if (!c.escalate({ extra: 0 })) c.log('The distraction worked.', true);
         },
       },
     ],
@@ -1634,57 +1618,50 @@ export function eating(s: GameState): Breakfast {
 }
 
 /** How each breakfast ends up on the floor. */
-const SPILLS: Record<Breakfast, { floor: string; top: string; detail: string; again: string }> = {
+const SPILLS: Record<Breakfast, { floor: string; top: string; again: string }> = {
   cereal: {
     floor: 'Her cereal is on the floor.',
     top: 'Cereal and milk everywhere. Including her top.',
-    detail: 'Most of the bowl, and a fair amount of milk.',
     again: 'poured another bowl',
   },
   toast: {
     floor: 'Her toast is on the floor.',
     top: 'Jam everywhere. Including her top.',
-    detail: 'Jam side down. Of course.',
     again: 'made another slice',
   },
   oatmeal: {
     floor: 'Her oatmeal is on the floor.',
     top: 'Oatmeal everywhere. Including her top.',
-    detail: 'The whole bowl, still warm, and spreading.',
     again: 'scraped together a second bowl',
   },
   pancakes: {
     floor: 'Her pancakes are on the floor.',
     top: 'Syrup everywhere. Including her top.',
-    detail: 'Syrup on the chair, the floor, and the cat.',
     again: 'saved what was left of the stack',
   },
 };
 export const BREAKFAST_CLUE_CHANCE = 0.6; // she said something about it last night
 export const BREAKFAST_CLUE_RIGHT = 0.75; // and still wants it this morning
 /** What she wants done with her hair today, and what each costs on top of brushing. */
-export const HAIR: Record<HairStyle, { name: string; title: string; ask: string; extra: number; redo: number; mess: string }> = {
-  down: { name: 'it down', title: 'Down', ask: '', extra: 0, redo: 2, mess: 'She has been rolling on the rug. The hair is gone.' },
+export const HAIR: Record<HairStyle, { name: string; title: string; extra: number; redo: number; mess: string }> = {
+  down: { name: 'it down', title: 'Down', extra: 0, redo: 2, mess: 'Her hair is a mess again.' },
   ponytail: {
     name: 'a ponytail',
     title: 'A ponytail',
-    ask: 'High. Not that high. Higher.',
     extra: 2,
     redo: 3,
-    mess: 'The ponytail is out. She wanted to see what it looked like.',
+    mess: 'She pulled her ponytail out.',
   },
   pigtails: {
     name: 'pigtails',
     title: 'Pigtails',
-    ask: 'Two. Even. She will check in the mirror.',
     extra: 4,
     redo: 4,
-    mess: 'One pigtail is gone. The hair tie is not.',
+    mess: 'One pigtail has come out.',
   },
   braids: {
     name: 'braided pigtails',
     title: 'Braided pigtails',
-    ask: 'Two of them. Like Ava. Today.',
     extra: 8,
     redo: 6,
     mess: 'One of the braids is coming out.',
@@ -1733,7 +1710,7 @@ export const JOKES: Joke[] = [
       { her: 'Cowgoes.', you: 'Cowgoes who?' },
       { her: 'No, cows go MOO!', you: 'Laugh' },
     ],
-    landed: 'Cows go moo. She is still laughing.',
+    landed: 'She laughed at her own joke.',
   },
   {
     lines: [
@@ -1741,7 +1718,7 @@ export const JOKES: Joke[] = [
       { her: 'Who.', you: 'Who who?' },
       { her: 'You sound like an owl!', you: 'Laugh' },
     ],
-    landed: 'You sound like an owl. She hoots at you for a while.',
+    landed: 'She hooted like an owl for a while.',
   },
   {
     // One of her own.
@@ -1749,9 +1726,9 @@ export const JOKES: Joke[] = [
       { her: 'Knock knock.', you: "Who's there?" },
       { her: 'Blanket.', you: 'Blanket who?' },
       { her: '…', you: 'Wait for it' },
-      { her: "…blankets can't talk!", you: 'Laugh anyway' },
+      { her: "…blankets can't talk!", you: 'Laugh' },
     ],
-    landed: 'Blankets cannot talk. She is very proud of that one.',
+    landed: "She made that one up herself, and she's proud of it.",
   },
 ];
 /** Minutes before leaving time when the first wave is announced. */
@@ -1768,7 +1745,7 @@ export const LIBRARY_CHANCE = 0.6;
 export const CONDITIONS: Record<MorningCondition, { label: string; note: string }> = {
   ordinary: { label: 'An ordinary Tuesday', note: 'Nothing unusual.' },
   lateBedtime: { label: 'Late bedtime', note: 'She went to bed late. She will be tired even at 7.' },
-  shoesByDoor: { label: 'Shoes by the door', note: 'Her shoes are where they belong, for once.' },
+  shoesByDoor: { label: 'Shoes by the door', note: 'Her shoes are by the door.' },
   noBread: { label: 'No bread', note: 'Lunch will take longer.' },
   earlyBird: { label: 'Early bird', note: 'She might wake a little early today.' },
 };
@@ -1826,7 +1803,7 @@ export const EVENTS: Record<EventId, EventDef> = {
   paperwork: {
     name: 'Paperwork due',
     calendar: 'FORMS!!',
-    ask: 'There was a paper. In my bag. For you.',
+    ask: "There's a paper in my bag for you.",
     email: 'Health forms are due back today, signed.',
     task: 'paperwork',
     missing: 'The signed form',
@@ -1844,7 +1821,7 @@ export const EVENTS: Record<EventId, EventDef> = {
   picture: {
     name: 'Picture day',
     calendar: 'PHOTOS',
-    ask: "Is it photos today? I want my hair like Ava's.",
+    ask: 'Is it picture day today?',
     email: 'School photographs today. Neat hair and a clean top, please.',
     missing: 'A clean top for the photo',
     reveal: 'It was picture day.',
@@ -1852,7 +1829,7 @@ export const EVENTS: Record<EventId, EventDef> = {
   library: {
     name: 'Library day',
     calendar: 'LIBRARY',
-    ask: 'Library day. My book is somewhere.',
+    ask: "Is it library day? I don't know where my book is.",
     email: 'Library books are due back today.',
     missing: 'Library book',
     reveal: 'It was library day.',
@@ -1896,19 +1873,19 @@ export const MOOD_LABELS = ['Meltdown', 'Upset', 'Tense', 'Calm', 'Good', 'Brigh
  */
 export const MOOD_EFFECTS: { speed: number; trouble: number; backfire: number; collapse: number; seen: string }[] = [
   { speed: 0.75, trouble: 0.2, backfire: 0.2, collapse: 5, seen: 'On the floor' },
-  { speed: 0.85, trouble: 0.12, backfire: 0.12, collapse: 3, seen: 'Slow. Saying no' },
+  { speed: 0.85, trouble: 0.12, backfire: 0.12, collapse: 3, seen: 'Saying no' },
   { speed: 0.95, trouble: 0.05, backfire: 0.05, collapse: 1, seen: 'Short answers' },
   { speed: 1, trouble: 0, backfire: 0, collapse: 0, seen: 'Going along with it' },
-  { speed: 1.05, trouble: -0.05, backfire: -0.05, collapse: 0, seen: 'Chatty. Cooperative' },
-  { speed: 1.1, trouble: -0.1, backfire: -0.1, collapse: 0, seen: 'Singing. Helping' },
+  { speed: 1.05, trouble: -0.05, backfire: -0.05, collapse: 0, seen: 'Chatty' },
+  { speed: 1.1, trouble: -0.1, backfire: -0.1, collapse: 0, seen: 'Singing, helping' },
 ];
 
 /** How she takes being sent to a job, by mood. Calm gets no comment. */
 export const MOOD_TAKES: string[][] = [
-  ['A scream into the carpet first.', 'She goes, the way a glacier goes.'],
-  ['"No." Then, eventually, yes.', 'She flops onto the floor first.', 'A long, theatrical sigh.'],
-  ['Short answers.', 'She goes, slowly.'],
+  ['She screams first.', 'She goes very slowly.'],
+  ['"No." Then she goes.', 'She flops on the floor first.', 'She sighs loudly.'],
+  ['She goes slowly.', 'She grumbles.'],
   [],
-  ['She goes, chatting the whole way.', '"Okay!"'],
-  ['She skips there.', 'Singing, a little off-key.', '"I can do it myself!"'],
+  ['She goes, chatting.', '"Okay!"'],
+  ['She runs off to do it.', 'She sings while she does it.', '"I can do it myself!"'],
 ];

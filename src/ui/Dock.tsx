@@ -18,7 +18,7 @@ function leaveWarning(s: GameState): string {
 
 function wakeWarning(s: GameState): string {
   const e = earliness(s);
-  return `More time together. ${e > 0.66 ? 'Likely to be very tired.' : e > 0.33 ? "She'll probably be tired." : 'Slightly early.'}`;
+  return e > 0.66 ? 'She will be very tired.' : e > 0.33 ? "She'll probably be tired." : 'A little early.';
 }
 
 /** Indicator lamps on the console housing. */

@@ -21,9 +21,9 @@ function headline(s: GameState): { title: string; sub: string } {
   if (!s.childAwake) return { title: 'Before she wakes up', sub: 'The house is quiet. She usually wakes around 7.' };
   const left = s.departureDeadline - s.minute;
   if (currentIncident(s)) return { title: 'Getting ready', sub: left > 0 ? "There's still time, but not much." : 'You should already be gone.' };
-  if (left < 0) return { title: 'Running late', sub: 'Every minute now is a minute late.' };
-  if (left <= 10) return { title: 'Nearly time', sub: 'Think about what really matters.' };
-  return { title: 'Getting ready', sub: 'She is up. The clock is running.' };
+  if (left < 0) return { title: 'Running late', sub: "You're late." };
+  if (left <= 10) return { title: 'Nearly time', sub: "It's almost time to leave." };
+  return { title: 'Getting ready', sub: "She's up." };
 }
 
 function useNarrow(): boolean {

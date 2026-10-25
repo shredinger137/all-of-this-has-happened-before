@@ -54,7 +54,7 @@ export function Debrief({ r, seed, label }: Props) {
           <div>
             <h3>Completed · {r.completed.length}</h3>
             <ul>
-              {r.completed.length === 0 && <li>Nothing, really.</li>}
+              {r.completed.length === 0 && <li>Nothing.</li>}
               {r.completed.map((c) => (
                 <li key={c}>
                   <span className="node done" />

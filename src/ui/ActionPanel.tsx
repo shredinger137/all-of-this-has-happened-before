@@ -313,13 +313,13 @@ function IncidentView({ s, act, inc }: Props & { inc: OpenIncident }) {
           <div className="context">{inc.worse ? 'Put off. Now back' : def.context}</div>
           {def.speaks ? (
             <>
-              <h2>“{inc.note ?? def.detail(s)}”</h2>
+              <h2>“{inc.note ?? def.detail?.(s)}”</h2>
               <p>{def.headline(s)}</p>
             </>
           ) : (
             <>
               <h2>{def.headline(s)}</h2>
-              <p>{inc.note ?? def.detail(s)}</p>
+              {(inc.note ?? def.detail?.(s)) && <p>{inc.note ?? def.detail?.(s)}</p>}
             </>
           )}
         </div>

@@ -179,7 +179,7 @@ export function RunScreen({ run, onCards, onPerk }: Props) {
             <FatePips fate={run.fate} />
           </div>
           <h1>{weekly ? 'Week report' : 'Evening'}</h1>
-          <div className="small">{weekly ? 'Five mornings. All of them survived.' : `Get ahead of ${tomorrow}.`}</div>
+          <div className="small">{weekly ? 'Five mornings done.' : `Get ahead of ${tomorrow}.`}</div>
         </div>
         <div className="timebox frame screen">
           <div className="time">{weekly ? '17:00' : '20:30'}</div>
@@ -199,7 +199,7 @@ export function RunScreen({ run, onCards, onPerk }: Props) {
                 ? perk
                   ? `${PERKS[perk].name}. ${PERKS[perk].note}`
                   : 'Choose one thing to sort out over the weekend.'
-                : 'Nothing left to sort out. The house runs itself. Nearly.'
+                : 'Nothing left to sort out.'
               : picks.length
                 ? `Tonight: ${picks.map((c) => CARDS[c].name.toLowerCase()).join(', ')}.`
                 : 'Nothing done tonight. Tomorrow starts from scratch.'}
