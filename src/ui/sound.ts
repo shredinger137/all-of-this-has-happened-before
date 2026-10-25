@@ -82,11 +82,11 @@ function load(name: Sample) {
 }
 
 export function hover() {
-  play('hover', 0.25);
+  play('hover', 0.1);
 }
 
 export function select() {
-  play('select', 0.4);
+  play('select', 0.15);
 }
 
 export function alert() {
