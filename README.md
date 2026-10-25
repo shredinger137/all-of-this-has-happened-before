@@ -54,7 +54,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 | `src/sim/engine.ts` | Pure, deterministic morning: `createGame(seed, setup)`, `reduce`, `requirements`, `results` |
 | `src/sim/run.ts` | The continuous run: weeks, evening cards, fate, carry-over, weekly perks |
 | `src/ui/` | `GameScreen` (one morning), `RunScreen` (evening, week report), Intel/Status/Log/Action panels, `Dock` status bar, `music.ts` (tiered background music), `sound.ts` |
-| `public/music/` | The background tracks |
+| `public/music/` | The background tracks, generated for this game with Suno and Gemini |
 | `scripts/balance.ts` | Bot strategies, including calendar-trusting vs email-reading |
 | `docs/` | Spec, design doc, reference notes (`ui-reference-notes.md`: why it reads as Galactica) |
 
