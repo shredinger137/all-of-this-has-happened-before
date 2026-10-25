@@ -1,4 +1,5 @@
 import type {
+  HairStyle,
   Breakfast,
   ChildTendency,
   EventId,
@@ -156,7 +157,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     label: 'Hair brushed',
     action: 'Brush her hair',
     doing: 'Brushing her hair',
-    hint: () => 'Down is fine. It still needs brushing',
+    hint: () => 'Brushed, at least. She may have other ideas',
     scored: true,
     missing: 'Brushed hair',
     duration: () => 4,
@@ -191,7 +192,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     label: 'Shoes on',
     action: 'Put on shoes',
     doing: 'Putting on shoes',
-    hint: (s) => (done(s, 'shoesFound') ? 'Shoes are by the door' : "You haven't seen her shoes yet"),
+    hint: (s) => (has(s, 'wellies') ? 'Rain boots today' : done(s, 'shoesFound') ? 'Shoes are by the door' : "You haven't seen her shoes yet"),
     scored: true,
     missing: 'Shoes',
     duration: (s) => (has(s, 'noSocks') ? 9 : 7),
@@ -741,7 +742,13 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           c.flag('wellies');
           c.completeTask('shoesFound');
-          if (!c.escalate({ extra: 2 })) c.log('Rain boots on. It is not raining.', true);
+          if (!c.escalate({ extra: 2 })) {
+            const d = c.s.day;
+            c.log(
+              d.weatherKnown && d.weather === 'rain' ? 'Rain boots on. For once, the right call.' : d.weatherKnown ? 'Rain boots on. It is not raining.' : 'Rain boots on. Maybe it will rain.',
+              true,
+            );
+          }
         },
       },
     ],
@@ -1002,7 +1009,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         apply: (c) => {
           if (c.roll() < 0.5) {
             c.spend(2);
-            c.log('She answered the door. In her pajamas. The delivery driver was charmed.', true);
+            c.log(done(c.s, 'dressed') ? 'She answered the door. The delivery driver got the whole story about the cats.' : 'She answered the door. In her pajamas. The delivery driver was charmed.', true);
           } else c.log('The driver left a note.', true);
         },
       },
@@ -1046,7 +1053,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'coatOff',
     title: 'Coat off',
     context: 'Contact',
-    headline: () => 'The coat is off. Too hot, apparently.',
+    headline: (s) => (s.day.weather === 'cold' ? 'The coat is off. Too hot, apparently.' : 'The raincoat is off. It is "crunchy".'),
     detail: () => 'It is on the hallway floor.',
     deferrable: false,
     endgame: (s) => done(s, 'coat'),
@@ -1061,7 +1068,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         riskBase: 0.3,
         tags: [{ text: 'May upset her', tone: 'bad' }],
         apply: (c) => {
-          if (!c.escalate({ extra: 0 })) c.log('Coat back on. Zip all the way up.', true);
+          if (!c.escalate({ extra: 0 })) c.log('Coat back on. Zipped all the way up.', true);
         },
       },
       {
@@ -1082,8 +1089,8 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     id: 'hairMess',
     title: 'Hair',
     context: 'Contact',
-    headline: () => 'Hood on, hood off. Eleven times.',
-    detail: () => 'The hair is gone.',
+    headline: (s) => (done(s, 'coat') ? 'Hood on, hood off. Eleven times.' : HAIR[s.hairStyle ?? 'down'].mess),
+    detail: (s) => (done(s, 'coat') ? 'The hair is gone.' : 'You did that hair ten minutes ago.'),
     deferrable: false,
     endgame: (s) => done(s, 'hair'),
     responses: [
@@ -1092,9 +1099,10 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         label: 'Redo it',
         hint: 'Properly',
         minutes: 3,
+        minutesFor: (s) => HAIR[s.hairStyle ?? 'down'].redo,
         both: true,
         tags: [{ text: 'Hair fixed', tone: 'neutral' }],
-        apply: (c) => c.log('Hair redone. Hood confiscated.', true),
+        apply: (c) => c.log(done(c.s, 'coat') ? 'Hair redone. Hood confiscated.' : 'Hair redone. Hands off it now.', true),
       },
       {
         id: 'leave',
@@ -1153,7 +1161,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     responses: [
       {
         id: 'snack',
-        label: 'A banana for the walk',
+        label: 'A banana for the car',
         hint: 'Quick',
         minutes: 1,
         tags: [{ text: 'Handled', tone: 'neutral' }],
@@ -1336,10 +1344,10 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       {
         id: 'wait',
         label: 'Give her a minute',
-        hint: 'She will come round. Eventually',
+        hint: 'She will come around. Eventually',
         minutes: 3,
         tags: [{ text: 'Slow', tone: 'bad' }],
-        apply: (c) => c.log('She came round in her own time.', true),
+        apply: (c) => c.log('She came around in her own time.', true),
       },
       {
         id: 'carry',
@@ -1401,37 +1409,56 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     ],
   },
 
-  braids: {
-    id: 'braids',
+  hairdo: {
+    id: 'hairdo',
     title: 'Hair',
     context: 'Doing her hair',
-    headline: () => 'She wants braided pigtails.',
-    detail: () => 'Two of them. Like Ava. Today.',
+    headline: (s) => `She wants ${HAIR[s.hairWant].name}.`,
+    detail: (s) => HAIR[s.hairWant].ask,
     deferrable: false,
     responses: [
       {
-        id: 'braids',
-        label: 'Braided pigtails it is',
-        hint: 'She will be thrilled. It takes ages',
+        id: 'yes',
+        label: 'Yes',
+        labelFor: (s) => `${HAIR[s.hairWant].title} it is`,
+        hint: 'She will be pleased. It costs what it costs',
         minutes: 0,
-        tags: [{ text: 'Hair +8 min', tone: 'bad' }, { text: 'Mood ↑', tone: 'good' }],
+        tags: [{ text: 'Her way', tone: 'good' }, { text: 'Takes longer', tone: 'bad' }],
         apply: (c) => {
-          c.addExtra(8);
+          const want = c.s.hairWant;
+          c.addExtra(HAIR[want].extra);
           c.mood(1);
-          c.log('Braids it is. Hold still.', true);
+          c.s.hairStyle = want;
+          c.log(`${HAIR[want].title} it is. Hold still.`, true);
         },
       },
       {
         id: 'clip',
         label: 'Ponytail, with the sparkly clip',
-        hint: 'Quick, if the clip is enough',
+        hint: 'Quicker, if the clip is enough',
         minutes: 1,
         both: true,
         risky: true,
-        riskBase: 0.45,
+        riskBase: 0.4,
         tags: [{ text: 'She may not buy it', tone: 'neutral' }],
+        available: (s) => s.hairWant === 'pigtails' || s.hairWant === 'braids',
         apply: (c) => {
+          c.addExtra(HAIR.ponytail.extra);
+          c.s.hairStyle = 'ponytail';
           if (!c.escalate({ extra: 1 })) c.log('The sparkly clip carried the day.', true);
+        },
+      },
+      {
+        id: 'down',
+        label: 'Down today, brushed',
+        hint: 'Quickest. She had her heart set on it',
+        minutes: 0,
+        risky: true,
+        riskBase: 0.45,
+        tags: [{ text: 'May upset her', tone: 'bad' }],
+        apply: (c) => {
+          c.s.hairStyle = 'down';
+          if (!c.escalate({ extra: 1 })) c.log('Down and brushed. She checked it in the mirror, and allowed it.', true);
         },
       },
       {
@@ -1443,7 +1470,9 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
         risky: true,
         riskBase: 0.2,
         tags: [{ text: 'A promise', tone: 'neutral' }],
+        available: (s) => s.hairWant === 'braids',
         apply: (c) => {
+          c.s.hairStyle = 'down';
           if (!c.escalate({ extra: 1 })) {
             c.flag('promisedBraids');
             c.log('Braids promised for Saturday. Pinky swear.', true);
@@ -1517,15 +1546,15 @@ const SPILLS: Record<Breakfast, { floor: string; top: string; detail: string; ag
     again: 'poured another bowl',
   },
   toast: {
-    floor: 'Her toast is on the floor. Jam side down.',
+    floor: 'Her toast is on the floor.',
     top: 'Jam everywhere. Including her top.',
-    detail: 'Of course it landed jam side down.',
+    detail: 'Jam side down. Of course.',
     again: 'made another slice',
   },
   oatmeal: {
     floor: 'Her oatmeal is on the floor.',
     top: 'Oatmeal everywhere. Including her top.',
-    detail: 'Upside down, which is somehow worse.',
+    detail: 'The whole bowl, still warm, and spreading.',
     again: 'scraped together a second bowl',
   },
   pancakes: {
@@ -1537,7 +1566,42 @@ const SPILLS: Record<Breakfast, { floor: string; top: string; detail: string; ag
 };
 export const BREAKFAST_CLUE_CHANCE = 0.6; // she said something about it last night
 export const BREAKFAST_CLUE_RIGHT = 0.75; // and still wants it this morning
-export const BRAIDS_CHANCE = 0.35;
+/** What she wants done with her hair today, and what each costs on top of brushing. */
+export const HAIR: Record<HairStyle, { name: string; title: string; ask: string; extra: number; redo: number; mess: string }> = {
+  down: { name: 'it down', title: 'Down', ask: '', extra: 0, redo: 2, mess: 'She has been rolling on the rug. The hair is gone.' },
+  ponytail: {
+    name: 'a ponytail',
+    title: 'A ponytail',
+    ask: 'High. Not that high. Higher.',
+    extra: 2,
+    redo: 3,
+    mess: 'The ponytail is out. She wanted to see what it looked like.',
+  },
+  pigtails: {
+    name: 'pigtails',
+    title: 'Pigtails',
+    ask: 'Two. Even. She will check in the mirror.',
+    extra: 4,
+    redo: 4,
+    mess: 'One pigtail is gone. The hair tie is not.',
+  },
+  braids: {
+    name: 'braided pigtails',
+    title: 'Braided pigtails',
+    ask: 'Two of them. Like Ava. Today.',
+    extra: 8,
+    redo: 6,
+    mess: 'One of the braids is coming out.',
+  },
+};
+/** How likely each request is on a given morning. */
+export const HAIR_WANTS: [HairStyle, number][] = [
+  ['down', 0.3],
+  ['ponytail', 0.3],
+  ['pigtails', 0.2],
+  ['braids', 0.2],
+];
+export const HAIR_CLUE_CHANCE = 0.4; // she announced it at bedtime
 export const CAR_STUFFY_CHANCE = 0.4;
 export const COFFEE_MINUTES = 20;
 export const COFFEE_SPEED = 1.15;

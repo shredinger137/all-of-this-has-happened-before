@@ -59,7 +59,7 @@ export type IncidentId =
   // follow-through: what a choice can lead to
   | 'upset'
   | 'wrongBreakfast'
-  | 'braids'
+  | 'hairdo'
   | 'joke'
   | 'closedDoor'
   | 'cats';
@@ -113,6 +113,7 @@ export type LogEntry = { minute: number; text: string; notable?: boolean };
 
 export type Mood = 0 | 1 | 2 | 3 | 4 | 5;
 
+export type HairStyle = 'down' | 'ponytail' | 'pigtails' | 'braids';
 export type Breakfast = 'toast' | 'oatmeal' | 'pancakes' | 'cereal';
 
 /** What a choice in a problem window did: shown before the next thing happens. */
@@ -174,7 +175,8 @@ export type GameState = {
   intel: Intel[];
   breakfastWant: Breakfast; // what she'll want today; hidden
   breakfastChoice?: Breakfast; // what you're making (or made)
-  hairWant: 'braids' | 'simple';
+  hairWant: HairStyle; // what she wants done with her hair today
+  hairStyle?: HairStyle; // what she ended up with
   carStuffyWant: boolean; // some days a stuffy has to come in the car
   caffeinatedUntil?: number; // coffee: you work faster until then
   outcome?: Outcome; // the result of the last choice, until you carry on

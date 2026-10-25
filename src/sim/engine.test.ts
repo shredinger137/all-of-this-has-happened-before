@@ -54,7 +54,7 @@ describe('parallel activity', () => {
     const base = seedWhere((s) => {
       if (s.morningCondition !== 'ordinary' || s.childTendency !== 'cheerful') return false;
       const t = run(s, { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' });
-      return !t.objectives.breakfastEaten.pending;
+      return !t.objectives.breakfastEaten.pending && !currentIncident(run(t, { type: 'startParent', task: 'lunch' }));
     });
     let s = run(base, { type: 'wakeNow' }, { type: 'assignChild', task: 'breakfastEaten' });
     const t0 = s.minute;
@@ -209,7 +209,7 @@ const INCIDENT_FALLBACK: Record<string, string> = {
   wobble: 'hug',
   upset: 'hug',
   wrongBreakfast: 'remake',
-  braids: 'clip',
+  hairdo: 'down',
   joke: 'interrupt',
   closedDoor: 'sorry',
   cats: 'let',
@@ -343,12 +343,15 @@ describe('follow-through', () => {
     expect(currentIncident(g)?.id).not.toBe('wrongBreakfast');
   });
 
-  it('some days she wants braids, and you have to decide what to do about it', () => {
+  it('she has her own idea about her hair, and you decide what to do about it', () => {
     const s = seedWhere((g) => g.hairWant === 'braids');
     const g = run(s, { type: 'wakeNow' }, { type: 'assignChild', task: 'hair' });
-    expect(currentIncident(g)?.id).toBe('braids');
-    const braided = reduce(g, { type: 'respond', response: 'braids' });
+    expect(currentIncident(g)?.id).toBe('hairdo');
+    const braided = reduce(g, { type: 'respond', response: 'yes' });
     expect(braided.objectives.hair.extra).toBe(8);
+    expect(braided.hairStyle).toBe('braids');
+    const down = seedWhere((g) => g.hairWant === 'down');
+    expect(currentIncident(run(down, { type: 'wakeNow' }, { type: 'assignChild', task: 'hair' }))?.id).not.toBe('hairdo');
   });
 
   it('a joke goes all the way through, line by line, and ends with a laugh', () => {

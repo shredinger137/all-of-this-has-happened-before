@@ -38,7 +38,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
   together. You can't stop them, only finish up or get out first. Arrive 10+ minutes late and the
   gate has shut.
 - **Leave.** The status bar always shows what leaving now means. Leaving is final: the door shuts,
-  the walk plays out, then the after-action report. A wave still inbound lands on an empty house. What you leave behind is weighted:
+  the drive plays out, then the after-action report. A wave still inbound lands on an empty house. What you leave behind is weighted:
   missing a stuffy on stuffy day is serious; a packed lunch is not.
 - **Evening.** Pick two preparations for tomorrow. Keep your promises.
 - **Friday.** The week report. Three tardies means a word with the principal on Monday.

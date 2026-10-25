@@ -91,12 +91,12 @@ export function GameScreen({ game, seed, act, run, onNext, onRetry, onReplay }: 
   const departing = !!r && !reportOpen;
   const { title, sub } = headline(game);
   const left = game.departureDeadline - game.minute;
-  // While walking, the clock shows when you left; the arrival is the departure's reveal.
+  // While driving, the clock shows when you left; the arrival is the departure's reveal.
   const shownTime = r ? (departing ? r.departed : r.arrived) : game.minute;
   const late = r ? !departing && r.lateness > 0 : left < 0;
   const timeSub = r
     ? departing
-      ? 'Walking'
+      ? 'Driving'
       : r.lateness > 0
         ? `${r.lateness} min late`
         : 'On time'

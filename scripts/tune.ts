@@ -191,8 +191,10 @@ function respondStrong(s: GameState): Action {
       return pick(tight ? 'carry' : 'hug');
     case 'wrongBreakfast':
       return pick(risk(0.45) < 0.35 ? 'negotiate' : 'remake');
-    case 'braids':
-      return pick(risk(0.2) < 0.35 ? 'promise' : 'clip');
+    case 'hairdo':
+      if (!tight && s.hairWant !== 'braids') return pick('yes');
+      if (ok('promise') && risk(0.2) < 0.35) return pick('promise');
+      return pick(ok('clip') && risk(0.4) < 0.4 ? 'clip' : ok('clip') ? 'yes' : risk(0.45) < 0.4 ? 'down' : 'yes');
     case 'joke':
       return pick(ok('listen') ? 'listen' : 'laugh');
     case 'closedDoor':

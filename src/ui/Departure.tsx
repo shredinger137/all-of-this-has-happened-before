@@ -40,7 +40,7 @@ export function Departure({ s, r }: { s: GameState; r: Results }) {
         </ol>
         <div className="walk" style={{ animationDelay: at(lines.length) }}>
           <div className="walk-label">
-            <span>Walking to school</span>
+            <span>Driving to school</span>
             <span>{walk} min{s.day.weather === 'rain' ? ', in the rain' : ''}</span>
           </div>
           <div className="walk-bar">

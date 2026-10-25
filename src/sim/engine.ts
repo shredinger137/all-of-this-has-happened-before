@@ -2,7 +2,9 @@ import {
   LOOK_SETTLES,
   LOOK_SETTLES_LATE,
   ASK_RIGHT,
-  BRAIDS_CHANCE,
+  HAIR,
+  HAIR_CLUE_CHANCE,
+  HAIR_WANTS,
   CAR_STUFFY_CHANCE,
   BREAKFAST_CLUE_CHANCE,
   BREAKFAST_CLUE_RIGHT,
@@ -125,7 +127,7 @@ export function createGame(seed: number, setup: MorningSetup = {}): GameState {
     intel: [],
     waves: 0,
     breakfastWant: 'toast',
-    hairWant: 'simple',
+    hairWant: 'down',
     carStuffyWant: false,
     fate: setup.fate ?? 0,
     perks: setup.perks ?? [],
@@ -210,7 +212,10 @@ function rollPreferences(s: GameState) {
       rand(s) < BREAKFAST_CLUE_RIGHT ? s.breakfastWant : BREAKFAST_ORDER.filter((b) => b !== s.breakfastWant)[Math.floor(rand(s) * 3)];
     addIntel(s, 'Last night', `She asked for ${BREAKFASTS[said].name.toLowerCase()} for breakfast.`, 'C3');
   }
-  s.hairWant = rand(s) < BRAIDS_CHANCE ? 'braids' : 'simple';
+  // A different opinion about her hair most days. Sometimes she announced it at bedtime.
+  let r = rand(s);
+  s.hairWant = HAIR_WANTS.find(([, p]) => (r -= p) < 0)?.[0] ?? 'down';
+  if (s.hairWant !== 'down' && rand(s) < HAIR_CLUE_CHANCE) addIntel(s, 'Bedtime', `She wants ${HAIR[s.hairWant].name} tomorrow.`, 'C3');
   s.carStuffyWant = rand(s) < CAR_STUFFY_CHANCE;
 }
 
@@ -913,9 +918,9 @@ export function reduce(prev: GameState, action: Action): GameState {
         openIncident(s, 'wrongBreakfast', 'breakfastEaten');
         return s;
       }
-      if (task === 'hair' && s.hairWant === 'braids' && !s.firedIncidents.includes('braids')) {
+      if (task === 'hair' && s.hairWant !== 'down' && !s.firedIncidents.includes('hairdo')) {
         s.objectives.hair.status = 'blocked';
-        openIncident(s, 'braids', 'hair');
+        openIncident(s, 'hairdo', 'hair');
         return s;
       }
       s.objectives[task].status = 'active';
