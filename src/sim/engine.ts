@@ -1,4 +1,6 @@
 import {
+  LOOK_SETTLES,
+  LOOK_SETTLES_LATE,
   ASK_RIGHT,
   BRAIDS_CHANCE,
   CAR_STUFFY_CHANCE,
@@ -427,6 +429,7 @@ function completeTask(s: GameState, task: TaskId) {
   }
   if (s.parentActivity === task) s.parentActivity = undefined;
 
+  if (task === 'coat' && s.day.weather !== 'cold') setFlag(s, 'wellies');
   if (task === 'coffee') {
     s.coffeeBuffer = true;
     s.caffeinatedUntil = s.minute + COFFEE_MINUTES;
@@ -507,10 +510,25 @@ function onParentComplete(s: GameState, task: TaskId) {
       log(s, e ? `School email: ${EVENTS[e].name.toLowerCase()}.` : 'School email: nothing special today.', true);
       break;
     case 'window': {
-      s.day.weatherKnown = true;
-      const w = s.day.weather === 'rain' ? 'Raining.' : s.day.weather === 'cold' ? 'Dry, and cold.' : 'Dry.';
-      addIntel(s, 'Out of the window', w, 'A1');
-      log(s, `You looked outside. ${w}`);
+      // The window shows now, not 07:45. Later looks are more likely to settle it.
+      const d = s.day;
+      const late = Math.max(0, Math.min(1, (s.minute - START_MINUTE) / (s.departureDeadline - START_MINUTE)));
+      if (d.weather === 'cold' || rand(s) < LOOK_SETTLES + LOOK_SETTLES_LATE * late) {
+        d.weatherKnown = true;
+        d.lookedOutside = undefined;
+        const w = d.weather === 'rain' ? 'Raining.' : d.weather === 'cold' ? 'Dry, and cold.' : 'Clear sky. It will stay dry.';
+        addIntel(s, 'Out of the window', w, 'A1');
+        log(s, `You looked outside. ${w}`, true);
+      } else {
+        // The same gray sky whether or not it's coming: you can look again later.
+        const w = 'Gray, and dry for now. Clouds to the west.';
+        d.lookedOutside = `${formatClock(s.minute)}: dry for now`;
+        addIntel(s, 'Out of the window', w, 'B3');
+        log(s, `You looked outside. ${w}`, true);
+        const o = s.objectives.window;
+        o.status = 'todo';
+        o.progress = 0;
+      }
       break;
     }
   }
@@ -1108,8 +1126,8 @@ export function requirements(s: GameState): Requirement[] {
   if (d.weather !== 'clear') {
     reqs.push({
       id: 'coat',
-      label: 'Coat on',
-      missing: d.weather === 'rain' ? 'Her coat (it rained)' : 'Her coat (it was cold)',
+      label: d.weather === 'rain' ? 'Rain gear on' : 'Coat on',
+      missing: d.weather === 'rain' ? 'Wet socks (it rained, no rain gear)' : 'Her coat (it was cold)',
       severity: 'moderate',
       met: isDone('coat'),
       known: d.weather === 'cold' || d.weatherKnown,

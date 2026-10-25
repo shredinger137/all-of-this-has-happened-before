@@ -287,7 +287,7 @@ function strongStep(wakeAt: number | null) {
       if (wakeAt !== null && s.minute >= wakeAt) return { type: 'wakeNow' };
       if (!s.parentActivity) {
         if (offered(s, 'email')) return { type: 'startParent', task: 'email' };
-        if (offered(s, 'window') && s.day.rainChance > 0.1) return { type: 'startParent', task: 'window' };
+        if (offered(s, 'window') && s.day.rainChance > 0.1 && !s.day.lookedOutside) return { type: 'startParent', task: 'window' };
         const t = parentPlan(s, true)[0];
         if (t) return { type: 'startParent', task: t };
       }

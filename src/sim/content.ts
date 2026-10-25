@@ -202,15 +202,17 @@ export const TASKS: Record<TaskId, TaskDef> = {
     label: 'Coat on',
     action: 'Put on her coat',
     doing: 'Putting on her coat',
+    // On a cold day it's just the coat. Otherwise it's for rain: raincoat and rain boots,
+    // and if it stays dry she's in rain boots all day.
     hint: (s) =>
       s.day.weather === 'cold'
         ? "It's cold out"
         : s.day.weatherKnown
-          ? "It's raining"
-          : `Forecast says ${Math.round(s.day.rainChance * 100)}% rain`,
+          ? 'Raincoat and rain boots. It is raining'
+          : `Raincoat and rain boots. ${Math.round(s.day.rainChance * 100)}% rain; if it stays dry, she wears rain boots all day`,
     scored: false,
     missing: 'Her coat',
-    duration: (s) => (s.perks.includes('hooks') ? 1 : 3),
+    duration: (s) => (s.day.weather === 'cold' ? 3 : RAIN_GEAR_MINUTES) - (s.perks.includes('hooks') ? 2 : 0),
   },
   stuffy: {
     id: 'stuffy',
@@ -274,7 +276,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     label: 'Looked outside',
     action: 'Look outside',
     doing: 'Looking outside',
-    hint: () => 'Confirms the weather',
+    hint: () => 'What it is doing now. Not always what it will do',
     scored: false,
     missing: 'A look outside',
     duration: () => 1,
@@ -1661,6 +1663,11 @@ export const COLD_CHANCE = 0.25;
 export const CALENDAR_RIGHT = 0.5;
 export const ASK_RIGHT = 0.7;
 export const RAIN_WALK_MINUTES = 3;
+/** Raincoat and rain boots, versus 3 minutes for a coat on a cold day. */
+export const RAIN_GEAR_MINUTES = 5;
+/** A look outside settles the weather this often at first, and more surely as departure nears. */
+export const LOOK_SETTLES = 0.45;
+export const LOOK_SETTLES_LATE = 0.35;
 export const EARLY_START_MINUTES = 10; // a meeting with the principal
 
 // ---------------------------------------------------------------------------

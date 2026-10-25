@@ -144,6 +144,7 @@ export type Day = {
   event?: EventId;
   eventKnown: boolean; // event (or its absence) confirmed
   weatherKnown: boolean;
+  lookedOutside?: string; // the last look out of the window, when it didn't settle anything
   schoolStart: number; // real start (a trip or a meeting moves it)
   meeting: boolean; // the principal wants a word: be there by 07:50
 };

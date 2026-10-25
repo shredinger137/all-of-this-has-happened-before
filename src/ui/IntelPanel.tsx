@@ -60,7 +60,7 @@ export function IntelPanel({ s, act, head }: { s: GameState; act: (a: Action) =>
       : d.weather === 'cold'
         ? 'Dry, cold'
         : 'Dry'
-    : `${Math.round(d.rainChance * 100)}% rain${d.weather === 'cold' ? ', cold' : ''}`;
+    : `${Math.round(d.rainChance * 100)}% rain${d.weather === 'cold' ? ', cold' : ''}${d.lookedOutside ? ` · ${d.lookedOutside}` : ''}`;
 
   return (
     <div className="panel frame screen">
@@ -125,7 +125,7 @@ export function IntelPanel({ s, act, head }: { s: GameState; act: (a: Action) =>
             {offered(s, 'window') && (
               <IntelButton
                 label="Look outside"
-                sub="Certain. Is it actually raining?"
+                sub={d.lookedOutside ? 'Again. Has it started?' : 'Is it raining yet? It might not settle it'}
                 cost={task('window')}
                 disabled={busy}
                 onClick={() => act({ type: 'startParent', task: 'window' })}

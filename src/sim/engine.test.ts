@@ -533,6 +533,34 @@ describe('the day: weather, school events, intel', () => {
     expect(r.arrived).toBe(ended.departedAt! + 15 + 3);
   });
 
+  it('rain gear on a day that stays dry means rain boots all day', () => {
+    let s = seedWhere((g) => g.day.weather === 'clear' && !g.day.event);
+    s = run(s, { type: 'wakeNow' }, { type: 'assignChild', task: 'coat' });
+    while (s.objectives.coat.status !== 'done' && !s.ended) {
+      s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
+    }
+    expect(s.flags).toContain('wellies');
+    expect(results(run(s, { type: 'leave' })).misses.some((m) => m.id === 'wellies')).toBe(true);
+  });
+
+  it('a look outside does not always settle the weather, and can be taken again', () => {
+    let unsettled = 0;
+    for (let seed = 1; seed < 80; seed++) {
+      const g = createGame(seed);
+      if (g.day.weather === 'cold') continue;
+      let s = run(g, { type: 'startParent', task: 'window' });
+      while (s.parentActivity === 'window' && !s.ended) {
+        s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
+      }
+      if (!s.day.weatherKnown) {
+        unsettled++;
+        expect(s.objectives.window.status).toBe('todo');
+        expect(offered(s, 'window')).toBe(true);
+      }
+    }
+    expect(unsettled).toBeGreaterThan(5);
+  });
+
   it('a packed bag the night before finds the form', () => {
     const seed = withEvent('paperwork').seed;
     const s = createGame(seed, { prepared: ['bagChecked'] });
