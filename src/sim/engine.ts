@@ -875,6 +875,8 @@ export function childTaskBlocker(s: GameState, task: TaskId): string | undefined
   if (st === 'skipped') return 'Skipped';
   if (st === 'blocked') return 'Waiting on you';
   if (s.childActivity === task) return 'Doing it';
+  // Clothes first: no coat over pajamas, no shoes before trousers.
+  if ((task === 'coat' || task === 'shoesOn') && s.objectives.dressed.status !== 'done') return 'Dressed first';
   return undefined;
 }
 

@@ -15,6 +15,12 @@ function seedWhere(pred: (s: GameState) => boolean): GameState {
   throw new Error('no seed found');
 }
 
+/** Dressed already: coat and shoes wait for clothes. */
+const dressedUp = (g: GameState): GameState => {
+  const c = structuredClone(g);
+  c.objectives.dressed.status = 'done';
+  return c;
+};
 const ordinary = () => seedWhere((s) => s.morningCondition === 'ordinary' && s.childTendency !== 'independent');
 
 describe('morning start', () => {
@@ -105,7 +111,7 @@ describe('supervised tasks', () => {
 describe('incidents', () => {
   it('missing shoes fires when shoes were never found, and finding them later resolves it', () => {
     let s = seedWhere((g) => g.morningCondition === 'ordinary');
-    s = run(s, { type: 'wakeNow' }, { type: 'assignChild', task: 'shoesOn' });
+    s = run(dressedUp(s), { type: 'wakeNow' }, { type: 'assignChild', task: 'shoesOn' });
     expect(currentIncident(s)?.id).toBe('shoesMissing');
     s = run(s, { type: 'defer' });
     expect(s.objectives.shoesOn.status).toBe('blocked');
@@ -131,7 +137,7 @@ describe('incidents', () => {
   });
 
   it('response minutes are charged to the clock', () => {
-    let s = run(ordinary(), { type: 'wakeNow' }, { type: 'assignChild', task: 'shoesOn' });
+    let s = run(dressedUp(ordinary()), { type: 'wakeNow' }, { type: 'assignChild', task: 'shoesOn' });
     const t0 = s.minute;
     s = run(s, { type: 'respond', response: 'together' });
     expect(s.minute).toBe(t0 + 6);
@@ -254,7 +260,7 @@ describe('the endgame', () => {
   it('a contact can undo finished work, depending on how you respond', () => {
     let found = false;
     for (let seed = 1; seed < 600 && !found; seed++) {
-      let s = run(createGame(seed), { type: 'wakeNow' });
+      let s = run(dressedUp(createGame(seed)), { type: 'wakeNow' });
       for (let i = 0; i < 400 && !s.ended && currentIncident(s)?.id !== 'shoesOff' && s.minute < 8 * 60 + 30; i++) {
         if (!s.childActivity && s.objectives.shoesOn.status === 'todo' && s.objectives.shoesFound.status === 'done' && !currentIncident(s)) {
           s = reduce(s, { type: 'assignChild', task: 'shoesOn' });
@@ -565,7 +571,7 @@ describe('the day: weather, school events, intel', () => {
 
   it('rain gear on a day that stays dry means rain boots all day', () => {
     let s = seedWhere((g) => g.day.weather === 'clear' && !g.day.event);
-    s = run(s, { type: 'wakeNow' }, { type: 'assignChild', task: 'coat' });
+    s = run(dressedUp(s), { type: 'wakeNow' }, { type: 'assignChild', task: 'coat' });
     while (s.objectives.coat.status !== 'done' && !s.ended) {
       s = currentIncident(s) ? reduce(s, { type: 'respond', response: INCIDENT_FALLBACK[currentIncident(s)!.id] }) : reduce(s, { type: 'wait' });
     }
