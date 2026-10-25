@@ -976,6 +976,12 @@ export function reduce(prev: GameState, action: Action): GameState {
         later: () => {
           later = true;
         },
+        learnEvent: (source) => {
+          const e = s.day.event;
+          addIntel(s, source, e ? EVENTS[e].email : 'Nothing special on today.', 'A2', e ?? 'none');
+          confirmEvent(s);
+          log(s, e ? `The group chat settles it: ${EVENTS[e].name.toLowerCase()}.` : 'The group chat settles it: nothing special today.', true);
+        },
         unflag: (f) => {
           s.flags = s.flags.filter((x) => x !== f);
         },

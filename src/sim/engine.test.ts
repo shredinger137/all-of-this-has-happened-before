@@ -198,6 +198,7 @@ const INCIDENT_FALLBACK: Record<string, string> = {
   bathroom: 'wait',
   stuffyWash: 'skip',
   phone: 'ignore',
+  groupChat: 'mute',
   doorbell: 'sign',
   shoesOff: 'together',
   coatOff: 'leave',

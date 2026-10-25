@@ -335,6 +335,8 @@ export type ResolveCtx = {
   reopen: (task: TaskId) => void;
   /** Not now: it goes on the pile and comes back, worse, if left too long. */
   later: () => void;
+  /** Someone else has said what today is: it goes in the intel, graded, and the day is settled. */
+  learnEvent: (source: string) => void;
   /** The conversation isn't over: another problem follows straight on from this one. */
   followUp: (id: IncidentId) => void;
   unflag: (f: Flag) => void;
@@ -880,11 +882,11 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
 
   phone: {
     id: 'phone',
-    title: 'Phone call',
+    title: 'Work call',
     context: 'While you were busy',
-    headline: () => "Your phone is ringing. It's Grandma.",
-    worse: "Grandma again. You didn't answer, so now she's worried.",
-    detail: () => 'She never calls this early unless it matters. Or she has found a recipe.',
+    headline: () => "Your phone is ringing. It's work.",
+    worse: "Work again. Twice in ten minutes means something is on fire.",
+    detail: () => 'Nobody calls this early unless it matters. Or unless they want to "just quickly" ask something.',
     deferrable: false,
     external: true,
     tasks: ['lunch', 'breakfastMade', 'parentReady', 'shoesFound', 'clothesOut', 'bagChecked', 'project', 'email'],
@@ -893,42 +895,77 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       {
         id: 'quick',
         label: 'Answer, keep it short',
-        hint: 'She has a lot to say',
+        hint: 'It is never just a quick question',
         minutes: 1,
         tags: [{ text: '40% runs long', tone: 'bad' }],
         apply: (c) => {
           if (c.roll() < 0.4) {
             c.spend(3);
-            c.log('Short, it was not. A recipe, in full.', true);
-          } else c.log('Kept it to a minute. A recipe; she will text it.', true);
+            c.log('Short, it was not. A spreadsheet, read aloud.', true);
+          } else c.log('Kept it to a minute. They will send an email instead.', true);
         },
       },
       {
         id: 'answer',
-        label: 'Hear her out',
+        label: 'Hear them out',
         hint: 'Could be important',
         minutes: 4,
         tags: [{ text: 'Might be useful', tone: 'neutral' }],
         apply: (c) => {
           if (c.roll() < 0.3) {
             c.mood(1);
-            c.log('Grandma will do pick-up on Friday. You put her on speaker. Delight.', true);
-          } else c.log('It was a recipe.', true);
+            c.log('Your 09:00 is canceled. You stop rushing a little, and she can tell.', true);
+          } else c.log('It could have been an email.', true);
         },
       },
       {
         id: 'ignore',
         label: 'Let it ring',
-        hint: 'Free now. She will call back, and it will be worse',
+        hint: 'Free now. They will call back, and it will be worse',
         minutes: 0,
-        tags: [{ text: 'She calls back', tone: 'bad' }],
+        tags: [{ text: 'They call back', tone: 'bad' }],
         apply: (c) => {
-          if (c.incident.worse) c.log('You let it ring again. You will hear about this at Thanksgiving.', true);
+          if (c.incident.worse) c.log('You let it ring again. There will be a thread waiting for you.', true);
           else {
             c.later();
-            c.log('You let it ring. Grandma left a voicemail.', true);
+            c.log('You let it ring. A voicemail, and a text: "Call me when you can."', true);
           }
         },
+      },
+    ],
+  },
+
+  groupChat: {
+    id: 'groupChat',
+    title: 'Group chat',
+    context: 'While you were busy',
+    headline: () => 'The class parents\' group chat is going off.',
+    detail: (s) =>
+      s.day.eventKnown ? 'Forty messages. Someone has lost a water bottle.' : 'Forty messages. Somewhere in there, someone will have said what today is.',
+    deferrable: false,
+    external: true,
+    tasks: ['lunch', 'breakfastMade', 'parentReady', 'clothesOut', 'bagChecked', 'coffee'],
+    chance: (s) => (s.childAwake ? 0.08 : 0.05),
+    responses: [
+      {
+        id: 'read',
+        label: 'Scroll back through it',
+        hint: 'Slow, but someone always knows',
+        minutes: 3,
+        tags: [{ text: 'Might settle what today is', tone: 'good' }],
+        apply: (c) => {
+          if (c.s.day.eventKnown) c.log('Nothing you did not know. A lost water bottle, and a lot of thumbs.', true);
+          else if (c.roll() < 0.7) c.learnEvent('Group chat');
+          else c.log('Forty messages about a lost water bottle. Nothing about today.', true);
+        },
+      },
+      {
+        id: 'mute',
+        label: 'Mute it',
+        hint: 'Free, and you learn nothing',
+        minutes: 0,
+        tags: [{ text: 'Free', tone: 'neutral' }],
+        apply: (c) => c.log('Muted. Whatever they know, they know without you.', true),
       },
     ],
   },
@@ -1448,7 +1485,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
 };
 
 /** Order matters: the first incident that hits for a task wins. */
-export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'cats', 'bug', 'joke', 'stuffyWash', 'phone', 'doorbell'];
+export const ROLL_ORDER: IncidentId[] = ['spoon', 'spill', 'socks', 'outfit', 'cats', 'bug', 'joke', 'stuffyWash', 'phone', 'groupChat', 'doorbell'];
 export const COMPOUND_MINUTES = 8;
 
 // ---------------------------------------------------------------------------

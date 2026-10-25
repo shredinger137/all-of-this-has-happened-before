@@ -46,6 +46,7 @@ export type IncidentId =
   | 'bathroom'
   | 'stuffyWash'
   | 'phone'
+  | 'groupChat'
   | 'doorbell'
   // the endgame: what a wave of contacts brings
   | 'shoesOff'

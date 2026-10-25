@@ -167,6 +167,8 @@ function respondStrong(s: GameState): Action {
       return pick('damp');
     case 'phone':
       return pick('ignore');
+    case 'groupChat':
+      return pick(s.day.eventKnown || tight ? 'mute' : 'read');
     case 'doorbell':
       return pick(ok('ignore') ? 'ignore' : 'sign');
     case 'shoesOff':
