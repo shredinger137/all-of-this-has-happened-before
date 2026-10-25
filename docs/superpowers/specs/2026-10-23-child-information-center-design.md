@@ -158,7 +158,8 @@ in one click and vanish into the log.
 - **Her jokes**: a knock-knock joke you must go through line by line ("Cowgoes." / "Cowgoes who?" /
   "No, cows go MOO!"), a minute each, no result card between lines. "Not now, sweetheart" is always there:
   she shuts herself in her room, and the next job you give her opens a closed door first.
-- **Coffee** now does something you can feel: you work 15% faster for 20 minutes, and it still keeps you
+- **Tea** (was coffee; the "keep your cool once" buffer was dropped 2026-10-24, since none of the risky
+  calls are about you losing your temper) now does something you can feel: you work 15% faster for 20 minutes, and it still keeps you
   calm once (named on the result card when it does).
 
 ### 10. Voice

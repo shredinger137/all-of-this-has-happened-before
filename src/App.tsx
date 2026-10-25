@@ -6,7 +6,7 @@ import * as sound from './ui/sound';
 import { EVENTS } from './sim/content';
 import { createGame, currentIncident, reduce } from './sim/engine';
 import { randomSeed } from './sim/rng';
-import { chooseCards, choosePerk, finishMorning, newRun, startMorning, type CardId, type RunState } from './sim/run';
+import { CARDS, chooseCards, choosePerk, finishMorning, newRun, startMorning, type CardId, type RunState } from './sim/run';
 import type { Action, GameState, PerkId } from './sim/types';
 
 // A run lives in this browser. ?seed=N plays a single standalone morning (a drill) instead.
@@ -19,7 +19,10 @@ function loadRun(): Saved | undefined {
     const v = raw ? (JSON.parse(raw) as Saved) : undefined;
     if (v?.run?.version !== 1) return undefined;
     // A morning saved by an older build (different events and tasks) restarts; the week carries on.
-    if (v.game && (!v.game.objectives.project || !v.game.breakfastWant || !v.game.objectives.face)) v.game = undefined;
+    if (v.game && (!v.game.objectives.project || !v.game.breakfastWant || !v.game.objectives.face || !v.game.objectives.tea)) v.game = undefined;
+    // Cards retired since (the coffee timer) drop out of tonight's offer and picks.
+    v.run.offer = v.run.offer.filter((c) => c in CARDS);
+    v.run.picks = v.run.picks.filter((c) => c in CARDS);
     for (const d of v.run.weekLog) if (d.event && !EVENTS[d.event]) d.event = undefined;
     if (v.run.lastEvent && !EVENTS[v.run.lastEvent]) v.run.lastEvent = undefined;
     return v;

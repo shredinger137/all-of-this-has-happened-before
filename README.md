@@ -75,7 +75,7 @@ npm run build      # static site in dist/ (relative paths; host anywhere)
 
 - **Prep is 25% slower once she's awake** ("she keeps needing you").
 - **Supervised tasks**: teeth and hair only progress while you help. **Help her**: 1.5× speed.
-- **Coffee**: 15% faster for 20 minutes, and cancels one escalation. **Fate** makes one risky choice certain.
+- **Tea**: 15% faster for 20 minutes (two minutes to make if you filled the kettle the night before). **Fate** makes one risky choice certain.
 - Risky responses show their odds ("Upset 45%"); escalation costs mood, time, and 2 minutes for both.
 - **Leaving mid-incident** is allowed; the problem goes unresolved. The toilet is no longer an ambush at
   the door: it arrives with a wave, announced.

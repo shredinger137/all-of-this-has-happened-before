@@ -424,8 +424,8 @@ describe('follow-through', () => {
     expect(found).toBe(true);
   });
 
-  it('coffee makes you faster for a while', () => {
-    const s = run(ordinary(), { type: 'startParent', task: 'coffee' });
+  it('tea makes you faster for a while', () => {
+    const s = run(ordinary(), { type: 'startParent', task: 'tea' });
     expect(parentRate(s)).toBeGreaterThan(1);
     expect(s.caffeinatedUntil).toBe(s.minute + 20);
   });

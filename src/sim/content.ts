@@ -95,16 +95,16 @@ export const TASKS: Record<TaskId, TaskDef> = {
     unavailable: (s) =>
       s.objectives.dressed.progress > 0 || done(s, 'dressed') ? "She's already getting dressed" : undefined,
   },
-  coffee: {
-    id: 'coffee',
+  tea: {
+    id: 'tea',
     owner: 'parent',
-    label: 'Coffee',
-    action: 'Have a coffee',
-    doing: 'Drinking coffee',
-    hint: () => 'You work faster for 20 minutes, and keep your cool once',
+    label: 'Tea',
+    action: 'Have a cup of tea',
+    doing: 'Drinking tea',
+    hint: (s) => (s.kettleReady ? 'Kettle filled, mug out. You work faster for 20 minutes' : 'You work faster for 20 minutes'),
     scored: false,
-    missing: 'Coffee',
-    duration: () => 5,
+    missing: 'Tea',
+    duration: (s) => (s.kettleReady ? 2 : 5),
   },
   bagChecked: {
     id: 'bagChecked',
@@ -289,7 +289,7 @@ export const PARENT_TASKS: TaskId[] = [
   'parentReady',
   'shoesFound',
   'clothesOut',
-  'coffee',
+  'tea',
   'bagChecked',
   'project',
   'paperwork',
@@ -952,7 +952,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       s.day.eventKnown ? 'Forty messages. Someone has lost a water bottle.' : 'Forty messages. Somewhere in there, someone will have said what today is.',
     deferrable: false,
     external: true,
-    tasks: ['lunch', 'breakfastMade', 'parentReady', 'clothesOut', 'bagChecked', 'coffee'],
+    tasks: ['lunch', 'breakfastMade', 'parentReady', 'clothesOut', 'bagChecked', 'tea'],
     chance: (s) => (s.childAwake ? 0.08 : 0.05),
     responses: [
       {
@@ -986,7 +986,7 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
     detail: () => 'A package that needs a signature.',
     deferrable: false,
     external: true,
-    tasks: ['lunch', 'breakfastMade', 'parentReady', 'shoesFound', 'clothesOut', 'bagChecked', 'coffee'],
+    tasks: ['lunch', 'breakfastMade', 'parentReady', 'shoesFound', 'clothesOut', 'bagChecked', 'tea'],
     chance: (s) => (s.childAwake ? 0.08 : 0.03),
     responses: [
       {
@@ -1699,8 +1699,8 @@ export const HAIR_WANTS: [HairStyle, number][] = [
 ];
 export const HAIR_CLUE_CHANCE = 0.4; // she announced it at bedtime
 export const CAR_STUFFY_CHANCE = 0.4;
-export const COFFEE_MINUTES = 20;
-export const COFFEE_SPEED = 1.15;
+export const TEA_MINUTES = 20;
+export const TEA_SPEED = 1.15;
 
 // ---------------------------------------------------------------------------
 // The endgame: as leaving time nears, waves of crises. Each wave is announced, then lands.

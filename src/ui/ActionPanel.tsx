@@ -243,11 +243,10 @@ function ActiveView({ s, act }: Props) {
   );
 }
 
-/** Chance a response upsets her, from the live escalation model. Coffee or fate takes it to zero. */
+/** Chance a response upsets her, from the live escalation model. Fate takes it to zero. */
 function riskBand(s: GameState, r: ResponseDef, fated: boolean): { label: string; cls: string } {
   if (!r.risky) return { label: '—', cls: 'risk-none' };
   if (fated) return { label: 'Fate', cls: 'risk-fate' };
-  if (s.coffeeBuffer) return { label: 'Coffee', cls: 'risk-low' }; // coffee absorbs one escalation
   const p = escalationChance(s, r.riskBase);
   const label = `${Math.round(p * 100)}%`;
   if (p < 0.3) return { label, cls: 'risk-low' };

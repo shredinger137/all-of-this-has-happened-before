@@ -5,7 +5,7 @@ import { formatClock } from '../src/sim/constants';
 import { childTaskBlocker, createGame, currentIncident, offered, parentTaskBlocker, reduce, results } from '../src/sim/engine';
 import type { GameState, TaskId } from '../src/sim/types';
 
-const PARENT_PRIORITY: TaskId[] = ['breakfastMade', 'clothesOut', 'shoesFound', 'lunch', 'paperwork', 'project', 'parentReady', 'bagChecked', 'coffee'];
+const PARENT_PRIORITY: TaskId[] = ['breakfastMade', 'clothesOut', 'shoesFound', 'lunch', 'paperwork', 'project', 'parentReady', 'bagChecked', 'tea'];
 const READY: TaskId[] = [...CHILD_TASKS, 'lunch', 'parentReady', 'paperwork', 'project'];
 
 // intel: 'trust' acts on whatever the calendar says; 'email' reads the school email first.

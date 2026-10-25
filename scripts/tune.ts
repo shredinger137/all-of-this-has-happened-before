@@ -78,7 +78,7 @@ type Policy = {
 };
 
 // --- legacy: scripts/balance.ts "natural, careful, trust" ------------------
-const LEGACY_PARENT: TaskId[] = ['breakfastMade', 'clothesOut', 'shoesFound', 'lunch', 'paperwork', 'project', 'parentReady', 'bagChecked', 'coffee'];
+const LEGACY_PARENT: TaskId[] = ['breakfastMade', 'clothesOut', 'shoesFound', 'lunch', 'paperwork', 'project', 'parentReady', 'bagChecked', 'tea'];
 const LEGACY_READY: TaskId[] = [...CHILD_TASKS, 'lunch', 'parentReady', 'paperwork', 'project'];
 function legacyStep(s: GameState): Action {
   const inc = currentIncident(s);
@@ -138,7 +138,7 @@ function respondStrong(s: GameState): Action {
   const inc = currentIncident(s)!;
   const id: IncidentId = inc.id;
   const ok = (r: string) => INCIDENTS[id].responses.some((x) => x.id === r && (!x.available || x.available(s, inc)));
-  const risk = (base = 0.4) => (s.coffeeBuffer ? 0 : escalationChance(s, base));
+  const risk = (base = 0.4) => escalationChance(s, base);
   const ev = believedEvent(s);
   const tight = leaveNowProjection(s).spare - childLaneLeft(s) < 2; // little or no slack left
   const pick = (r: string): Action => ({ type: 'respond', response: r });
@@ -233,7 +233,7 @@ function parentPlan(s: GameState, quiet: boolean): TaskId[] {
   if (!s.objectives.dressed.progress && !isDone(s, 'dressed')) plan.push('clothesOut');
   if (!isDone(s, 'shoesOn')) plan.push('shoesFound');
   plan.push('bagChecked', 'lunch', 'parentReady');
-  if (quiet) plan.push('coffee');
+  if (quiet) plan.push('tea');
   return plan.filter((t) => offered(s, t) && !parentTaskBlocker(s, t));
 }
 
@@ -305,7 +305,7 @@ function strongStep(wakeAt: number | null) {
     // Her lane: the next task in plan order that can run. Supervised tasks take you too, so only start
     // them when your own list is empty or time is short. Shoes wait until they are found.
     const plan = childPlan(s);
-    const myList = parentPlan(s, false).filter((t) => t !== 'coffee');
+    const myList = parentPlan(s, false).filter((t) => t !== 'tea');
     const spare = leaveNowProjection(s).spare;
     const short = spare - childLaneLeft(s) < 4;
     const ca = s.childActivity;
@@ -346,7 +346,7 @@ function breakfastGuess(s: GameState): Breakfast {
 }
 
 // --- evening card picks ------------------------------------------------------
-const STRONG_CARDS: CardId[] = ['promise', 'lunch', 'clothes', 'bedtime', 'bag', 'coffee', 'shoes', 'newsletter', 'project'];
+const STRONG_CARDS: CardId[] = ['promise', 'lunch', 'clothes', 'bedtime', 'bag', 'kettle', 'shoes', 'newsletter', 'project'];
 const strongEvening = (run: RunState) => [...run.offer].sort((a, b) => STRONG_CARDS.indexOf(a) - STRONG_CARDS.indexOf(b)).slice(0, 2);
 const firstTwo = (run: RunState) => run.offer.slice(0, 2);
 

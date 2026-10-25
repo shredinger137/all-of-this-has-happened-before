@@ -6,7 +6,7 @@ export type TaskId =
   | 'breakfastMade'
   | 'shoesFound'
   | 'clothesOut'
-  | 'coffee'
+  | 'tea'
   | 'bagChecked'
   | 'breakfastEaten'
   | 'dressed'
@@ -163,7 +163,7 @@ export type GameState = {
   groggyUntil?: number;
   groggyLevel: number; // 0..1 strength while groggy
   householdMood: Mood;
-  coffeeBuffer: boolean;
+  kettleReady?: boolean; // kettle filled and a mug out the night before
   objectives: Record<TaskId, Objective>;
   parentActivity?: TaskId | 'help';
   childActivity?: TaskId;
@@ -180,7 +180,7 @@ export type GameState = {
   hairWant: HairStyle; // what she wants done with her hair today
   hairStyle?: HairStyle; // what she ended up with
   carStuffyWant: boolean; // some days a stuffy has to come in the car
-  caffeinatedUntil?: number; // coffee: you work faster until then
+  caffeinatedUntil?: number; // tea: you work faster until then
   focus?: number; // jobs she's finished in a row without a problem; it never lasts
   bathroomAt?: number; // when she'll need the bathroom (again)
   hungryAt?: number; // when she'll be hungry (again)

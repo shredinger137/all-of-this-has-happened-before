@@ -134,10 +134,9 @@ export function StatusPanel({ s, head }: { s: GameState; head?: ReactNode }) {
           </span>
         </div>
         <MoodBar mood={mood} />
-        {((s.caffeinatedUntil ?? 0) > s.minute || s.coffeeBuffer) && (
+        {(s.caffeinatedUntil ?? 0) > s.minute && (
           <div className="small" style={{ marginTop: 8 }}>
-            {(s.caffeinatedUntil ?? 0) > s.minute ? `Coffee: you're working faster until ${formatClock(s.caffeinatedUntil!)}.` : ''}
-            {s.coffeeBuffer ? " You'll keep your cool once." : ''}
+            {`Tea: you're working faster until ${formatClock(s.caffeinatedUntil!)}.`}
           </div>
         )}
 

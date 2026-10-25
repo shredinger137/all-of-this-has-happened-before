@@ -6,7 +6,7 @@ import { createGame, results, WEEKDAYS, type MorningSetup } from './engine';
 import { nextRandom } from './rng';
 import type { EventId, GameState, Mood, PerkId, TaskId } from './types';
 
-export type CardId = 'clothes' | 'bag' | 'lunch' | 'shoes' | 'bedtime' | 'newsletter' | 'coffee' | 'project' | 'promise';
+export type CardId = 'clothes' | 'bag' | 'lunch' | 'shoes' | 'bedtime' | 'newsletter' | 'kettle' | 'project' | 'promise';
 
 /** Evening preparations: pick two of four each night. */
 export const CARDS: Record<CardId, { name: string; note: string; prepares?: TaskId }> = {
@@ -16,11 +16,11 @@ export const CARDS: Record<CardId, { name: string; note: string; prepares?: Task
   shoes: { name: 'Find her shoes', note: 'By the door, where they belong.', prepares: 'shoesFound' },
   bedtime: { name: 'Early bedtime', note: 'She wakes rested and in a better mood.' },
   newsletter: { name: 'Read the newsletter', note: "You'll know what's on at school tomorrow." },
-  coffee: { name: 'Set the coffee timer', note: 'Coffee is ready when you are. Keeps you calm once.' },
+  kettle: { name: 'Fill the kettle, mug out', note: 'Tea in two minutes instead of five.' },
   project: { name: 'Finish the leaf project', note: 'Ten minutes tonight, if it turns out to be due.', prepares: 'project' },
   promise: { name: 'Keep your promise', note: 'You said you would. She remembers.' },
 };
-const CARD_POOL: CardId[] = ['clothes', 'bag', 'lunch', 'shoes', 'bedtime', 'newsletter', 'coffee', 'project'];
+const CARD_POOL: CardId[] = ['clothes', 'bag', 'lunch', 'shoes', 'bedtime', 'newsletter', 'kettle', 'project'];
 export const CARDS_PER_EVENING = 2;
 export const MAX_FATE = 3;
 export const LATE_MARKS_FOR_MEETING = 3;
@@ -125,7 +125,7 @@ export function morningSetup(run: RunState): MorningSetup {
     prepared: picks.map((c) => CARDS[c].prepares).filter((t): t is TaskId => !!t),
     readNewsletter: picks.includes('newsletter'),
     earlyBedtime: picks.includes('bedtime'),
-    coffeeTimer: picks.includes('coffee'),
+    kettleReady: picks.includes('kettle'),
     forceEvent: run.overdueBook ? 'library' : undefined,
     notEvent: run.lastEvent,
     meeting: run.weekday === 0 && run.meetingMonday,

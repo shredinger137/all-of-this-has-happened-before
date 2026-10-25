@@ -21,8 +21,8 @@ import {
   BREAKFAST_CLUE_RIGHT,
   BREAKFAST_ORDER,
   BREAKFASTS,
-  COFFEE_MINUTES,
-  COFFEE_SPEED,
+  TEA_MINUTES,
+  TEA_SPEED,
   CALENDAR_RIGHT,
   CHECKLIST,
   COLD_CHANCE,
@@ -99,7 +99,7 @@ export type MorningSetup = {
   notEvent?: EventId; // yesterday's event doesn't repeat
   meeting?: boolean; // the principal wants a word
   earlyBedtime?: boolean; // no late bedtime, and she starts in a better mood
-  coffeeTimer?: boolean;
+  kettleReady?: boolean;
 };
 
 export function createGame(seed: number, setup: MorningSetup = {}): GameState {
@@ -117,7 +117,7 @@ export function createGame(seed: number, setup: MorningSetup = {}): GameState {
     childAwake: false,
     groggyLevel: 0,
     householdMood: setup.mood ?? START_MOOD,
-    coffeeBuffer: !!setup.coffeeTimer,
+    kettleReady: !!setup.kettleReady,
     objectives,
     incidents: [],
     firedIncidents: [],
@@ -342,8 +342,8 @@ export function currentIncident(s: GameState): OpenIncident | undefined {
 
 /** Prep is quicker while she sleeps: once she's up, she keeps needing you. */
 export function parentRate(s: GameState): number {
-  const coffee = s.caffeinatedUntil !== undefined && s.minute < s.caffeinatedUntil ? COFFEE_SPEED : 1;
-  return (s.childAwake ? 0.8 : 1) * coffee;
+  const tea = s.caffeinatedUntil !== undefined && s.minute < s.caffeinatedUntil ? TEA_SPEED : 1;
+  return (s.childAwake ? 0.8 : 1) * tea;
 }
 
 /** Supervised tasks stall unless you are helping. */
@@ -371,7 +371,7 @@ function incidentModifier(s: GameState): number {
   return m;
 }
 
-/** Chance a risky response backfires right now (before coffee). Shown to the player as a band. */
+/** Chance a risky response backfires right now. Shown to the player as a band. */
 export function escalationChance(s: GameState, base = 0.4): number {
   let chance = base;
   if (isGroggy(s)) chance += 0.3 * s.groggyLevel;
@@ -449,10 +449,7 @@ function completeTask(s: GameState, task: TaskId) {
   if (s.parentActivity === task) s.parentActivity = undefined;
 
   if (task === 'coat' && s.day.weather !== 'cold') setFlag(s, 'wellies');
-  if (task === 'coffee') {
-    s.coffeeBuffer = true;
-    s.caffeinatedUntil = s.minute + COFFEE_MINUTES;
-  }
+  if (task === 'tea') s.caffeinatedUntil = s.minute + TEA_MINUTES;
   // Festival clothes are getting dressed, as far as anyone at school is concerned.
   if (task === 'festivalClothes' && s.objectives.dressed.status !== 'done') {
     if (s.childActivity === 'dressed') s.childActivity = undefined;
@@ -834,7 +831,6 @@ function outcomeOf(a: GameState, b: GameState, title: string, choice: string): O
     costs.push('Mood ↓');
     good = false;
   }
-  if (a.coffeeBuffer && !b.coffeeBuffer) costs.push('Coffee: you stayed calm');
   if (b.fate < a.fate) costs.push('Fate point spent');
   for (const f of b.flags) {
     if (a.flags.includes(f) || !FLAG_RESULT[f]) continue;
@@ -1018,11 +1014,6 @@ export function reduce(prev: GameState, action: Action): GameState {
         flag: (f) => setFlag(s, f),
         escalate: ({ base = resp.riskBase ?? 0.4, extra = 3 } = {}) => {
           if (charmed || rand(s) >= escalationChance(s, base)) return false;
-          if (s.coffeeBuffer) {
-            s.coffeeBuffer = false;
-            log(s, 'It nearly went badly. The coffee helped; you stayed calm.', true);
-            return false;
-          }
           // It went badly, and that's a problem of its own.
           changeMood(s, -1);
           if (open.task) s.objectives[open.task].extra += extra;
