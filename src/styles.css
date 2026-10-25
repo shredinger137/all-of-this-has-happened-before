@@ -616,7 +616,7 @@ button { font: inherit; color: inherit; }
   .head { padding: 7px 10px 6px; gap: 8px; align-items: center; }
   .head .small { display: none; }
   .head-eyebrow { font-size: 8px; }
-  .head h1 { font-size: 13.5px; margin: 3px 0 0; overflow-wrap: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .head h1 { font-size: 13.5px; letter-spacing: 0.06em; margin: 3px 0 0; overflow-wrap: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .head-title { min-width: 0; }
   .timebox { padding: 5px 8px 6px; }
   .time { font-size: 18px; }
@@ -631,9 +631,14 @@ button { font: inherit; color: inherit; }
   .workarea > .tabs .tab { min-width: 0; padding: 7px 4px 8px; font-size: 8px; letter-spacing: 0.06em; clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 100%, 0 100%); white-space: nowrap; }
   .workarea > .tabs .tab { flex: 1 1 auto; }
   .tab-count { margin-left: 3px; }
-  .sectionhead .sectitle { font-size: 9.5px; letter-spacing: 0.1em; }
+  .sectionhead .sectitle { font-size: 9.5px; letter-spacing: 0.1em; white-space: nowrap; }
   .sectionhead .status { font-size: 8px; letter-spacing: 0.08em; text-align: right; }
-  .summary { font-size: 12.5px; line-height: 1.4; margin-bottom: 8px; }
+  .summary { font-size: 12px; line-height: 1.4; margin-bottom: 8px; }
+  @media (max-width: 400px) {
+    .head h1 { font-size: 11.5px; letter-spacing: 0.03em; }
+    .time { font-size: 16px; }
+    .timebox .time-sub { font-size: 6.5px; }
+  }
   .btnline { min-height: 44px; padding: 7px 10px; }
   .btnline .label { font-size: 10px; }
   .btnline .sub { font-size: 11.5px; margin-top: 2px; }

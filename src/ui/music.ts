@@ -4,7 +4,7 @@
 export type Tier = 'calm' | 'active' | 'crisis';
 
 const TRACKS: Record<Tier, string[]> = {
-  calm: ['vessel-in-stasis', 'gravitys-quiet-pull'],
+  calm: ['vessel-in-stasis', 'gravitys-quiet-pull', 'ten-million-miles-away'],
   active: ['the-long-watch', 'terminal-horizon-line'],
   crisis: ['last-pulse-of-the-hull', 'iron-bow-and-hollow-bone', 'under-the-iron-hull'],
 };
