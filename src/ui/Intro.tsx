@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react';
 
-// The miniseries opening, one line at a time on black. First visit only; after that, just the title.
-const LINES = ['She was created by you.', 'She wakes at seven.', 'She has opinions.', 'There is only one of her.', 'And she has a plan.'];
-const LINE_MS = 2600;
+// The miniseries opening, one line at a time on black: what the game is, plainly. First visit only;
+// after that, just the title.
+const LINES = [
+  'Kindergarten starts at 8.',
+  'You have to leave by 7:45.',
+  'There is one of her. She has strong opinions.',
+  'You must get her to school on time.',
+];
+const LINE_MS = 3400;
+const FIRST_DELAY_MS = 1200; // black screen before the first line
 const SEEN_KEY = 'cic.intro.seen';
 
 function seenBefore(): boolean {
@@ -24,7 +31,7 @@ export function Intro({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     if (titled) return;
-    const t = setTimeout(() => setStep((n) => n + 1), LINE_MS);
+    const t = setTimeout(() => setStep((n) => n + 1), LINE_MS + (step === 0 ? FIRST_DELAY_MS : 0));
     return () => clearTimeout(t);
   }, [step, titled]);
 
@@ -47,7 +54,7 @@ export function Intro({ onDone }: { onDone: () => void }) {
           </button>
         </div>
       ) : (
-        <p key={step} className="intro-line">
+        <p key={step} className={`intro-line${step === 0 ? ' first' : ''}`}>
           {LINES[step]}
         </p>
       )}
