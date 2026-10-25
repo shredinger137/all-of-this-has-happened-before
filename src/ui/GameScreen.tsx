@@ -8,7 +8,7 @@ import { Departure } from './Departure';
 import { Dock } from './Dock';
 import { MorningPlot } from './MorningPlot';
 import { IntelPanel } from './IntelPanel';
-import { LogPanel, StatusPanel } from './StatusPanel';
+import { LogPanel, StatusPanel, checklistCount } from './StatusPanel';
 import { WeekStrip, FatePips } from './RunScreen';
 import type { RunState } from '../sim/run';
 
@@ -38,9 +38,10 @@ function useNarrow(): boolean {
 }
 
 type Tab = 'actions' | 'intel' | 'status' | 'log';
-const TAB_LABELS: Record<Tab, string> = { actions: 'Actions', intel: 'Intel', status: 'Status', log: 'Log' };
+const TAB_LABELS: Record<Tab, string> = { actions: 'Actions', intel: 'Intel', status: 'Checklist', log: 'Log' };
 
-function Tabs({ tabs, value, onChange, alert }: { tabs: Tab[]; value: Tab; onChange: (t: Tab) => void; alert?: Tab }) {
+type TabsProps = { tabs: Tab[]; value: Tab; onChange: (t: Tab) => void; alert?: Tab; count?: string };
+function Tabs({ tabs, value, onChange, alert, count }: TabsProps) {
   return (
     <div className="tabs" role="tablist">
       {tabs.map((t) => (
@@ -52,6 +53,7 @@ function Tabs({ tabs, value, onChange, alert }: { tabs: Tab[]; value: Tab; onCha
           onClick={() => onChange(t)}
         >
           {TAB_LABELS[t]}
+          {t === 'status' && count && <span className="tab-count">{count}</span>}
         </button>
       ))}
     </div>
@@ -79,12 +81,18 @@ export function GameScreen({ game, seed, act, run, onNext, onRetry, onReplay }: 
   useEffect(() => {
     if (inc && narrow) setTab('actions');
   }, [inc?.uid, narrow]);
+  // Intel is the job before she wakes; once she's up, the checklist is what you watch.
+  useEffect(() => {
+    if (game.childAwake && !narrow) setTab((t) => (t === 'intel' ? 'status' : t));
+  }, [game.childAwake]);
   // Switching layouts: a phone has no separate actions column, a wide screen has no actions tab.
   useEffect(() => {
     setTab((t) => (narrow ? t : t === 'actions' ? 'intel' : t));
   }, [narrow]);
 
   const r = game.ended ? results(game) : undefined;
+  const cl = checklistCount(game);
+  const count = `${cl.done}/${cl.total}`;
   // Leaving plays the departure first; the report is one press away.
   const [reportOpen, setReportOpen] = useState(false);
   useEffect(() => setReportOpen(false), [game.seed, game.ended]);
@@ -129,7 +137,7 @@ export function GameScreen({ game, seed, act, run, onNext, onRetry, onReplay }: 
       );
     work = (
       <div className="workarea single">
-        <Tabs tabs={['actions', 'intel', 'status', 'log']} value={tab} onChange={setTab} alert={inc ? 'actions' : undefined} />
+        <Tabs tabs={['actions', 'intel', 'status', 'log']} value={tab} onChange={setTab} alert={inc ? 'actions' : undefined} count={count} />
         {panel}
       </div>
     );
@@ -137,7 +145,7 @@ export function GameScreen({ game, seed, act, run, onNext, onRetry, onReplay }: 
     const side = tab === 'actions' ? 'intel' : tab;
     const head = (
       <div className="sectionhead tabhead">
-        <Tabs tabs={['intel', 'status', 'log']} value={side} onChange={setTab} />
+        <Tabs tabs={['intel', 'status', 'log']} value={side} onChange={setTab} count={count} />
       </div>
     );
     work = (

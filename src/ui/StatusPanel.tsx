@@ -86,6 +86,12 @@ function ActivityCard({ s, who }: { s: GameState; who: 'parent' | 'child' }) {
   );
 }
 
+/** Checklist items done, out of those known so far: shown on the tab. */
+export function checklistCount(s: GameState): { done: number; total: number } {
+  const needed = requirements(s).filter((r) => r.known && !LOOSE_ENDS.has(r.id));
+  return { done: needed.filter((r) => r.met).length, total: needed.length };
+}
+
 /** `head` is the fixed strip above the scrolling body (the tab strip on wide screens). */
 export function StatusPanel({ s, head }: { s: GameState; head?: ReactNode }) {
   const reqs = requirements(s);
@@ -101,63 +107,7 @@ export function StatusPanel({ s, head }: { s: GameState; head?: ReactNode }) {
       <div className="panel-body">
         <div className="sectionhead">
           <span className="sectitle">
-            <span className="num">01</span>At home
-          </span>
-          <span className={`status ${s.childAwake ? 'amber' : 'green'}`}>{s.childAwake ? 'Active' : 'Quiet'}</span>
-        </div>
-        <div className="row">
-          <span className="k">Your daughter</span>
-          <span className="v">{s.childAwake ? (groggy ? 'Awake · groggy' : 'Awake') : 'Asleep'}</span>
-        </div>
-        {!s.childAwake && (
-          <div className="row">
-            <span className="k">Usually wakes</span>
-            <span className="v">{formatClock(s.wakeMinute)}</span>
-          </div>
-        )}
-        <div className="row">
-          <span className="k">Today</span>
-          <span className="v" title={CONDITIONS[s.morningCondition].note}>
-            {CONDITIONS[s.morningCondition].label}
-          </span>
-        </div>
-        <div className="row">
-          <span className="k">She is</span>
-          <span className="v" title={TENDENCIES[s.childTendency].note}>
-            {TENDENCIES[s.childTendency].label}
-          </span>
-        </div>
-        <div className="row" style={{ marginBottom: 5 }}>
-          <span className="k">Household mood</span>
-          <span className={`v ${mood <= 1 ? 'red' : mood === 2 ? 'amber' : 'green'}`} title={moodEffect(mood)}>
-            {MOOD_LABELS[mood]} · {MOOD_EFFECTS[mood].seen}
-          </span>
-        </div>
-        <MoodBar mood={mood} />
-        {(s.caffeinatedUntil ?? 0) > s.minute && (
-          <div className="small" style={{ marginTop: 8 }}>
-            {`Tea: you're working faster until ${formatClock(s.caffeinatedUntil!)}.`}
-          </div>
-        )}
-
-        {s.childAwake && (
-          <>
-            <div className="sectionhead spaced">
-              <span className="sectitle">
-                <span className="num">02</span>Activities
-              </span>
-              <span className="status">2 slots</span>
-            </div>
-            <div className="two-stat">
-              <ActivityCard s={s} who="parent" />
-              <ActivityCard s={s} who="child" />
-            </div>
-          </>
-        )}
-
-        <div className="sectionhead spaced">
-          <span className="sectitle">
-            <span className="num">{s.childAwake ? '03' : '02'}</span>Morning checklist
+            <span className="num">01</span>Morning checklist
           </span>
           <span className={`status ${done === needed.length ? 'green' : 'amber'}`}>
             {done} of {needed.length}
@@ -226,6 +176,62 @@ export function StatusPanel({ s, head }: { s: GameState; head?: ReactNode }) {
           </span>
           <span className="v muted">{s.objectives.shoesFound.status === 'done' ? 'Found' : 'Not checked'}</span>
         </div>
+        <div className="sectionhead spaced">
+          <span className="sectitle">
+            <span className="num">02</span>At home
+          </span>
+          <span className={`status ${s.childAwake ? 'amber' : 'green'}`}>{s.childAwake ? 'Active' : 'Quiet'}</span>
+        </div>
+        <div className="row">
+          <span className="k">Your daughter</span>
+          <span className="v">{s.childAwake ? (groggy ? 'Awake · groggy' : 'Awake') : 'Asleep'}</span>
+        </div>
+        {!s.childAwake && (
+          <div className="row">
+            <span className="k">Usually wakes</span>
+            <span className="v">{formatClock(s.wakeMinute)}</span>
+          </div>
+        )}
+        <div className="row">
+          <span className="k">Today</span>
+          <span className="v" title={CONDITIONS[s.morningCondition].note}>
+            {CONDITIONS[s.morningCondition].label}
+          </span>
+        </div>
+        <div className="row">
+          <span className="k">She is</span>
+          <span className="v" title={TENDENCIES[s.childTendency].note}>
+            {TENDENCIES[s.childTendency].label}
+          </span>
+        </div>
+        <div className="row" style={{ marginBottom: 5 }}>
+          <span className="k">Household mood</span>
+          <span className={`v ${mood <= 1 ? 'red' : mood === 2 ? 'amber' : 'green'}`} title={moodEffect(mood)}>
+            {MOOD_LABELS[mood]} · {MOOD_EFFECTS[mood].seen}
+          </span>
+        </div>
+        <MoodBar mood={mood} />
+        {(s.caffeinatedUntil ?? 0) > s.minute && (
+          <div className="small" style={{ marginTop: 8 }}>
+            {`Tea: you're working faster until ${formatClock(s.caffeinatedUntil!)}.`}
+          </div>
+        )}
+
+        {s.childAwake && (
+          <>
+            <div className="sectionhead spaced">
+              <span className="sectitle">
+                <span className="num">03</span>Activities
+              </span>
+              <span className="status">2 slots</span>
+            </div>
+            <div className="two-stat">
+              <ActivityCard s={s} who="parent" />
+              <ActivityCard s={s} who="child" />
+            </div>
+          </>
+        )}
+
       </div>
     </div>
   );

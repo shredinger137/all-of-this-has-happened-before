@@ -633,3 +633,6 @@ button { font: inherit; color: inherit; }
   .intro-line, .intro-title { animation: none; opacity: 1; }
 }
 .intro-title .tool { font-size: 12px; padding: 14px 34px; }
+.intro { transition: opacity 0.9s ease-in; }
+.intro.leaving { opacity: 0; pointer-events: none; }
+.tab-count { margin-left: 6px; color: var(--khaki-dim); font-family: var(--mono); letter-spacing: 0; }

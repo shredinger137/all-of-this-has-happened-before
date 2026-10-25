@@ -11,6 +11,7 @@ const LINES = [
 const LINE_MS = 3400;
 const FIRST_DELAY_MS = 1200; // black screen before the first line
 const SEEN_KEY = 'cic.intro.seen';
+const FADE_OUT_MS = 900;
 
 function seenBefore(): boolean {
   try {
@@ -27,6 +28,7 @@ function reducedMotion(): boolean {
 /** A black screen with the title and a Begin key. Pressing it is also what lets the music start. */
 export function Intro({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState(() => (seenBefore() || reducedMotion() ? LINES.length : 0));
+  const [leaving, setLeaving] = useState(false);
   const titled = step >= LINES.length;
 
   useEffect(() => {
@@ -41,11 +43,13 @@ export function Intro({ onDone }: { onDone: () => void }) {
     } catch {
       /* storage unavailable; the full intro plays again next time */
     }
-    onDone();
+    // Fade the black away to reveal the console, then get out of the way.
+    setLeaving(true);
+    setTimeout(onDone, reducedMotion() ? 0 : FADE_OUT_MS);
   };
 
   return (
-    <div className="intro" onClick={() => !titled && setStep(LINES.length)}>
+    <div className={`intro${leaving ? ' leaving' : ''}`} onClick={() => !titled && setStep(LINES.length)}>
       {titled ? (
         <div className="intro-title">
           <h1>All of This Has Happened Before</h1>
