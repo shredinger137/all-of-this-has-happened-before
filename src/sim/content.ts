@@ -631,14 +631,14 @@ export const INCIDENTS: Record<IncidentId, IncidentDef> = {
       },
       {
         id: 'shoo',
-        label: 'Cats out, door shut',
-        hint: 'Quick. She may not forgive you',
+        label: 'Stop her and get her back to it',
+        hint: 'Quick. She may not take it well',
         minutes: 1,
         risky: true,
         riskBase: 0.4,
         tags: [{ text: 'May upset her', tone: 'bad' }],
         apply: (c) => {
-          if (!c.escalate({ extra: 1 })) c.log('You put the cats out and shut the door.', true);
+          if (!c.escalate({ extra: 1 })) c.log('She left the cats and went back to it.', true);
         },
       },
       {
