@@ -179,7 +179,7 @@ export function RunScreen({ run, onCards, onPerk }: Props) {
             <FatePips fate={run.fate} />
           </div>
           <h1>{weekly ? 'Week report' : 'Evening'}</h1>
-          <div className="small">{weekly ? 'Five mornings. All of them survived.' : `Get ahead of ${tomorrow}.`}</div>
+          <div className="small">{weekly ? 'Five mornings, all survived. And all of it will happen again.' : `Get ahead of ${tomorrow}.`}</div>
         </div>
         <div className="timebox frame screen">
           <div className="time">{weekly ? '17:00' : '20:30'}</div>

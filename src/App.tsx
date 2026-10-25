@@ -148,7 +148,7 @@ export default function App() {
     <div className="site">
       <div className="site-top">
         <div className="brand">
-          C·I·C <span>Child Information Center</span>
+          C·I·C <span>All of this has happened before</span>
         </div>
         <div className="caption">
           {drill !== undefined ? (

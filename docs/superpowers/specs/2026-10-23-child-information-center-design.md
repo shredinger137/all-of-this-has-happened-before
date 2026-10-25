@@ -13,6 +13,8 @@ every morning is the same morning. The user wants:
 - **A default day that's still interesting**: meaningful decisions, *inference*, and choosing what to leave
   behind.
 - **Over-dramatic seriousness**: lean into the CIC joke. The console is now the **Child Information Center**.
+  The game is titled **All of This Has Happened Before** (2026-10-24): the show's line, and the loop of
+  the run. "And all of it will happen again" closes each week report.
 - **Tension**: it should feel like a crisis, not a checklist.
 - **Rogue-like continuity**: rounds build on each other; luck/fate points. Runs are **continuous**: no
   game over (user's choice, open to change).

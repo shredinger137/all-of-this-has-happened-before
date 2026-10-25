@@ -1,6 +1,7 @@
-# C·I·C: Child Information Center
+# All of This Has Happened Before
 
-(Working titles: *School Run*, *Tuesday*.)
+*...and all of it will happen again.* The console is the C·I·C, the Child Information Center.
+(Working titles: *School Run*, *Tuesday*, *C·I·C*.)
 
 A turn-based browser game about getting a child out the door by 07:45, presented as a Colonial
 crisis console. You never quite know what today needs: the intel is graded, sometimes wrong, and
