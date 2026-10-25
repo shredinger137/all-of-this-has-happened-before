@@ -145,7 +145,7 @@ export const TASKS: Record<TaskId, TaskDef> = {
     label: 'Teeth brushed',
     action: 'Brush teeth',
     doing: 'Brushing teeth',
-    hint: (s) => (done(s, 'breakfastEaten') ? 'She can do it herself' : 'Better after breakfast'),
+    hint: () => 'She can do it herself',
     scored: true,
     missing: 'Brushed teeth',
     duration: () => 4,
